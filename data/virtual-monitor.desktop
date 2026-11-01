@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Virtual monitor
+Name[pt_BR]=Monitor virtual
+Comment=Pick the resolution and install the EDID of the virtual HDMI monitor
+Comment[pt_BR]=Escolhe a resolução e instala o EDID do monitor virtual HDMI
+Exec=python3 virtual-monitor.py
+Icon=virtual-monitor
+Terminal=false
+StartupNotify=true
+Categories=System;Settings;HardwareSettings;
+Keywords=HDMI;EDID;monitor;resolution;display;headless;
+Keywords[pt_BR]=HDMI;EDID;monitor;resolução;tela;headless;
