@@ -2,7 +2,7 @@
 
 <sub><b>🇧🇷 Português</b> · <a href="README.en.md">🇺🇸 English</a></sub>
 
-<img src="assets/readme-banner.svg" alt="Monitor virtual — um monitor HDMI ultrawide para máquinas sem monitor" width="100%">
+<img src="assets/readme-banner.svg" alt="Monitor virtual — um monitor HDMI virtual para máquinas sem monitor" width="100%">
 
 <br>
 
@@ -71,7 +71,7 @@
 > [!NOTE]
 > **Por que existe?** Máquinas sem monitor (um Orange Pi, um servidor, um notebook com a tampa fechada)
 > costumam entregar à área de trabalho remota — Jump Desktop, VNC, RDP — uma tela pequena ou nenhuma.
-> Com um EDID virtual, o sistema acredita que há um monitor ultrawide ligado.
+> Com um EDID virtual, o sistema acredita que há um monitor ligado, com as resoluções que você definir.
 
 ## 🚀 Instalação rápida
 
@@ -288,11 +288,3 @@ Distribuído sob a [licença MIT](LICENSE). Use, modifique e redistribua à vont
 O repositório principal fica no [GitLab](https://gitlab.com/danie1net0/virtual-hdmi);
 o [GitHub](https://github.com/danie1net0/virtual-hdmi) é uma réplica automática.
 Issues e merge requests são bem-vindos no GitLab.
-
----
-
-<div align="center">
-  <img src="assets/virtual-monitor.png" alt="Ícone do Monitor virtual: um conector HDMI projetando uma tela ultrawide tracejada" width="96" height="96">
-  <br>
-  <sub>Feito com 💚 para quem trabalha em máquinas sem monitor.</sub>
-</div>

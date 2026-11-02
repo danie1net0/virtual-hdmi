@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" fill="none" role="img" aria-labelledby="title description">
   <title id="title">Virtual Monitor</title>
-  <desc id="description">The name Virtual Monitor next to an HDMI connector projecting a dashed ultrawide screen, on a graphite background.</desc>
+  <desc id="description">The name Virtual Monitor next to a pixel-art monitor, on a graphite background.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1200" y2="360" gradientUnits="userSpaceOnUse">
       <stop stop-color="#1D232A"/>
@@ -11,7 +11,7 @@
       <stop stop-color="#7FE3F5"/>
       <stop offset="1" stop-color="#2F9CC4"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="matrix(0 240 -330 0 300 150)" gradientUnits="userSpaceOnUse">
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="matrix(0 240 -330 0 250 180)" gradientUnits="userSpaceOnUse">
       <stop stop-color="#54C8E8" stop-opacity=".22"/>
       <stop offset="1" stop-color="#54C8E8" stop-opacity="0"/>
     </radialGradient>
@@ -33,30 +33,147 @@
   </g>
   <rect x=".5" y=".5" width="1199" height="359" rx="27.5" stroke="#FFFFFF" stroke-opacity=".1"/>
 
-  <!-- Tela ultrawide projetada (tracejada) -->
-  <g transform="translate(70 70)">
-    <rect x="0" y="0" width="360" height="154" rx="10" fill="url(#screen)" fill-opacity=".16" stroke="#DD5E53" stroke-width="3" stroke-dasharray="14 9"/>
-    <rect x="22" y="22" width="316" height="110" rx="4" fill="url(#screen)" fill-opacity=".85"/>
-    <path d="M22 108l60-40 46 28 58-52 70 46 82-36v86H22z" fill="#0F3B50" fill-opacity=".55"/>
-  </g>
-
-  <!-- Conector HDMI -->
-  <g transform="translate(184 262)">
-    <path d="M0 0h132v22l-12 18H12L0 22z" fill="#F1ECE0"/>
-    <path d="M12 8h108v12l-8 12H20l-8-12z" fill="#2B323B"/>
-    <rect x="26" y="14" width="80" height="6" rx="2" fill="#F1ECE0" fill-opacity=".5"/>
-    <circle cx="66" cy="-14" r="6" fill="#DD5E53"/>
-    <path d="M66 -8v8" stroke="#DD5E53" stroke-width="3"/>
+<!-- Monitor em pixel art -->
+  <g transform="translate(88 38)" shape-rendering="crispEdges">
+      <rect x="20" y="50" width="280" height="10" fill="#14181d"/>
+      <rect x="20" y="60" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="60" width="250" height="10" fill="#f3efe6"/>
+      <rect x="280" y="60" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="60" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="70" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="70" width="250" height="10" fill="#f3efe6"/>
+      <rect x="280" y="70" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="70" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="80" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="80" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="80" width="220" height="10" fill="#7d8794"/>
+      <rect x="270" y="80" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="80" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="80" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="90" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="90" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="90" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="90" width="10" height="10" fill="#a8ecff"/>
+      <rect x="70" y="90" width="150" height="10" fill="#59dcff"/>
+      <rect x="220" y="90" width="20" height="10" fill="#fff3a8"/>
+      <rect x="240" y="90" width="30" height="10" fill="#59dcff"/>
+      <rect x="270" y="90" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="90" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="90" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="100" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="100" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="100" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="100" width="50" height="10" fill="#59dcff"/>
+      <rect x="110" y="100" width="10" height="10" fill="#2a9df4"/>
+      <rect x="120" y="100" width="100" height="10" fill="#59dcff"/>
+      <rect x="220" y="100" width="20" height="10" fill="#fff3a8"/>
+      <rect x="240" y="100" width="30" height="10" fill="#59dcff"/>
+      <rect x="270" y="100" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="100" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="100" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="110" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="110" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="110" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="110" width="40" height="10" fill="#59dcff"/>
+      <rect x="100" y="110" width="30" height="10" fill="#2a9df4"/>
+      <rect x="130" y="110" width="60" height="10" fill="#59dcff"/>
+      <rect x="190" y="110" width="10" height="10" fill="#2a9df4"/>
+      <rect x="200" y="110" width="70" height="10" fill="#59dcff"/>
+      <rect x="270" y="110" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="110" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="110" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="120" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="120" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="120" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="120" width="30" height="10" fill="#59dcff"/>
+      <rect x="90" y="120" width="50" height="10" fill="#2a9df4"/>
+      <rect x="140" y="120" width="40" height="10" fill="#59dcff"/>
+      <rect x="180" y="120" width="30" height="10" fill="#2a9df4"/>
+      <rect x="210" y="120" width="60" height="10" fill="#59dcff"/>
+      <rect x="270" y="120" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="120" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="120" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="130" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="130" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="130" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="130" width="20" height="10" fill="#59dcff"/>
+      <rect x="80" y="130" width="70" height="10" fill="#2a9df4"/>
+      <rect x="150" y="130" width="20" height="10" fill="#59dcff"/>
+      <rect x="170" y="130" width="50" height="10" fill="#2a9df4"/>
+      <rect x="220" y="130" width="50" height="10" fill="#59dcff"/>
+      <rect x="270" y="130" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="130" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="130" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="140" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="140" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="140" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="140" width="10" height="10" fill="#59dcff"/>
+      <rect x="70" y="140" width="160" height="10" fill="#2a9df4"/>
+      <rect x="230" y="140" width="40" height="10" fill="#59dcff"/>
+      <rect x="270" y="140" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="140" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="140" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="150" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="150" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="150" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="150" width="210" height="10" fill="#2a9df4"/>
+      <rect x="270" y="150" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="150" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="150" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="160" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="160" width="20" height="10" fill="#f3efe6"/>
+      <rect x="50" y="160" width="10" height="10" fill="#7d8794"/>
+      <rect x="60" y="160" width="210" height="10" fill="#1c6fd1"/>
+      <rect x="270" y="160" width="10" height="10" fill="#f3efe6"/>
+      <rect x="280" y="160" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="160" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="170" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="170" width="250" height="10" fill="#f3efe6"/>
+      <rect x="280" y="170" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="170" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="180" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="180" width="120" height="10" fill="#f3efe6"/>
+      <rect x="150" y="180" width="20" height="10" fill="#dd5e53"/>
+      <rect x="170" y="180" width="110" height="10" fill="#f3efe6"/>
+      <rect x="280" y="180" width="10" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="180" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="190" width="10" height="10" fill="#14181d"/>
+      <rect x="30" y="190" width="260" height="10" fill="#b9b3a6"/>
+      <rect x="290" y="190" width="10" height="10" fill="#14181d"/>
+      <rect x="20" y="200" width="280" height="10" fill="#14181d"/>
+      <rect x="130" y="210" width="10" height="10" fill="#14181d"/>
+      <rect x="140" y="210" width="20" height="10" fill="#f3efe6"/>
+      <rect x="160" y="210" width="20" height="10" fill="#b9b3a6"/>
+      <rect x="180" y="210" width="10" height="10" fill="#14181d"/>
+      <rect x="130" y="220" width="10" height="10" fill="#14181d"/>
+      <rect x="140" y="220" width="20" height="10" fill="#f3efe6"/>
+      <rect x="160" y="220" width="20" height="10" fill="#b9b3a6"/>
+      <rect x="180" y="220" width="10" height="10" fill="#14181d"/>
+      <rect x="130" y="230" width="10" height="10" fill="#14181d"/>
+      <rect x="140" y="230" width="20" height="10" fill="#f3efe6"/>
+      <rect x="160" y="230" width="20" height="10" fill="#b9b3a6"/>
+      <rect x="180" y="230" width="10" height="10" fill="#14181d"/>
+      <rect x="130" y="240" width="10" height="10" fill="#14181d"/>
+      <rect x="140" y="240" width="20" height="10" fill="#f3efe6"/>
+      <rect x="160" y="240" width="20" height="10" fill="#b9b3a6"/>
+      <rect x="180" y="240" width="10" height="10" fill="#14181d"/>
+      <rect x="80" y="250" width="10" height="10" fill="#14181d"/>
+      <rect x="90" y="250" width="140" height="10" fill="#f3efe6"/>
+      <rect x="230" y="250" width="10" height="10" fill="#14181d"/>
+      <rect x="80" y="260" width="10" height="10" fill="#14181d"/>
+      <rect x="90" y="260" width="140" height="10" fill="#b9b3a6"/>
+      <rect x="230" y="260" width="10" height="10" fill="#14181d"/>
+      <rect x="80" y="270" width="160" height="10" fill="#14181d"/>
   </g>
 
   <!-- Texto -->
   <g transform="translate(520 0)">
     <text x="0" y="150" fill="#F1ECE0" font-family="ui-sans-serif, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="64" font-weight="700" letter-spacing="-1">Virtual Monitor</text>
-    <text x="2" y="196" fill="#C9D3DC" font-family="ui-sans-serif, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21">An ultrawide HDMI display for machines with no display.</text>
+    <text x="2" y="196" fill="#C9D3DC" font-family="ui-sans-serif, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21">A virtual HDMI display for machines with no display.</text>
     <g transform="translate(0 232)">
-      <rect width="470" height="38" rx="19" fill="#FFFFFF" fill-opacity=".06" stroke="#FFFFFF" stroke-opacity=".14"/>
+      <rect width="390" height="38" rx="19" fill="#FFFFFF" fill-opacity=".06" stroke="#FFFFFF" stroke-opacity=".14"/>
       <circle cx="24" cy="19" r="5" fill="#54C8E8"/>
-      <text x="42" y="24.5" fill="#DCE8F7" font-family="ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="15" letter-spacing=".3">3440×1440 · 2560×1080 · EDID in the kernel</text>
+      <text x="42" y="24.5" fill="#DCE8F7" font-family="ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="15" letter-spacing=".3">Any resolution · EDID in the kernel</text>
     </g>
   </g>
 </svg>

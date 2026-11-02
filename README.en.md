@@ -2,7 +2,7 @@
 
 <sub><a href="README.md">🇧🇷 Português</a> · <b>🇺🇸 English</b></sub>
 
-<img src="assets/readme-banner.en.svg" alt="Virtual Monitor — an ultrawide HDMI display for machines with no display" width="100%">
+<img src="assets/readme-banner.en.svg" alt="Virtual Monitor — a virtual HDMI display for machines with no display" width="100%">
 
 <br>
 
@@ -71,7 +71,7 @@
 > [!NOTE]
 > **Why does it exist?** Headless machines (an Orange Pi, a server, a laptop with the lid closed)
 > often hand a small screen — or none — to remote desktop tools such as Jump Desktop, VNC or RDP.
-> With a virtual EDID, the system believes an ultrawide monitor is plugged in.
+> With a virtual EDID, the system believes a monitor is plugged in, with the resolutions you define.
 
 ## 🚀 Quick install
 
@@ -286,11 +286,3 @@ Released under the [MIT license](LICENSE). Use, modify and redistribute freely.
 The main repository lives on [GitLab](https://gitlab.com/danie1net0/virtual-hdmi);
 [GitHub](https://github.com/danie1net0/virtual-hdmi) is an automatic replica.
 Issues and merge requests are welcome on GitLab.
-
----
-
-<div align="center">
-  <img src="assets/virtual-monitor.png" alt="Virtual Monitor icon: an HDMI connector projecting a dashed ultrawide screen" width="96" height="96">
-  <br>
-  <sub>Made with 💚 for people who work on headless machines.</sub>
-</div>
