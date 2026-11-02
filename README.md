@@ -10,7 +10,8 @@
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10 ou superior">
   <img src="https://img.shields.io/badge/GTK-4-4A86CF?style=for-the-badge&logo=gtk&logoColor=white" alt="GTK 4 e libadwaita">
   <img src="https://img.shields.io/badge/Linux-X11_·_Wayland-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux, X11 e Wayland">
-  <img src="https://img.shields.io/badge/cobertura-100%25-54E1C1?style=for-the-badge" alt="Cobertura de testes de 100%">
+  <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-status/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=CI" alt="Estado do pipeline"></a>
+  <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-coverage/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=cobertura" alt="Cobertura de testes medida no CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licença-MIT-F2C94C?style=for-the-badge" alt="Licença MIT"></a>
 </p>
 
@@ -280,6 +281,9 @@ Os testes de Python usam um GTK falso (`tests/fake_gi.py`), e os de shell trocam
 `systemctl`, `loginctl` e outros por stubs, gravando cada chamada. A cobertura exige
 **100%**; a parte shell precisa de bash 4.1+ e de um usuário comum — no macOS, use o
 container descrito no cabeçalho de [`tests/coverage.sh`](tests/coverage.sh).
+
+O [CI do GitLab](.gitlab-ci.yml) roda os testes no Python 3.10 e no 3.13 e mede a cobertura
+a cada push e merge request.
 
 ## 📄 Licença
 
