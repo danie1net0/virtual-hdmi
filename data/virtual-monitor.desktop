@@ -8,6 +8,7 @@ Exec=python3 virtual-monitor.py
 Icon=virtual-monitor
 Terminal=false
 StartupNotify=true
+StartupWMClass=virtual-monitor
 Categories=System;Settings;HardwareSettings;
 Keywords=HDMI;EDID;monitor;resolution;display;headless;
 Keywords[pt_BR]=HDMI;EDID;monitor;resolução;tela;headless;

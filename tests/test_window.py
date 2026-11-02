@@ -301,6 +301,8 @@ class AppTest(WindowTestCase):
         app = fake_gi.Application.created[-1]
         self.assertIsInstance(app, window_module.App)
         self.assertEqual(app.run_args, [])
+        self.assertEqual(fake_gi.GLib.prgnames, ["virtual-monitor"])
+        self.assertEqual(fake_gi.Gtk.Window.default_icons, ["virtual-monitor"])
         self.assertIsInstance(app.props.active_window, window_module.Window)
 
 

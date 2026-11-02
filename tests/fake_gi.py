@@ -197,6 +197,7 @@ Gtk = namespace(
     Button=type("Button", (Widget,), {}),
     Label=type("Label", (Widget,), {}),
     Image=Image,
+    Window=type("Window", (), {"default_icons": [], "set_default_icon_name": staticmethod(lambda name: Gtk.Window.default_icons.append(name))}),
     Align=types.SimpleNamespace(CENTER="center"),
 )
 
@@ -233,6 +234,8 @@ GLib = namespace(
     Variant=Variant,
     SOURCE_REMOVE=False,
     timeouts=[],
+    prgnames=[],
+    set_prgname=lambda name: GLib.prgnames.append(name),
     timeout_add=lambda ms, callback: GLib.timeouts.append((ms, callback)),
 )
 
@@ -255,3 +258,5 @@ def reset():
     DBusProxy.calls.clear()
     DBusProxy.next = None
     GLib.timeouts.clear()
+    GLib.prgnames.clear()
+    Gtk.Window.default_icons.clear()

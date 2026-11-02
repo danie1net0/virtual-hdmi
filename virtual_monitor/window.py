@@ -19,6 +19,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 from virtual_monitor import choice, displays, edid  # noqa: E402
 
 APP_ID = "br.app.VirtualMonitor"
+ICON_NAME = "virtual-monitor"
 INSTALL_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "install-edid.sh"
 EDID_HELP = (
     "Modes the virtual monitor advertises, in the format WIDTHxHEIGHT@MHz. "
@@ -172,4 +173,7 @@ class App(Adw.Application):
 
 
 def run():
+    # The panel matches the window to the launcher by its class and icon name.
+    GLib.set_prgname(ICON_NAME)
+    Gtk.Window.set_default_icon_name(ICON_NAME)
     return App().run([])
