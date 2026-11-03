@@ -1,0 +1,105 @@
+<div align="center">
+
+<sub><a href="README.md">🇺🇸 English</a> · <b>🇧🇷 Português</b></sub>
+
+<img src="assets/readme-banner.pt-BR.svg" alt="Monitor virtual — um monitor HDMI virtual para máquinas sem monitor" width="100%">
+
+<p>
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10 ou mais novo">
+  <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-status/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=CI" alt="Estado do pipeline"></a>
+  <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-coverage/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=cobertura" alt="Cobertura de testes medida no CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licença-MIT-F2C94C?style=for-the-badge" alt="Licença MIT"></a>
+</p>
+
+**Escolha qualquer resolução numa máquina sem monitor ligado.**
+
+<img src="assets/readme-preview.png" alt="A janela do app: status, a lista de resoluções com 1920×1080 selecionada, a chave Lembrar escolha e a seção EDID" width="380">
+
+</div>
+
+## Por quê
+
+Máquinas sem monitor (um Orange Pi, um servidor, um notebook de tampa fechada) entregam às
+ferramentas de área de trabalho remota, como VNC, RDP ou Jump Desktop, uma tela pequena, ou
+nenhuma. O Monitor virtual instala um EDID no kernel, e a saída HDMI passa a agir como um
+monitor de verdade, com as resoluções que você escolher. Um app pequeno troca entre elas e
+lembra a sua escolha.
+
+## Instalar
+
+```sh
+sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1   # Debian, Ubuntu, Armbian
+bash install.sh                                          # sem sudo
+```
+
+Isso coloca o **Virtual monitor** no menu de apps. Rode `bash install.sh --help` para ver as
+opções (`--uninstall`, `--dev`, `--dest-dir`).
+
+## Usar
+
+Abra o **Virtual monitor** pelo menu, ou use o terminal:
+
+```sh
+python3 virtual-monitor.py --list                    # saídas e modos
+python3 virtual-monitor.py --apply 2560x1080@59.98   # troca e lembra
+python3 virtual-monitor.py --apply 1920x1080@60.00 --temp   # só troca
+```
+
+Funciona no GNOME, KDE Plasma, wlroots (sway, Hyprland) e X11 (XFCE, MATE, i3).
+
+## Instalar o EDID
+
+Uma vez por máquina. O app tem um botão **Install**, ou:
+
+```sh
+sudo bash scripts/install-edid.sh edid/ultrawide-rockchip.bin   # Orange Pi (RK3566)
+sudo bash scripts/install-edid.sh                               # notebook Intel
+```
+
+O script edita o `armbianEnv.txt` ou o GRUB e guarda uma cópia `*.before-edid`. Reinicie depois.
+
+<details>
+<summary><b>Gerar o seu próprio EDID</b></summary>
+
+<br>
+
+```sh
+python3 -m virtual_monitor.edid saida.bin 3440x1440@312 2560x1080@216:60 --vic 16
+```
+
+Cada modo é `LARGURAxALTURA@CLOCK_MHZ[:HZ_ALVO]`; `--vic` acrescenta modos CEA padrão.
+
+No RK3566, use só clocks que o PLL dele gera exatamente (`312`, `297`, `241.5`, `216`, `200`,
+`148.5`, `74.25` MHz). Os outros falham com `NOCLOCK`.
+
+</details>
+
+<details>
+<summary><b>Sessão mais leve para servidor sem monitor</b></summary>
+
+<br>
+
+```sh
+sudo bash scripts/install-xfce.sh [usuário]   # XFCE + LightDM com login automático
+sudo bash scripts/install-session.sh          # impede o GDM de tomar o seat de volta
+```
+
+O GNOME continua instalado. Para voltar: `sudo systemctl enable gdm3.service && sudo reboot`.
+
+</details>
+
+## Desenvolver
+
+```sh
+bash install.sh --dev     # liga o app a este checkout
+bash tests/run.sh         # todos os testes
+bash tests/coverage.sh    # exige 100% (no macOS, veja o cabeçalho do script)
+```
+
+Só a biblioteca padrão. O CI roda os testes no Python 3.10 e 3.13 e no bash 3.2 do macOS.
+Veja o [AGENTS.md](AGENTS.md) para a organização do código e as regras.
+
+## Licença
+
+[MIT](LICENSE). Repositório principal no [GitLab](https://gitlab.com/danie1net0/virtual-hdmi);
+o [GitHub](https://github.com/danie1net0/virtual-hdmi) é um espelho.

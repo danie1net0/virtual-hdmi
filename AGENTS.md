@@ -20,7 +20,8 @@ app switches the resolution and generates/installs EDIDs.
 - Shell scripts must run on macOS bash 3.2 and Linux bash 5: no `sed -i`, `install -D` or
   associative arrays.
 - New or changed code ships with tests and 100% coverage.
-- `README.md` (Portuguese, default) and `README.en.md` (English) say the same thing; change both together.
+- `README.md` (English, default) and `README.pt-BR.md` (Portuguese) say the same thing; change both together.
+  Keep them short: details live in `--help`, the script headers and this file.
 
 ## Tests
 
