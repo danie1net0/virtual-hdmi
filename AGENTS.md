@@ -12,6 +12,8 @@ app switches the resolution and generates/installs EDIDs.
   `choice.py` (remembered resolution and autostart), `cli.py`, `window.py` (GTK).
 - `scripts/`: root-only system scripts. All accept `ROOT=` for tests.
 - `edid/`: ready EDIDs. `ultrawide-rockchip.bin` only uses clocks the RK3566 PLL can generate.
+- `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
+  1280×640 PNG uploaded in Settings) and the repository avatar used on GitLab and GitHub.
 - `install.sh`: per-user install of app, icon and launcher (`--dev`, `--dest-dir`, `--uninstall`).
 
 ## Rules
