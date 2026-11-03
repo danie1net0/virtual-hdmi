@@ -1,8 +1,8 @@
 <div align="center">
 
-<sub><b>🇺🇸 English</b> · <a href="README.pt-BR.md">🇧🇷 Português</a></sub>
-
 <img src="assets/readme-banner.svg" alt="Virtual Monitor — a virtual HDMI display for machines with no display" width="100%">
+
+<br>
 
 <p>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10 or newer">
@@ -11,7 +11,9 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-F2C94C?style=for-the-badge" alt="MIT license"></a>
 </p>
 
-**Pick any resolution on a machine with no monitor plugged in.**
+<sub><b>🇺🇸 English</b> · <a href="README.pt-BR.md">🇧🇷 Português</a></sub>
+
+<br>
 
 <img src="assets/readme-preview.png" alt="The app window: status, the resolution list with 1920×1080 selected, the Remember choice switch and the EDID section" width="380">
 
