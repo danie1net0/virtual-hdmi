@@ -5,7 +5,7 @@
 <br>
 
 <p>
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10 ou mais novo">
+  <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.9 ou mais novo">
   <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-status/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=CI" alt="Estado do pipeline"></a>
   <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-coverage/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=cobertura" alt="Cobertura de testes medida no CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licença-MIT-F2C94C?style=for-the-badge" alt="Licença MIT"></a>
@@ -98,7 +98,7 @@ bash tests/run.sh         # todos os testes
 bash tests/coverage.sh    # exige 100% (no macOS, veja o cabeçalho do script)
 ```
 
-Só a biblioteca padrão. O CI roda os testes no Python 3.10 e 3.13 e no bash 3.2 do macOS.
+Só a biblioteca padrão. O CI roda os testes no Python 3.9 e 3.13 e no bash 3.2 do macOS.
 Veja o [AGENTS.md](AGENTS.md) para a organização do código e as regras.
 
 ## Licença

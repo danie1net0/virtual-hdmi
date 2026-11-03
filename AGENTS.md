@@ -27,5 +27,5 @@ app switches the resolution and generates/installs EDIDs.
 
 `bash tests/run.sh` runs everything. `bash tests/coverage.sh` measures coverage; the shell part
 needs bash 4.1+ and a non-root user (on macOS use the container in the script header).
-`.gitlab-ci.yml` runs the tests on Python 3.10 and 3.13, and coverage on 3.13, for every push and MR.
+`.gitlab-ci.yml` runs the tests on Python 3.9 and 3.13, and coverage on 3.13, for every push and MR.
 The `macos` job runs them with the system bash 3.2 on the aurisbook Mac runner (tag `aurisbook-mac`).

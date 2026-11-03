@@ -5,7 +5,7 @@
 <br>
 
 <p>
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10 or newer">
+  <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.9 or newer">
   <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-status/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=CI" alt="Pipeline status"></a>
   <a href="https://gitlab.com/danie1net0/virtual-hdmi/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-coverage/danie1net0%2Fvirtual-hdmi?branch=master&style=for-the-badge&label=coverage" alt="Test coverage measured in CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-F2C94C?style=for-the-badge" alt="MIT license"></a>
@@ -97,7 +97,7 @@ bash tests/run.sh         # all tests
 bash tests/coverage.sh    # 100% required (see the script header on macOS)
 ```
 
-Standard library only. CI runs the tests on Python 3.10 and 3.13 and on macOS bash 3.2.
+Standard library only. CI runs the tests on Python 3.9 and 3.13 and on macOS bash 3.2.
 See [AGENTS.md](AGENTS.md) for the code layout and rules.
 
 ## License

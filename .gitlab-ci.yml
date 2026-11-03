@@ -16,7 +16,7 @@ test:
   image: python:${PYTHON}-slim
   parallel:
     matrix:
-      - PYTHON: ["3.10", "3.13"]
+      - PYTHON: ["3.9", "3.13"]
   script:
     - bash tests/run.sh
 
