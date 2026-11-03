@@ -1,7 +1,7 @@
 # Virtual monitor
 
 Virtual HDMI monitor for a headless machine (Orange Pi 3B on Armbian, GRUB laptops): an EDID
-installed in the kernel makes the video output offer ultrawide resolutions, and a GTK4/libadwaita
+installed in the kernel makes the video output offer the resolutions it defines, and a GTK4/libadwaita
 app switches the resolution and generates/installs EDIDs.
 
 ## Layout
