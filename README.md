@@ -283,7 +283,7 @@ Os testes de Python usam um GTK falso (`tests/fake_gi.py`), e os de shell trocam
 container descrito no cabeçalho de [`tests/coverage.sh`](tests/coverage.sh).
 
 O [CI do GitLab](.gitlab-ci.yml) roda os testes no Python 3.10 e no 3.13 e mede a cobertura
-a cada push e merge request.
+a cada push e merge request. Um runner macOS também roda os testes com o bash 3.2 do sistema.
 
 ## 📄 Licença
 

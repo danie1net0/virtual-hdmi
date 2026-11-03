@@ -20,6 +20,18 @@ test:
   script:
     - bash tests/run.sh
 
+# The macOS bash 3.2 and BSD tools, on the aurisbook Mac runner (shell executor).
+macos:
+  stage: test
+  tags:
+    - aurisbook-mac
+  script:
+    # tests/run.sh calls bash from PATH; keep the system 3.2 ahead of Homebrew's.
+    - export PATH="/bin:/usr/bin:$PATH"
+    - bash --version | head -n 1
+    - python3 --version
+    - bash tests/run.sh
+
 coverage:
   stage: test
   image: python:3.13-slim

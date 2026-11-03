@@ -281,7 +281,7 @@ The Python tests use a fake GTK (`tests/fake_gi.py`), and the shell tests swap `
 described in the header of [`tests/coverage.sh`](tests/coverage.sh).
 
 [GitLab CI](.gitlab-ci.yml) runs the tests on Python 3.10 and 3.13 and measures coverage on
-every push and merge request.
+every push and merge request. A macOS runner also runs them with the system bash 3.2.
 
 ## 📄 License
 
