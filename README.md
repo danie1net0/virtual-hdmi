@@ -30,11 +30,12 @@ small app then switches between them and remembers your choice.
 
 ```sh
 sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1   # Debian, Ubuntu, Armbian
-bash install.sh                                          # no sudo
+curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 ```
 
-This adds **Virtual monitor** to the app menu. Run `bash install.sh --help` for the options
-(`--uninstall`, `--dev`, `--dest-dir`).
+This adds **Virtual monitor** to the app menu, without sudo. Run the same line to update; add
+`-s -- --uninstall` after `bash` to remove it. From a clone, `bash install.sh` does the same
+(`--help` lists the options).
 
 ## Use
 
@@ -50,7 +51,7 @@ Works on GNOME, KDE Plasma, wlroots (sway, Hyprland) and X11 (XFCE, MATE, i3).
 
 ## Install the EDID
 
-Once per machine. The app has an **Install** button, or:
+Once per machine. The app has an **Install** button, or, from a clone:
 
 ```sh
 sudo bash scripts/install-edid.sh edid/ultrawide-rockchip.bin   # Orange Pi (RK3566)

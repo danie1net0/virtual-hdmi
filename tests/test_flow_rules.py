@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PYTHON = sorted([ROOT / "virtual-monitor.py", *ROOT.glob("virtual_monitor/*.py"), *ROOT.glob("tests/**/*.py")])
-SHELL = sorted([ROOT / "install.sh", *ROOT.glob("scripts/*.sh"), *ROOT.glob("tests/**/*.sh")])
+SHELL = sorted([ROOT / "get.sh", ROOT / "install.sh", *ROOT.glob("scripts/*.sh"), *ROOT.glob("tests/**/*.sh")])
 SHELL_ELSE = re.compile(r"(^|[;\s])(else|elif)\b")
 
 

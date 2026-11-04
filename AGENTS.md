@@ -15,6 +15,8 @@ app switches the resolution and generates/installs EDIDs.
 - `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
   1280×640 PNG uploaded in Settings) and the GitLab project avatar.
 - `install.sh`: per-user install of app, icon and launcher (`--dev`, `--dest-dir`, `--uninstall`).
+- `get.sh`: `curl | bash` installer. Downloads the GitLab archive of `VERSION` (default `master`)
+  and runs `install.sh` with the options after `--`.
 
 ## Rules
 

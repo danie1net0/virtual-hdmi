@@ -31,11 +31,12 @@ lembra a sua escolha.
 
 ```sh
 sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1   # Debian, Ubuntu, Armbian
-bash install.sh                                          # sem sudo
+curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 ```
 
-Isso coloca o **Virtual monitor** no menu de apps. Rode `bash install.sh --help` para ver as
-opções (`--uninstall`, `--dev`, `--dest-dir`).
+Isso coloca o **Virtual monitor** no menu de apps, sem sudo. Rode a mesma linha para atualizar;
+acrescente `-s -- --uninstall` depois de `bash` para remover. Num clone, `bash install.sh` faz o
+mesmo (`--help` lista as opções).
 
 ## Usar
 
@@ -51,7 +52,7 @@ Funciona no GNOME, KDE Plasma, wlroots (sway, Hyprland) e X11 (XFCE, MATE, i3).
 
 ## Instalar o EDID
 
-Uma vez por máquina. O app tem um botão **Install**, ou:
+Uma vez por máquina. O app tem um botão **Install**, ou, num clone:
 
 ```sh
 sudo bash scripts/install-edid.sh edid/ultrawide-rockchip.bin   # Orange Pi (RK3566)

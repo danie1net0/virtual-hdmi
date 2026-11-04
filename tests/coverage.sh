@@ -38,7 +38,7 @@ shell_coverage() {
     for test in tests/shell/test_*.sh; do
         bash "$test" > /dev/null || { echo "Failed: $test"; failures=$((failures + 1)); }
     done
-    python3 tests/shell/shell_coverage.py "$COVERAGE" install.sh scripts/*.sh || failures=$((failures + 1))
+    python3 tests/shell/shell_coverage.py "$COVERAGE" get.sh install.sh scripts/*.sh || failures=$((failures + 1))
 }
 
 echo "== Python"
