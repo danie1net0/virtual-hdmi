@@ -46,7 +46,9 @@ class CliTest(unittest.TestCase):
         )
 
     def run_cli(self, argv, backend="default"):
-        backend = self.backend if backend == "default" else backend
+        if backend == "default":
+            backend = self.backend
+
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(displays, "detect", return_value=backend):
             code = cli.main(argv, out, err)

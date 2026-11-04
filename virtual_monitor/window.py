@@ -38,16 +38,26 @@ def run_async(argv, done):
         except GLib.Error as error:
             done(False, error.message)
             return
+
         done(proc.get_exit_status() == 0, stdout or "")
 
     process.communicate_utf8_async(None, None, finished)
+
+
+def edid_text(wanted):
+    if not wanted:
+        return "not configured at this boot"
+
+    return f"active at boot ({wanted})"
 
 
 class Window(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Virtual monitor", default_width=520, default_height=760)
         self.backend = displays.detect()
-        self.connector = displays.pick_connector(self.backend) if self.backend else None
+        self.connector = None
+        if self.backend:
+            self.connector = displays.pick_connector(self.backend)
         self.mode_rows = []
 
         self.toasts = Adw.ToastOverlay()
@@ -84,6 +94,7 @@ class Window(Adw.ApplicationWindow):
         self.modes_entry = Adw.EntryRow(title="Modes")
         self.modes_entry.set_text(" ".join(edid.DEFAULT_MODES))
         group.add(self.modes_entry)
+
         install = Adw.ActionRow(title="Generate and install EDID", subtitle="Asks for the administrator password.")
         self.install_button = Gtk.Button(label="Install", valign=Gtk.Align.CENTER)
         self.install_button.add_css_class("suggested-action")
@@ -96,9 +107,8 @@ class Window(Adw.ApplicationWindow):
         self.toasts.add_toast(Adw.Toast(title=text))
 
     def refresh(self):
-        wanted = displays.cmdline_connector()
-        self.session_row.set_subtitle(self.backend.name if self.backend else "unsupported video environment")
-        self.edid_row.set_subtitle(f"active at boot ({wanted})" if wanted else "not configured at this boot")
+        self.session_row.set_subtitle(self.session_text())
+        self.edid_row.set_subtitle(edid_text(displays.cmdline_connector()))
         self.output_row.set_subtitle(self.connector or "no monitor found")
 
         for row in self.mode_rows:
@@ -106,20 +116,30 @@ class Window(Adw.ApplicationWindow):
         self.mode_rows = []
         if not self.connector:
             return
+
         for mode in self.backend.modes(self.connector):
             row = self.mode_row(mode)
             self.modes_group.add(row)
             self.mode_rows.append(row)
 
+    def session_text(self):
+        if not self.backend:
+            return "unsupported video environment"
+
+        return self.backend.name
+
     def mode_row(self, mode):
         row = Adw.ActionRow(title=f"{mode.width}×{mode.height}", subtitle=f"{mode.refresh:.2f} Hz")
         row.set_activatable(True)
+
         if mode.preferred:
             tag = Gtk.Label(label="default of the EDID", valign=Gtk.Align.CENTER)
             tag.add_css_class("dim-label")
             row.add_suffix(tag)
+
         if mode.current:
             row.add_suffix(Gtk.Image.new_from_icon_name("object-select-symbolic"))
+
         row.connect("activated", self.on_mode, mode)
         return row
 
@@ -129,6 +149,7 @@ class Window(Adw.ApplicationWindow):
         except Exception as error:  # xrandr, kscreen-doctor or DBus refused the mode
             self.toast(f"Failed: {error}")
             return
+
         self.toast(f"{mode.width}×{mode.height} applied")
         GLib.timeout_add(600, self.refresh_once)
 
@@ -142,8 +163,10 @@ class Window(Adw.ApplicationWindow):
         except edid.EdidError as error:
             self.toast(f"Invalid EDID: {error}")
             return
+
         out = Path(tempfile.mkdtemp(prefix="edid-")) / "ultrawide-app.bin"
         out.write_bytes(data)
+
         self.install_button.set_sensitive(False)
         run_async(["pkexec", "bash", str(INSTALL_SCRIPT), str(out)], self.after_install)
 
@@ -152,6 +175,7 @@ class Window(Adw.ApplicationWindow):
         if not ok:
             self.toast("Install cancelled or failed")
             return
+
         dialog = Adw.AlertDialog(heading="EDID installed", body="Restart for it to take effect. Restart now?")
         dialog.add_response("later", "Later")
         dialog.add_response("reboot", "Restart")
@@ -160,8 +184,10 @@ class Window(Adw.ApplicationWindow):
         dialog.present(self)
 
     def on_reboot_response(self, _dialog, response):
-        if response == "reboot":
-            Gio.Subprocess.new(["systemctl", "reboot"], Gio.SubprocessFlags.NONE)
+        if response != "reboot":
+            return
+
+        Gio.Subprocess.new(["systemctl", "reboot"], Gio.SubprocessFlags.NONE)
 
 
 class App(Adw.Application):

@@ -15,26 +15,36 @@ failures=0
 DATA="$(mktemp -d)"
 trap 'rm -rf "$DATA"' EXIT
 
-echo "== Python"
-if python3 -c 'import coverage' 2> /dev/null; then
+python_coverage() {
+    if ! python3 -c 'import coverage' 2> /dev/null; then
+        echo "coverage.py not installed (pip install coverage); skipping."
+        failures=$((failures + 1))
+        return
+    fi
+
     python3 -m coverage run --data-file="$DATA/python" -m unittest discover -s tests -t . 2> /dev/null || failures=$((failures + 1))
     python3 -m coverage report --data-file="$DATA/python" || failures=$((failures + 1))
-else
-    echo "coverage.py not installed (pip install coverage); skipping."
-    failures=$((failures + 1))
-fi
+}
 
-echo "== Shell"
-if [[ ${BASH_VERSINFO[0]} -lt 4 || "$(id -u)" -eq 0 ]]; then
-    echo "Needs bash 4.1+ and a regular user (bash ignores PS4 from the environment as root); see the header."
-    failures=$((failures + 1))
-else
+shell_coverage() {
+    if [[ ${BASH_VERSINFO[0]} -lt 4 || "$(id -u)" -eq 0 ]]; then
+        echo "Needs bash 4.1+ and a regular user (bash ignores PS4 from the environment as root); see the header."
+        failures=$((failures + 1))
+        return
+    fi
+
     export COVERAGE="$DATA/shell"
     : > "$COVERAGE"
     for test in tests/shell/test_*.sh; do
         bash "$test" > /dev/null || { echo "Failed: $test"; failures=$((failures + 1)); }
     done
     python3 tests/shell/shell_coverage.py "$COVERAGE" install.sh scripts/*.sh || failures=$((failures + 1))
-fi
+}
+
+echo "== Python"
+python_coverage
+
+echo "== Shell"
+shell_coverage
 
 exit $((failures > 0))

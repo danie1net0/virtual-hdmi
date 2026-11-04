@@ -64,16 +64,20 @@ def build_timing(width: int, height: int, clock_mhz: float, target_hz: float = 6
     """Picks htotal/vtotal to get close to target_hz with the fixed clock."""
     if not (0 < width <= MAX_PIXELS and 0 < height <= MAX_PIXELS):
         raise EdidError(f"Resolution beyond the {MAX_PIXELS} pixel limit: {width}x{height}")
+
     if not (_positive(clock_mhz) and _positive(target_hz)):
         raise EdidError(f"Clock and rate must be positive: {clock_mhz} MHz, {target_hz} Hz")
+
     clock_khz = round(clock_mhz * 1000)
     if clock_khz > MAX_CLOCK_KHZ:
         raise EdidError(f"Clock above {MAX_CLOCK_KHZ / 1000:g} MHz: {clock_mhz:g}")
+
     clock_hz = clock_mhz * 1_000_000
     htotal = width + H_BLANK_MIN
     vtotal = max(height + V_BLANK_MIN, round(clock_hz / (htotal * target_hz)))
     if vtotal - height > MAX_PIXELS:
         raise EdidError(f"Clock too high for {width}x{height} at {target_hz:g} Hz")
+
     # Fine line adjustment; vtotal already absorbed the clock, so hblank stays at the minimum (+1 from rounding)
     htotal = max(width + H_BLANK_MIN, round(clock_hz / (vtotal * target_hz)))
     return Timing(width, height, clock_khz, htotal, vtotal)
@@ -89,6 +93,7 @@ def parse_mode(text: str) -> Timing:
         target_hz = float(hz or 60)
     except ValueError:
         raise EdidError(f"Invalid mode: {text} (use WIDTHxHEIGHT@MHZ[:HZ])") from None
+
     return build_timing(width, height, clock_mhz, target_hz)
 
 
@@ -116,8 +121,10 @@ def name_descriptor(name: str) -> bytes:
         text = name.encode("ascii")[:13]
     except UnicodeEncodeError:
         raise EdidError(f"The monitor name must be ASCII: {name}") from None
+
     if len(text) < 13:
         text += b"\n" + b" " * (12 - len(text))
+
     return bytes([0, 0, 0, 0xFC, 0]) + text
 
 
@@ -138,8 +145,10 @@ def base_block(descriptors: list[bytes]) -> bytearray:
     block[24] = 0x06  # sRGB, preferred mode in the first descriptor
     block[25:35] = bytes.fromhex("ee91a3544c99260f5054")  # sRGB colors
     block[38:54] = b"\x01" * 16  # no standard timings
+
     for i, descriptor in enumerate(descriptors):
         block[54 + 18 * i : 72 + 18 * i] = descriptor
+
     block[126] = 1  # one extension
     checksum(block)
     return block
@@ -148,21 +157,26 @@ def base_block(descriptors: list[bytes]) -> bytearray:
 def cta_block(vics: list[int], dtds: list[bytes]) -> bytearray:
     if len(vics) > 31 or not all(1 <= vic <= 127 for vic in vics):
         raise EdidError("Provide up to 31 VICs, each from 1 to 127")
+
     data = bytearray()
     if vics:
         data += bytes([0x40 | len(vics)]) + bytes(vics)
+
     # HDMI Vendor Specific Data Block: address 1.0.0.0, max TMDS 340 MHz
     data += bytes([0x67, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x00, 340 // 5])
+
     block = bytearray(128)
     block[0], block[1] = 0x02, 0x03
     block[2] = 4 + len(data)
     block[4 : 4 + len(data)] = data
+
     offset = 4 + len(data)
     for dtd in dtds:
         if offset + 18 > 127:
             raise EdidError("Too many modes to fit in the EDID")
         block[offset : offset + 18] = dtd
         offset += 18
+
     checksum(block)
     return block
 
@@ -171,6 +185,7 @@ def build_edid(timings: list[Timing], vics: list[int], name: str = DEFAULT_NAME)
     """The first three modes go in the base block (the first is the preferred one); the rest go in the extension."""
     if not timings:
         raise EdidError("Provide at least one mode")
+
     dtds = [detailed_timing(t) for t in timings]
     base = dtds[:3] + [name_descriptor(name)]
     return bytes(base_block(base) + cta_block(list(vics), dtds[3:]))
@@ -197,11 +212,14 @@ def main(argv=None) -> int:
     except EdidError as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
+
     args.output.write_bytes(data)
     for timing in timings:
         print(timing.label())
+
     if args.vic:
         print("VICs:", " ".join(str(v) for v in args.vic))
+
     return 0
 
 

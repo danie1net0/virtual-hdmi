@@ -56,15 +56,26 @@ done
 # Absolute XDG path, or the default
 xdg() {
     local value="$1" default="$2"
-    if [[ "$value" == /* ]]; then echo "$value"; else echo "$default"; fi
+    if [[ "$value" != /* ]]; then
+        echo "$default"
+        return
+    fi
+
+    echo "$value"
 }
 
-if [[ -n "$DEST" ]]; then
-    mkdir -p "$DEST"
-    DATA="$(cd "$DEST" && pwd)"
-else
-    DATA="$(xdg "${XDG_DATA_HOME:-}" "$HOME/.local/share")"
-fi
+# The data folder: --dest-dir (created, made absolute) or the user's XDG one
+data_dir() {
+    if [[ -n "$DEST" ]]; then
+        mkdir -p "$DEST"
+        (cd "$DEST" && pwd)
+        return
+    fi
+
+    xdg "${XDG_DATA_HOME:-}" "$HOME/.local/share"
+}
+
+DATA="$(data_dir)"
 CONFIG="$(xdg "${XDG_CONFIG_HOME:-}" "$HOME/.config")"
 
 APP="$DATA/$NAME"
@@ -101,17 +112,72 @@ remove_legacy() {
     rm -f "$LEGACY_ICON" "$LEGACY_LAUNCHER" "$LEGACY_AUTOSTART"
 }
 
-if [[ $UNINSTALL -eq 1 ]]; then
+remove_autostart() {
+    is_user_install || return 0
+    rm -f "$AUTOSTART"
+}
+
+uninstall() {
     rm -rf "$APP"
     rm -f "$ICON" "$LAUNCHER"
-    if is_user_install; then
-        rm -f "$AUTOSTART"
-    fi
+    remove_autostart
     remove_legacy
     update_caches
+
     echo "Removed: $APP, $ICON, $LAUNCHER"
     echo "The remembered resolution stays in $CONFIG/$NAME; delete it if you no longer want it."
     exit 0
+}
+
+check_dependencies() {
+    [[ $SKIP_CHECK -eq 0 ]] || return 0
+    command -v python3 >/dev/null 2>&1 || { echo "Missing python3." >&2; exit 1; }
+
+    if ! python3 -c 'import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Adw", "1")' 2>/dev/null; then
+        echo "GTK 4 or libadwaita for Python is missing. On Debian/Ubuntu/Armbian:" >&2
+        echo "  sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1" >&2
+        exit 1
+    fi
+
+    command -v pkexec >/dev/null 2>&1 || echo "Warning: without pkexec the EDID Install button does not work (package policykit-1 or polkit)."
+}
+
+# Copies one app file into the staging folder; --dev links it to this checkout instead
+stage_file() {
+    local file="$1"
+    mkdir -p "$(dirname "$STAGING/app/$file")"
+    if [[ $DEV -eq 1 ]]; then
+        ln -s "$DIR/$file" "$STAGING/app/$file"
+        return
+    fi
+
+    install -m 644 "$DIR/$file" "$STAGING/app/$file"
+}
+
+# Migrates the old Portuguese-named install: remembered resolution and autostart
+migrate_legacy() {
+    is_user_install || return 0
+    if [[ -f "$LEGACY_MODE" && ! -f "$MODE" ]]; then
+        mkdir -p "$(dirname "$MODE")"
+        cp "$LEGACY_MODE" "$MODE"
+        echo "Migrated: $LEGACY_MODE -> $MODE"
+    fi
+
+    [[ -f "$LEGACY_AUTOSTART" ]] || return 0
+    mkdir -p "$(dirname "$AUTOSTART")"
+    cat > "$AUTOSTART" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Virtual monitor (restore resolution)
+Exec=python3 "$APP/$NAME.py" --restore
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+EOF
+    echo "Autostart migrated: $AUTOSTART"
+}
+
+if [[ $UNINSTALL -eq 1 ]]; then
+    uninstall
 fi
 
 FILES=("$NAME.py" scripts/install-edid.sh)
@@ -127,27 +193,14 @@ done
 case "$APP/" in "$DIR"/*) echo "Destination cannot be inside the project folder." >&2; exit 1 ;; esac
 case "$DIR/" in "$APP"/*) echo "Destination cannot contain the project folder." >&2; exit 1 ;; esac
 
-if [[ $SKIP_CHECK -eq 0 ]]; then
-    command -v python3 >/dev/null 2>&1 || { echo "Missing python3." >&2; exit 1; }
-    if ! python3 -c 'import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Adw", "1")' 2>/dev/null; then
-        echo "GTK 4 or libadwaita for Python is missing. On Debian/Ubuntu/Armbian:" >&2
-        echo "  sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1" >&2
-        exit 1
-    fi
-    command -v pkexec >/dev/null 2>&1 || echo "Warning: without pkexec the EDID Install button does not work (package policykit-1 or polkit)."
-fi
+check_dependencies
 
 mkdir -p "$DATA"
 STAGING="$(mktemp -d "$DATA/.${NAME}-install-XXXXXX")"
 trap 'rm -rf "$STAGING"' EXIT
 
 for file in "${FILES[@]}"; do
-    mkdir -p "$(dirname "$STAGING/app/$file")"
-    if [[ $DEV -eq 1 ]]; then
-        ln -s "$DIR/$file" "$STAGING/app/$file"
-    else
-        install -m 644 "$DIR/$file" "$STAGING/app/$file"
-    fi
+    stage_file "$file"
 done
 [[ $DEV -eq 1 ]] || chmod 755 "$STAGING/app/$NAME.py" "$STAGING/app/scripts/install-edid.sh"
 
@@ -163,26 +216,7 @@ mv "$STAGING/app" "$APP"
 mv -f "$STAGING/icon.png" "$ICON"
 mv -f "$STAGING/launcher.desktop" "$LAUNCHER"
 
-# Migrates the old Portuguese-named install: remembered resolution and autostart
-if is_user_install; then
-    if [[ -f "$LEGACY_MODE" && ! -f "$MODE" ]]; then
-        mkdir -p "$(dirname "$MODE")"
-        cp "$LEGACY_MODE" "$MODE"
-        echo "Migrated: $LEGACY_MODE -> $MODE"
-    fi
-    if [[ -f "$LEGACY_AUTOSTART" ]]; then
-        mkdir -p "$(dirname "$AUTOSTART")"
-        cat > "$AUTOSTART" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Virtual monitor (restore resolution)
-Exec=python3 "$APP/$NAME.py" --restore
-NoDisplay=true
-X-GNOME-Autostart-enabled=true
-EOF
-        echo "Autostart migrated: $AUTOSTART"
-    fi
-fi
+migrate_legacy
 remove_legacy
 
 update_caches

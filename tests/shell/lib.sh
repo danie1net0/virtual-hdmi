@@ -32,7 +32,7 @@ new_case() {
     mkdir -p "$ROOT" "$STUBS"
     : > "$CALLS"
     # id -u says root (FAKE_UID); id <user> exists (FAKE_USER_EXISTS)
-    stub id 'if [[ "$1" == -u ]]; then echo "${FAKE_UID:-0}"; else [[ "${FAKE_USER_EXISTS:-1}" == 1 ]]; fi'
+    stub id 'if [[ "$1" == -u ]]; then echo "${FAKE_UID:-0}"; exit 0; fi; [[ "${FAKE_USER_EXISTS:-1}" == 1 ]]'
 }
 
 # stub name [body]: creates the command name, which records "name args" in $CALLS and runs the body
@@ -50,12 +50,14 @@ stub() {
 run_script() {
     local script="$1"
     shift
-    if [[ -n "${COVERAGE:-}" ]]; then
-        PS4='+@@${BASH_SOURCE}:${LINENO}@@ ' BASH_XTRACEFD=7 ROOT="$ROOT" PATH="$STUBS:$BIN" \
-            bash -x "$script" "$@" > "$OUT" 2> "$ERRS" 7>> "$COVERAGE"
-    else
+    if [[ -z "${COVERAGE:-}" ]]; then
         ROOT="$ROOT" PATH="$STUBS:$BIN" bash "$script" "$@" > "$OUT" 2> "$ERRS"
+        STATUS=$?
+        return
     fi
+
+    PS4='+@@${BASH_SOURCE}:${LINENO}@@ ' BASH_XTRACEFD=7 ROOT="$ROOT" PATH="$STUBS:$BIN" \
+        bash -x "$script" "$@" > "$OUT" 2> "$ERRS" 7>> "$COVERAGE"
     STATUS=$?
 }
 
@@ -64,26 +66,37 @@ record() {
     TOTAL=$((TOTAL + 1))
     if [[ "$passed" == 1 ]]; then
         echo "ok    $description"
-    else
-        echo "FAIL  $description"
-        FAILURES=$((FAILURES + 1))
-        if [[ -f "${OUT:-}" ]]; then
-            sed 's/^/      output: /' "$OUT"
-            sed 's/^/      errors: /' "$ERRS"
-        fi
+        return
     fi
+
+    echo "FAIL  $description"
+    FAILURES=$((FAILURES + 1))
+    show_output
+}
+
+# Output of the last run_script, shown under a failure
+show_output() {
+    [[ -f "${OUT:-}" ]] || return 0
+    sed 's/^/      output: /' "$OUT"
+    sed 's/^/      errors: /' "$ERRS"
 }
 
 # check description command...: passes if the command exits with 0
 check() {
     local description="$1"
     shift
-    if "$@" > /dev/null 2>&1; then record "$description" 1; else record "$description" 0; fi
+    "$@" > /dev/null 2>&1
+    record "$description" "$(($? == 0))"
 }
 
 status_is() {
     local expected="$1" description="$2"
-    if [[ "$STATUS" == "$expected" ]]; then record "$description" 1; else record "$description (status $STATUS, expected $expected)" 0; fi
+    if [[ "$STATUS" == "$expected" ]]; then
+        record "$description" 1
+        return
+    fi
+
+    record "$description (status $STATUS, expected $expected)" 0
 }
 
 # contains file text description: the file has the text (literal)
@@ -92,7 +105,8 @@ contains() {
 }
 
 not_contains() {
-    if grep -qF -- "$2" "$1" 2> /dev/null; then record "$3" 0; else record "$3" 1; fi
+    grep -qF -- "$2" "$1" 2> /dev/null
+    record "$3" "$(($? != 0))"
 }
 
 # called "command args": the stub was called with exactly these arguments
@@ -101,7 +115,8 @@ called() {
 }
 
 not_called() {
-    if grep -q -- "^$1\( \|$\)" "$CALLS"; then record "not called: $1" 0; else record "not called: $1" 1; fi
+    grep -q -- "^$1\( \|$\)" "$CALLS"
+    record "not called: $1" "$(($? != 0))"
 }
 
 summary() {

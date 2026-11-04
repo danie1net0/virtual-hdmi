@@ -12,7 +12,10 @@ LAUNCHER = Path(__file__).resolve().parent.parent / "virtual-monitor.py"
 
 def config_dir():
     xdg = os.environ.get("XDG_CONFIG_HOME", "")
-    return Path(xdg) if xdg.startswith("/") else Path.home() / ".config"
+    if not xdg.startswith("/"):
+        return Path.home() / ".config"
+
+    return Path(xdg)
 
 
 def choice_file():
@@ -38,6 +41,7 @@ def save(connector, mode_id):
     choice = choice_file()
     choice.parent.mkdir(parents=True, exist_ok=True)
     choice.write_text(json.dumps({"connector": connector, "mode": mode_id}))
+
     autostart = autostart_file()
     autostart.parent.mkdir(parents=True, exist_ok=True)
     autostart.write_text(autostart_entry())
@@ -54,6 +58,7 @@ def load():
 
 def apply_mode(backend, connector, mode_id, persistent):
     backend.apply(connector, mode_id, persistent)
+
     if persistent and not backend.native_persist:
         save(connector, mode_id)
 
@@ -63,5 +68,6 @@ def restore(backend):
     choice = load()
     if choice is None:
         return False
+
     backend.apply(*choice, False)
     return True

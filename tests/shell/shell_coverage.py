@@ -26,15 +26,42 @@ def quote_state(line, state):
     for char in line:
         if escaped:
             escaped = False
-        elif char == "\\" and state != "'":
+            continue
+
+        if char == "\\" and state != "'":
             escaped = True
-        elif state is None and char == "#":
+            continue
+
+        if state is None and char == "#":
             break
-        elif state is None and char in "'\"":
+
+        if state is None and char in "'\"":
             state = char
-        elif char == state:
+            continue
+
+        if char == state:
             state = None
     return state
+
+
+def command_start(line, number):
+    """number if the line starts a command that bash records in the xtrace; None otherwise."""
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#") or number == 1:
+        return None
+
+    if STRUCTURE.match(line) or FUNCTION.match(line) or CASE_PATTERN.match(line):
+        return None
+
+    return number
+
+
+def heredoc_after(heredoc, stripped):
+    """The heredoc still open after this line, or None if the line closes it."""
+    if stripped == heredoc:
+        return None
+
+    return heredoc
 
 
 def executable_lines(path):
@@ -48,21 +75,24 @@ def executable_lines(path):
     for number, line in enumerate(lines, 1):
         stripped = line.strip()
         if heredoc:
-            heredoc = None if stripped == heredoc else heredoc
+            heredoc = heredoc_after(heredoc, stripped)
             continue
-        if quote or continued:
-            if command:
-                result[command].add(number)
-        else:
-            command = None
-            skip = not stripped or stripped.startswith("#") or number == 1
-            if not (skip or STRUCTURE.match(line) or FUNCTION.match(line) or CASE_PATTERN.match(line)):
-                command = number
-                result[number] = {number}
+
+        inside = quote or continued
+        if inside and command:
+            result[command].add(number)
+
+        if not inside:
+            command = command_start(line, number)
+
+        if not inside and command:
+            result[command] = {number}
+
         quote = quote_state(line, quote)
         found = HEREDOC.search(line)
         if found and quote is None and not stripped.startswith("#"):
             heredoc = found.group(1)
+
         continued = quote is None and line.endswith("\\")
     return result
 
@@ -91,7 +121,10 @@ def main(argv):
         for number in missing:
             print(f"   {number}: {text[number - 1].strip()}")
     print(f"TOTAL: {covered}/{total} lines ({100 * covered / max(total, 1):.1f}%)")
-    return 0 if covered == total else 1
+    if covered != total:
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":

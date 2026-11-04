@@ -16,35 +16,52 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
+def flag(on, mark):
+    if not on:
+        return " "
+
+    return mark
+
+
 def print_modes(backend, connector, out):
     print(f"session: {backend.name}", file=out)
     print(f"connector: {connector}  (EDID at boot: {displays.cmdline_connector() or 'no'})", file=out)
+
     for mode in backend.modes(connector):
-        flags = ("*" if mode.current else " ") + ("+" if mode.preferred else " ")
+        flags = flag(mode.current, "*") + flag(mode.preferred, "+")
         print(f"{flags} {mode.id}  {mode.width}x{mode.height}  {mode.refresh:.3f} Hz", file=out)
+
+
+def run_action(args, backend, out, err):
+    if args.restore:
+        choice.restore(backend)
+        return 0
+
+    connector = displays.pick_connector(backend)
+    if connector is None:
+        print("No monitor connected.", file=err)
+        return 1
+
+    if args.apply:
+        choice.apply_mode(backend, connector, args.apply, not args.temp)
+        print(f"applied {args.apply} on {connector}", file=out)
+        return 0
+
+    print_modes(backend, connector, out)
+    return 0
 
 
 def main(argv, out=None, err=None):
     out, err = out or sys.stdout, err or sys.stderr
     args = parse_args(argv)
+
     backend = displays.detect()
     if backend is None:
         print("No supported video environment in this session.", file=err)
         return 1
+
     try:
-        if args.restore:
-            choice.restore(backend)
-            return 0
-        connector = displays.pick_connector(backend)
-        if connector is None:
-            print("No monitor connected.", file=err)
-            return 1
-        if args.apply:
-            choice.apply_mode(backend, connector, args.apply, not args.temp)
-            print(f"applied {args.apply} on {connector}", file=out)
-            return 0
-        print_modes(backend, connector, out)
-        return 0
+        return run_action(args, backend, out, err)
     except Exception as error:  # xrandr, kscreen-doctor or DBus refused the mode
         print(f"Failed: {error}", file=err)
         return 1

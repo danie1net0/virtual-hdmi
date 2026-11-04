@@ -4,11 +4,14 @@ import sys
 
 
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
+    if argv is None:
+        argv = sys.argv[1:]
+
     if argv:
         from virtual_monitor import cli
 
         return cli.main(argv)
+
     from virtual_monitor import window
 
     return window.run()

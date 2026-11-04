@@ -20,9 +20,9 @@ for test in tests/shell/test_*.sh; do
     [[ ${PIPESTATUS[0]} -eq 0 ]] || failures=$((failures + 1))
 done
 
-if [[ $failures -eq 0 ]]; then
-    echo "All ok."
-else
+if [[ $failures -ne 0 ]]; then
     echo "$failures test set(s) failed."
     exit 1
 fi
+
+echo "All ok."

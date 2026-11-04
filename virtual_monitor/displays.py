@@ -36,8 +36,32 @@ def run(argv):
 
 
 def normalize(connector):
-    """HDMI-A-1 (kernel) e HDMI-1 (Mutter, X11) are the same output."""
+    """HDMI-A-1 (kernel) and HDMI-1 (Mutter, X11) are the same output."""
     return re.sub(r"-A-", "-", connector or "")
+
+
+def start_xrandr_output(outputs, header):
+    """Mode list of a connected output, registered in outputs; None for a disconnected one."""
+    if header.group(2) != "connected":
+        return None
+
+    modes = []
+    outputs[header.group(1)] = modes
+    return modes
+
+
+def parse_xrandr_rates(tokens):
+    """[rate, flags] pairs; xrandr may print the flags apart from the rate ("60.00 +")."""
+    rates = []
+    for token in tokens:
+        rate = re.match(r"^(\d+(?:\.\d+)?)([*+]*)$", token)
+        if rate:
+            rates.append([rate.group(1), rate.group(2)])
+            continue
+
+        if rates and re.match(r"^[*+]+$", token):
+            rates[-1][1] += token
+    return rates
 
 
 def parse_xrandr(text):
@@ -46,22 +70,15 @@ def parse_xrandr(text):
     for line in text.splitlines():
         header = re.match(r"^(\S+) (connected|disconnected)", line)
         if header:
-            modes = [] if header.group(2) == "connected" else None
-            if modes is not None:
-                outputs[header.group(1)] = modes
+            modes = start_xrandr_output(outputs, header)
             continue
+
         row = re.match(r"^\s+(\d+)x(\d+)(i?)\s+(.*)$", line)
         if not row or modes is None or row.group(3):
             continue
+
         width, height = int(row.group(1)), int(row.group(2))
-        rates = []
-        for token in row.group(4).split():
-            rate = re.match(r"^(\d+(?:\.\d+)?)([*+]*)$", token)
-            if rate:
-                rates.append([rate.group(1), rate.group(2)])
-            elif rates and re.match(r"^[*+]+$", token):
-                rates[-1][1] += token
-        for rate, flags in rates:
+        for rate, flags in parse_xrandr_rates(row.group(4).split()):
             modes.append(Mode(f"{width}x{height}@{rate}", width, height, float(rate), "*" in flags, "+" in flags))
     return outputs
 
@@ -91,6 +108,7 @@ def parse_kscreen(text):
     for output in json.loads(text).get("outputs", []):
         if not output.get("connected"):
             continue
+
         current = str(output.get("currentModeId"))
         preferred = str((output.get("preferredModes") or [None])[0])
         modes = []
@@ -136,6 +154,7 @@ def mutter_layout(monitors, logical, connector, mode_id):
         members = [(mon[0], mode_of[mon[0]], {}) for mon in mons if mode_of.get(mon[0])]
         if members:
             layout.append((x, y, scale, transform, primary, members))
+
     if not any(connector == member[0] for item in layout for member in item[5]):
         layout.append((0, 0, 1.0, 0, not layout, [(connector, mode_id, {})]))
     return layout
@@ -200,7 +219,10 @@ class KScreenBackend(Backend):
 def mutter_proxy(auto_start):
     from gi.repository import Gio
 
-    flags = Gio.DBusProxyFlags.NONE if auto_start else Gio.DBusProxyFlags.DO_NOT_AUTO_START
+    flags = Gio.DBusProxyFlags.DO_NOT_AUTO_START
+    if auto_start:
+        flags = Gio.DBusProxyFlags.NONE
+
     return Gio.DBusProxy.new_for_bus_sync(Gio.BusType.SESSION, flags, None, *MUTTER, None)
 
 
@@ -233,8 +255,12 @@ class MutterBackend(Backend):
         from gi.repository import Gio, GLib
 
         serial, monitors, logical = self.state()
+
         layout = mutter_layout(monitors, logical, connector, mode_id)
-        method = 2 if persistent else 1  # 1 = temporary, 2 = persistent (monitors.xml)
+        method = 1  # temporary
+        if persistent:
+            method = 2  # persistent (monitors.xml)
+
         args = GLib.Variant("(uua(iiduba(ssa{sv}))a{sv})", (serial, method, layout, {}))
         self.proxy.call_sync("ApplyMonitorsConfig", args, Gio.DBusCallFlags.NONE, -1, None)
 
@@ -256,16 +282,23 @@ def cmdline_connector():
         cmdline = CMDLINE.read_text()
     except OSError:
         return None
+
     found = re.search(r"drm\.edid_firmware=([^:\s]+):", cmdline)
-    return found.group(1) if found else None
+    if not found:
+        return None
+
+    return found.group(1)
 
 
 def pick_connector(backend):
     """The virtual EDID output, if the backend sees it; otherwise the first connected one."""
     connectors = backend.connectors()
     wanted = normalize(cmdline_connector())
-    if wanted:
-        for connector in connectors:
-            if normalize(connector) == wanted:
-                return connector
-    return connectors[0] if connectors else None
+    for connector in connectors:
+        if wanted and normalize(connector) == wanted:
+            return connector
+
+    if not connectors:
+        return None
+
+    return connectors[0]

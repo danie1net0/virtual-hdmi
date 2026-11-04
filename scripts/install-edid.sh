@@ -39,6 +39,84 @@ edit() {
     printf '%s\n' "$new" > "$file"
 }
 
+# Only the running kernel: old kernels whose modules were removed break the generation
+build_boot_image() {
+    if command -v update-initramfs >/dev/null 2>&1; then
+        update-initramfs -u -k "$KVER"
+        return
+    fi
+
+    if command -v dracut >/dev/null 2>&1; then
+        dracut -f --kver "$KVER"
+        return
+    fi
+
+    echo "Neither update-initramfs nor dracut available to build the boot image." >&2
+    exit 1
+}
+
+check_boot_image() {
+    if command -v lsinitrd >/dev/null 2>&1 && lsinitrd --kver "$KVER" 2>/dev/null | grep -q "$EDID_REL"; then
+        echo "    ok (lsinitrd)"
+        return
+    fi
+
+    if command -v lsinitramfs >/dev/null 2>&1 && lsinitramfs "$ROOT/boot/initrd.img-$KVER" 2>/dev/null | grep -q "$EDID_REL"; then
+        echo "    ok (lsinitramfs)"
+        return
+    fi
+
+    echo "    The EDID was not found in the boot image; stopping before touching the boot setup." >&2
+    exit 1
+}
+
+add_armbian_params() {
+    if ! grep -q '^extraargs=' "$ARMBIAN_ENV"; then
+        echo "extraargs=${PARAMS}" >> "$ARMBIAN_ENV"
+        return
+    fi
+
+    edit "$ARMBIAN_ENV" -e "s#^extraargs=(.*)#extraargs=\1 ${PARAMS}#" -e "s#^extraargs=[[:space:]]+#extraargs=#"
+}
+
+set_armbian_params() {
+    echo "==> Adjusting the kernel parameters in $ARMBIAN_ENV"
+    [[ -f "$ARMBIAN_ENV.before-edid" ]] || cp "$ARMBIAN_ENV" "$ARMBIAN_ENV.before-edid"
+
+    # Remove earlier parameters of this setup and add the new ones
+    edit "$ARMBIAN_ENV" -e "/^extraargs=/s#[[:space:]]*video=${CONNECTOR}:[^ ]*##g" \
+        -e "/^extraargs=/s#[[:space:]]*drm\.edid_firmware=[^ ]*##g"
+    add_armbian_params
+    grep '^extraargs=' "$ARMBIAN_ENV"
+}
+
+set_grub_params() {
+    echo "==> Adjusting the kernel parameters in GRUB"
+    [[ -f "$GRUB.before-edid" ]] || cp "$GRUB" "$GRUB.before-edid"
+
+    # Remove earlier parameters of this setup and add the new ones
+    edit "$GRUB" -e "s#[[:space:]]*video=${CONNECTOR}:[^\" ]*##g" -e "s#[[:space:]]*drm\.edid_firmware=[^\" ]*##g" \
+        -e "s#^(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*)\"#\1 ${PARAMS}\"#" -e "s#^(GRUB_CMDLINE_LINUX_DEFAULT=\")[[:space:]]+#\1#"
+    grep GRUB_CMDLINE_LINUX_DEFAULT "$GRUB"
+    update-grub
+}
+
+set_kernel_params() {
+    if [[ -f "$ARMBIAN_ENV" ]]; then
+        set_armbian_params
+        return
+    fi
+
+    if [[ -f "$GRUB" ]]; then
+        set_grub_params
+        return
+    fi
+
+    echo "Neither $ARMBIAN_ENV nor $GRUB exists: I do not know where to put the kernel parameters." >&2
+    echo "Add to the kernel command line: $PARAMS" >&2
+    exit 1
+}
+
 [[ -f "$EDID_SRC" ]] || { echo "$EDID_SRC not found" >&2; exit 1; }
 [[ "$(wc -c < "$EDID_SRC" | tr -d ' ')" -eq 256 ]] || { echo "$EDID_SRC is not 256 bytes; it does not look like an EDID." >&2; exit 1; }
 
@@ -51,6 +129,7 @@ echo "==> Adding the EDID to the boot image (kernel $KVER)"
 if [[ -d "$ROOT/etc/dracut.conf.d" ]]; then
     echo "install_items+=\" /usr/lib/firmware/$EDID_REL \"" > "$ROOT/etc/dracut.conf.d/90-edid-ultrawide.conf"
 fi
+
 if [[ -d "$ROOT/etc/initramfs-tools/hooks" ]]; then
     cat > "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide" <<'EOF'
 #!/bin/sh
@@ -62,51 +141,13 @@ cp /usr/lib/firmware/edid/ultrawide.bin "${DESTDIR}/usr/lib/firmware/edid/"
 EOF
     chmod 755 "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide"
 fi
-# Only the running kernel: old kernels whose modules were removed break the generation
-if command -v update-initramfs >/dev/null 2>&1; then
-    update-initramfs -u -k "$KVER"
-elif command -v dracut >/dev/null 2>&1; then
-    dracut -f --kver "$KVER"
-else
-    echo "Neither update-initramfs nor dracut available to build the boot image." >&2
-    exit 1
-fi
+
+build_boot_image
 
 echo "==> Checking that the EDID is in the image"
-if command -v lsinitrd >/dev/null 2>&1 && lsinitrd --kver "$KVER" 2>/dev/null | grep -q "$EDID_REL"; then
-    echo "    ok (lsinitrd)"
-elif command -v lsinitramfs >/dev/null 2>&1 && lsinitramfs "$ROOT/boot/initrd.img-$KVER" 2>/dev/null | grep -q "$EDID_REL"; then
-    echo "    ok (lsinitramfs)"
-else
-    echo "    The EDID was not found in the boot image; stopping before touching the boot setup." >&2
-    exit 1
-fi
+check_boot_image
 
-if [[ -f "$ARMBIAN_ENV" ]]; then
-    echo "==> Adjusting the kernel parameters in $ARMBIAN_ENV"
-    [[ -f "$ARMBIAN_ENV.before-edid" ]] || cp "$ARMBIAN_ENV" "$ARMBIAN_ENV.before-edid"
-    # Remove earlier parameters of this setup and add the new ones
-    edit "$ARMBIAN_ENV" -e "/^extraargs=/s#[[:space:]]*video=${CONNECTOR}:[^ ]*##g" \
-        -e "/^extraargs=/s#[[:space:]]*drm\.edid_firmware=[^ ]*##g"
-    if grep -q '^extraargs=' "$ARMBIAN_ENV"; then
-        edit "$ARMBIAN_ENV" -e "s#^extraargs=(.*)#extraargs=\1 ${PARAMS}#" -e "s#^extraargs=[[:space:]]+#extraargs=#"
-    else
-        echo "extraargs=${PARAMS}" >> "$ARMBIAN_ENV"
-    fi
-    grep '^extraargs=' "$ARMBIAN_ENV"
-elif [[ -f "$GRUB" ]]; then
-    echo "==> Adjusting the kernel parameters in GRUB"
-    [[ -f "$GRUB.before-edid" ]] || cp "$GRUB" "$GRUB.before-edid"
-    # Remove earlier parameters of this setup and add the new ones
-    edit "$GRUB" -e "s#[[:space:]]*video=${CONNECTOR}:[^\" ]*##g" -e "s#[[:space:]]*drm\.edid_firmware=[^\" ]*##g" \
-        -e "s#^(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*)\"#\1 ${PARAMS}\"#" -e "s#^(GRUB_CMDLINE_LINUX_DEFAULT=\")[[:space:]]+#\1#"
-    grep GRUB_CMDLINE_LINUX_DEFAULT "$GRUB"
-    update-grub
-else
-    echo "Neither $ARMBIAN_ENV nor $GRUB exists: I do not know where to put the kernel parameters." >&2
-    echo "Add to the kernel command line: $PARAMS" >&2
-    exit 1
-fi
+set_kernel_params
 
 echo
 echo "Done. Reboot with: sudo reboot"
