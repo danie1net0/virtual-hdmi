@@ -106,6 +106,7 @@ class BytesTest(unittest.TestCase):
     def test_detailed_timing_round_trip(self):
         timing = edid.build_timing(3440, 1440, 312)
         dtd = edid.detailed_timing(timing)
+
         self.assertEqual(len(dtd), 18)
         self.assertEqual(
             decode_dtd(dtd),
@@ -145,6 +146,7 @@ class BytesTest(unittest.TestCase):
     def test_base_block(self):
         descriptor = bytes(range(18))
         block = edid.base_block([descriptor, descriptor])
+
         self.assertEqual(block[:8], b"\x00\xff\xff\xff\xff\xff\xff\x00")
         self.assertEqual(block[54:72], descriptor)
         self.assertEqual(block[72:90], descriptor)
@@ -155,6 +157,7 @@ class BytesTest(unittest.TestCase):
 
     def test_cta_block_with_vics(self):
         block = edid.cta_block([16, 4], [])
+
         self.assertEqual(block[:2], b"\x02\x03")
         self.assertEqual(block[4:7], bytes([0x42, 16, 4]))
         self.assertEqual(block[7:10], bytes([0x67, 0x03, 0x0C]))
@@ -170,6 +173,7 @@ class BytesTest(unittest.TestCase):
         dtd = bytes([7] * 18)
         block = edid.cta_block([16], [dtd, dtd])
         start = 4 + 2 + 8
+
         self.assertEqual(block[start : start + 36], dtd * 2)
 
     def test_cta_block_fits_six_dtds_but_not_seven(self):
@@ -193,6 +197,7 @@ class BuildEdidTest(unittest.TestCase):
     def test_first_three_modes_in_base_rest_in_extension(self):
         timings = [edid.build_timing(1000 + i, 700, 100) for i in range(5)]
         data = edid.build_edid(timings, [])
+
         self.assertEqual(len(data), 256)
         self.assertEqual([decode_dtd(data[54 + 18 * i : 72 + 18 * i])["width"] for i in range(3)], [1000, 1001, 1002])
         self.assertEqual(data[108:113], b"\x00\x00\x00\xfc\x00")
@@ -202,6 +207,7 @@ class BuildEdidTest(unittest.TestCase):
 
     def test_single_mode(self):
         data = edid.build_edid([edid.build_timing(1920, 1080, 148.5)], [16])
+
         self.assertEqual(decode_dtd(data[54:72])["width"], 1920)
         self.assertEqual(data[72:77], b"\x00\x00\x00\xfc\x00")
         self.assertEqual(sum(data[:128]) % 256, 0)

@@ -78,8 +78,10 @@ class Window(Adw.ApplicationWindow):
         self.session_row = Adw.ActionRow(title="Session")
         self.edid_row = Adw.ActionRow(title="Virtual EDID")
         self.output_row = Adw.ActionRow(title="Output")
+
         for row in (self.session_row, self.edid_row, self.output_row):
             group.add(row)
+
         return group
 
     def build_modes(self):

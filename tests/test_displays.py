@@ -87,6 +87,7 @@ class ParseXrandrTest(unittest.TestCase):
 
     def test_flags_and_ids(self):
         modes = {m.id: m for m in self.outputs["HDMI-1"]}
+
         self.assertTrue(modes["3440x1440@59.24"].current)
         self.assertTrue(modes["3440x1440@59.24"].preferred)
         self.assertFalse(modes["2560x1080@59.98"].current)
@@ -119,6 +120,7 @@ class ParseOtherBackendsTest(unittest.TestCase):
     def test_wlr(self):
         outputs = displays.parse_wlr(WLR)
         modes = outputs["HDMI-A-1"]
+
         self.assertEqual([m.id for m in modes], ["3440x1440@59.239", "1920x1080@60.000"])
         self.assertTrue(modes[0].current and modes[0].preferred)
         self.assertFalse(modes[1].current or modes[1].preferred)
@@ -126,6 +128,7 @@ class ParseOtherBackendsTest(unittest.TestCase):
 
     def test_kscreen(self):
         outputs = displays.parse_kscreen(KSCREEN)
+
         self.assertEqual(list(outputs), ["HDMI-A-1", "DP-1"])
         first, second = outputs["HDMI-A-1"]
         self.assertEqual((first.id, second.id), ("1", "2"))
@@ -139,6 +142,7 @@ class ParseOtherBackendsTest(unittest.TestCase):
     def test_mutter(self):
         monitors = [mutter_monitor("HDMI-1", ("a", True, False), ("b", False, True)), mutter_monitor("DP-1")]
         outputs = displays.parse_mutter(monitors)
+
         self.assertEqual(list(outputs), ["HDMI-1", "DP-1"])
         a, b = outputs["HDMI-1"]
         self.assertEqual((a.id, a.width, a.height, a.refresh), ("a", 1920, 1080, 60.0))
@@ -258,6 +262,7 @@ class MutterBackendTest(unittest.TestCase):
     def test_available_when_mutter_owns_the_name(self):
         self.assertTrue(displays.MutterBackend.available())
         bus, flags, info, *names, cancellable = fake_gi.DBusProxy.calls[-1]
+
         self.assertEqual((bus, flags), ("session", "do-not-auto-start"))
         self.assertEqual(tuple(names), displays.MUTTER)
 

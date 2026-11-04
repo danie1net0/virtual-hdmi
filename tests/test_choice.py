@@ -57,6 +57,7 @@ class SaveLoadTest(unittest.TestCase):
 
     def test_save_writes_choice_and_autostart(self):
         choice.save("HDMI-1", "2560x1080@59.98")
+
         self.assertEqual(
             json.loads((self.config / "virtual-monitor/mode.json").read_text()),
             {"connector": "HDMI-1", "mode": "2560x1080@59.98"},
@@ -87,6 +88,7 @@ class ApplyRestoreTest(SaveLoadTest):
     def test_apply_persistent_saves_when_backend_does_not(self):
         backend = Backend()
         choice.apply_mode(backend, "HDMI-1", "m", True)
+
         self.assertEqual(backend.applied, [("HDMI-1", "m", True)])
         self.assertEqual(choice.load(), ("HDMI-1", "m"))
 
@@ -97,6 +99,7 @@ class ApplyRestoreTest(SaveLoadTest):
     def test_apply_on_native_backend_does_not_save(self):
         backend = Backend(native_persist=True)
         choice.apply_mode(backend, "HDMI-1", "m", True)
+
         self.assertEqual(backend.applied, [("HDMI-1", "m", True)])
         self.assertIsNone(choice.load())
 
@@ -105,11 +108,13 @@ class ApplyRestoreTest(SaveLoadTest):
         backend.apply = mock.Mock(side_effect=RuntimeError("refused"))
         with self.assertRaises(RuntimeError):
             choice.apply_mode(backend, "HDMI-1", "m", True)
+
         self.assertIsNone(choice.load())
 
     def test_restore_reapplies_temporarily(self):
         choice.save("HDMI-1", "m")
         backend = Backend()
+
         self.assertTrue(choice.restore(backend))
         self.assertEqual(backend.applied, [("HDMI-1", "m", False)])
 

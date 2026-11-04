@@ -101,6 +101,7 @@ def detailed_timing(timing: Timing) -> bytes:
     hblank = timing.htotal - timing.width
     vblank = timing.vtotal - timing.height
     clock = timing.clock_khz // 10
+
     dtd = bytearray(18)
     dtd[0], dtd[1] = clock & 0xFF, clock >> 8
     dtd[2], dtd[3] = timing.width & 0xFF, hblank & 0xFF
@@ -113,6 +114,7 @@ def detailed_timing(timing: Timing) -> bytes:
     dtd[12], dtd[13] = WIDTH_MM & 0xFF, HEIGHT_MM & 0xFF
     dtd[14] = (WIDTH_MM >> 8) << 4 | HEIGHT_MM >> 8
     dtd[17] = 0x1E  # digital, separate sync, +hsync +vsync
+
     return bytes(dtd)
 
 

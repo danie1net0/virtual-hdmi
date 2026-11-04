@@ -46,6 +46,7 @@ class MainTest(unittest.TestCase):
     def test_launcher_script(self):
         launcher = ROOT / "virtual-monitor.py"
         code, cli_main = self.run_script(launcher, [str(launcher), "--apply", "x", "--temp"])
+
         self.assertEqual(code, 5)
         cli_main.assert_called_once_with(["--apply", "x", "--temp"])
 

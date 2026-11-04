@@ -13,6 +13,7 @@ def parse_args(argv):
     action.add_argument("--apply", metavar="ID", help="applies mode ID and remembers it at the next login")
     action.add_argument("--restore", action="store_true", help="reapplies the last remembered mode")
     parser.add_argument("--temp", action="store_true", help="with --apply: does not remember the choice")
+
     return parser.parse_args(argv)
 
 

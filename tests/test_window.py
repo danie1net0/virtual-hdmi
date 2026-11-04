@@ -80,6 +80,7 @@ class ModuleTest(unittest.TestCase):
         fake_gi.install()
         fake_gi.gi.versions.clear()
         importlib.reload(window_module)
+
         self.assertEqual(fake_gi.gi.versions, {"Gtk": "4.0", "Adw": "1"})
 
     def test_install_script_ships_with_the_app(self):
@@ -91,18 +92,21 @@ class LayoutTest(WindowTestCase):
     def test_window_properties(self):
         window = self.window()
         props = window.init_props
+
         self.assertIs(props["application"], self.app)
         self.assertEqual((props["title"], props["default_width"], props["default_height"]), ("Virtual monitor", 520, 760))
 
     def test_page_has_three_groups(self):
         window = self.window()
         view = window.toasts.child
+
         self.assertIs(window.content, window.toasts)
         self.assertEqual(len(view.top_bars), 1)
         self.assertEqual(titles(view.content.children), ["Status", "Resolution", "EDID"])
 
     def test_status_rows(self):
         window = self.window()
+
         self.assertEqual(window.session_row.subtitle, "X11 (xrandr)")
         self.assertEqual(window.edid_row.subtitle, "active at boot (HDMI-A-1)")
         self.assertEqual(window.output_row.subtitle, "HDMI-1")
@@ -111,6 +115,7 @@ class LayoutTest(WindowTestCase):
         self.backend = None
         self.cmdline = None
         window = self.window()
+
         self.assertIsNone(window.connector)
         self.assertEqual(window.session_row.subtitle, "unsupported video environment")
         self.assertEqual(window.edid_row.subtitle, "not configured at this boot")
@@ -120,12 +125,14 @@ class LayoutTest(WindowTestCase):
     def test_session_without_monitor(self):
         self.backend = Backend({})
         window = self.window()
+
         self.assertEqual(window.output_row.subtitle, "no monitor found")
         self.assertEqual(window.mode_rows, [])
 
     def test_mode_rows(self):
         window = self.window()
         preferred, current = window.mode_rows
+
         self.assertEqual((preferred.init_props["title"], preferred.init_props["subtitle"]), ("3440×1440", "59.24 Hz"))
         self.assertTrue(preferred.activatable)
         self.assertEqual([s.init_props.get("label") for s in preferred.suffixes], ["default of the EDID"])
@@ -146,6 +153,7 @@ class LayoutTest(WindowTestCase):
         old = list(window.mode_rows)
         self.backend._outputs = {"HDMI-1": [mode("1920x1080@60.00", 1920, 1080, 60.0, current=True)]}
         window.refresh()
+
         self.assertEqual(len(window.mode_rows), 1)
         for row in old:
             self.assertNotIn(row, window.modes_group.children)
@@ -156,6 +164,7 @@ class ModeTest(WindowTestCase):
     def test_activating_a_row_applies_and_remembers(self):
         window = self.window()
         window.mode_rows[0].emit("activated")
+
         self.assertEqual(self.backend.applied, [("HDMI-1", "3440x1440@59.24", True)])
         self.assertEqual(choice.load(), ("HDMI-1", "3440x1440@59.24"))
         self.assertEqual(window.toasts.toasts[-1].init_props["title"], "3440×1440 applied")
@@ -164,6 +173,7 @@ class ModeTest(WindowTestCase):
         window = self.window()
         window.remember.set_active(False)
         window.mode_rows[1].emit("activated")
+
         self.assertEqual(self.backend.applied, [("HDMI-1", "2560x1080@59.98", False)])
         self.assertIsNone(choice.load())
 
@@ -171,6 +181,7 @@ class ModeTest(WindowTestCase):
         window = self.window()
         window.mode_rows[0].emit("activated")
         (delay, callback), = fake_gi.GLib.timeouts
+
         self.assertEqual(delay, 600)
         self.backend._outputs = {"HDMI-1": []}
         self.assertIs(callback(), fake_gi.GLib.SOURCE_REMOVE)
@@ -180,6 +191,7 @@ class ModeTest(WindowTestCase):
         window = self.window()
         self.backend.error = RuntimeError("xrandr: Configure crtc 0 failed")
         window.mode_rows[0].emit("activated")
+
         self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Failed: xrandr: Configure crtc 0 failed")
         self.assertEqual(fake_gi.GLib.timeouts, [])
         self.assertIsNone(choice.load())
@@ -196,6 +208,7 @@ class InstallTest(WindowTestCase):
         self.click_install(window)
         (process,) = fake_gi.Subprocess.created
         out = Path(process.argv[-1])
+
         self.assertEqual(process.argv[:3], ["pkexec", "bash", str(window_module.INSTALL_SCRIPT)])
         self.assertEqual(out.name, "ultrawide-app.bin")
         self.assertTrue(out.parent.name.startswith("edid-"))
@@ -207,6 +220,7 @@ class InstallTest(WindowTestCase):
         window = self.window()
         self.click_install(window, "  1920x1080@148.5   1280x720@74.25 ")
         out = Path(fake_gi.Subprocess.created[0].argv[-1])
+
         self.assertEqual(out.read_bytes(), edid.generate(["1920x1080@148.5", "1280x720@74.25"])[1])
 
     def test_invalid_modes_show_toast_without_running_anything(self):
@@ -223,6 +237,7 @@ class InstallTest(WindowTestCase):
         window = self.window()
         self.click_install(window)
         fake_gi.Subprocess.created[0].finish(status=126)
+
         self.assertTrue(window.install_button.sensitive)
         self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Install cancelled or failed")
 
@@ -230,6 +245,7 @@ class InstallTest(WindowTestCase):
         window = self.window()
         self.click_install(window)
         fake_gi.Subprocess.created[0].finish(error="pkexec not found")
+
         self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Install cancelled or failed")
 
     def successful_install(self):
@@ -241,6 +257,7 @@ class InstallTest(WindowTestCase):
 
     def test_success_asks_to_reboot(self):
         window, props, dialog = self.successful_install()
+
         self.assertTrue(window.install_button.sensitive)
         self.assertEqual(props, {"heading": "EDID installed", "body": "Restart for it to take effect. Restart now?"})
         self.assertEqual(dialog.responses, [("later", "Later"), ("reboot", "Restart")])
@@ -250,6 +267,7 @@ class InstallTest(WindowTestCase):
     def test_reboot_response_reboots(self):
         _window, _props, dialog = self.successful_install()
         dialog.emit("response", "reboot")
+
         self.assertEqual(fake_gi.Subprocess.created[-1].argv, ["systemctl", "reboot"])
         self.assertEqual(fake_gi.Subprocess.created[-1].flags, 0)
 
@@ -288,6 +306,7 @@ class RunAsyncTest(unittest.TestCase):
 class AppTest(WindowTestCase):
     def test_activate_creates_and_presents_window_once(self):
         app = window_module.App()
+
         self.assertEqual(app.application_id, "br.app.VirtualMonitor")
         app.do_activate()
         window = app.props.active_window
@@ -299,6 +318,7 @@ class AppTest(WindowTestCase):
     def test_run(self):
         self.assertEqual(window_module.run(), 0)
         app = fake_gi.Application.created[-1]
+
         self.assertIsInstance(app, window_module.App)
         self.assertEqual(app.run_args, [])
         self.assertEqual(fake_gi.GLib.prgnames, ["virtual-monitor"])

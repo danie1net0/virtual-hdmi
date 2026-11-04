@@ -85,6 +85,7 @@ class CliTest(unittest.TestCase):
 
     def test_apply_remembers(self):
         code, out, _ = self.run_cli(["--apply", "1920x1080@60.00"])
+
         self.assertEqual(code, 0)
         self.assertEqual(out, "applied 1920x1080@60.00 on HDMI-1\n")
         self.assertEqual(self.backend.applied, [("HDMI-1", "1920x1080@60.00", True)])
@@ -92,6 +93,7 @@ class CliTest(unittest.TestCase):
 
     def test_apply_temp_does_not_remember(self):
         code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--temp"])
+
         self.assertEqual(code, 0)
         self.assertEqual(self.backend.applied, [("HDMI-1", "1920x1080@60.00", False)])
         self.assertIsNone(choice.load())
@@ -99,6 +101,7 @@ class CliTest(unittest.TestCase):
     def test_apply_failure(self):
         backend = Backend({"HDMI-1": []}, error=RuntimeError("xrandr: cannot find mode"))
         code, out, err = self.run_cli(["--apply", "9x9@1"], backend=backend)
+
         self.assertEqual((code, out), (1, ""))
         self.assertEqual(err, "Failed: xrandr: cannot find mode\n")
         self.assertIsNone(choice.load())
@@ -106,6 +109,7 @@ class CliTest(unittest.TestCase):
     def test_restore_with_choice(self):
         choice.save("HDMI-1", "3440x1440@59.24")
         code, out, _ = self.run_cli(["--restore"])
+
         self.assertEqual((code, out), (0, ""))
         self.assertEqual(self.backend.applied, [("HDMI-1", "3440x1440@59.24", False)])
 
@@ -117,12 +121,14 @@ class CliTest(unittest.TestCase):
         choice.save("HDMI-1", "m")
         backend = Backend({})
         code, _, _ = self.run_cli(["--restore"], backend=backend)
+
         self.assertEqual(code, 0)
         self.assertEqual(backend.applied, [("HDMI-1", "m", False)])
 
     def test_restore_failure(self):
         choice.save("HDMI-1", "m")
         code, _, err = self.run_cli(["--restore"], backend=Backend({}, error=RuntimeError("no output")))
+
         self.assertEqual(code, 1)
         self.assertIn("Failed: no output", err)
 
@@ -133,6 +139,7 @@ class CliTest(unittest.TestCase):
 
     def test_temp_alone_lists(self):
         code, out, _ = self.run_cli(["--temp"])
+
         self.assertEqual(code, 0)
         self.assertIn("session:", out)
         self.assertEqual(self.backend.applied, [])
@@ -141,6 +148,7 @@ class CliTest(unittest.TestCase):
         out = io.StringIO()
         with self.assertRaises(SystemExit) as raised, contextlib.redirect_stdout(out):
             cli.parse_args(["--help"])
+
         self.assertEqual(raised.exception.code, 0)
         self.assertIn("--apply ID", out.getvalue())
 
