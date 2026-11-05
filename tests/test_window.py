@@ -96,22 +96,47 @@ class LayoutTest(WindowTestCase):
         props = window.init_props
 
         self.assertIs(props["application"], self.app)
-        self.assertEqual((props["title"], props["default_width"], props["default_height"]), ("Virtual monitor", 520, 760))
+        self.assertEqual((props["title"], props["default_width"], props["default_height"]), ("Virtual monitor", 520, 840))
 
-    def test_page_has_three_groups(self):
+    def test_main_page_has_status_and_resolution(self):
         window = self.window()
-        view = window.toasts.child
+        main, edid_page = window.navigation.children
+        view = main.init_props["child"]
 
         self.assertIs(window.content, window.toasts)
+        self.assertIs(window.toasts.child, window.navigation)
+        self.assertEqual((main.init_props["title"], main.init_props["tag"]), ("Virtual monitor", "main"))
         self.assertEqual(len(view.top_bars), 1)
-        self.assertEqual(titles(view.content.children), ["Status", "Resolution", "EDID"])
+        self.assertEqual(titles(view.content.children), ["Status", "Resolution"])
+        self.assertIs(edid_page, window.edid_page)
+        self.assertEqual(window.navigation.pushed, [])
+
+    def test_edid_page_has_its_own_header(self):
+        window = self.window()
+        view = window.edid_page.init_props["child"]
+        (group,) = view.content.children
+
+        self.assertEqual((window.edid_page.init_props["title"], window.edid_page.init_props["tag"]), ("Virtual EDID", "edid"))
+        self.assertEqual(len(view.top_bars), 1)
+        self.assertEqual(group.init_props, {"description": window_module.EDID_HELP})
+        self.assertEqual(group.children[0], window.modes_entry)
+        self.assertEqual(group.children[1].suffixes, [window.install_button])
+
+    def test_edid_row_opens_the_edid_page(self):
+        window = self.window()
+        window.edid_row.emit("activated")
+
+        self.assertTrue(window.edid_row.activatable)
+        self.assertEqual([s.init_props.get("icon_name") for s in window.edid_row.suffixes], ["go-next-symbolic"])
+        self.assertEqual(window.navigation.pushed, [window.edid_page])
 
     def test_status_rows(self):
         window = self.window()
+        display, edid_row = window.display_row.init_props, window.edid_row.init_props
 
-        self.assertEqual(window.session_row.subtitle, "X11 (xrandr)")
+        self.assertEqual((display["title"], edid_row["title"]), ("Display", "Virtual EDID"))
+        self.assertEqual(window.display_row.subtitle, "X11 (xrandr) · HDMI-1")
         self.assertEqual(window.edid_row.subtitle, "active at boot (HDMI-A-1)")
-        self.assertEqual(window.output_row.subtitle, "HDMI-1")
 
     def test_status_without_session_or_edid(self):
         self.backend = None
@@ -119,16 +144,15 @@ class LayoutTest(WindowTestCase):
         window = self.window()
 
         self.assertIsNone(window.connector)
-        self.assertEqual(window.session_row.subtitle, "unsupported video environment")
+        self.assertEqual(window.display_row.subtitle, "unsupported video environment")
         self.assertEqual(window.edid_row.subtitle, "not configured at this boot")
-        self.assertEqual(window.output_row.subtitle, "no monitor found")
         self.assertEqual(window.mode_rows, [])
 
     def test_session_without_monitor(self):
         self.backend = Backend({})
         window = self.window()
 
-        self.assertEqual(window.output_row.subtitle, "no monitor found")
+        self.assertEqual(window.display_row.subtitle, "X11 (xrandr) · no monitor found")
         self.assertEqual(window.mode_rows, [])
 
     def test_mode_rows(self):

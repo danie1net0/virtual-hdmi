@@ -52,7 +52,7 @@ Funciona no GNOME, KDE Plasma, wlroots (sway, Hyprland) e X11 (XFCE, MATE, i3).
 
 ## Instalar o EDID
 
-Uma vez por máquina. O app tem um botão **Install**, ou, num clone:
+Uma vez por máquina. O app tem um botão **Install** (toque na linha **Virtual EDID**), ou, num clone:
 
 ```sh
 sudo bash scripts/install-edid.sh edid/ultrawide-rockchip.bin   # Orange Pi (RK3566)

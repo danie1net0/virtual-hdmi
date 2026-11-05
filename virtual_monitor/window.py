@@ -4,7 +4,8 @@ GTK4/libadwaita window of the Virtual monitor:
   - shows whether the virtual EDID is active at the current boot
   - lists the monitor modes and switches the resolution right away (displays.py)
   - "Remember choice" reapplies the resolution at every login (choice.py)
-  - generates a new EDID (edid.py) and installs it (scripts/install-edid.sh, via pkexec)
+  - on its own page, opened from the status row, generates a new EDID (edid.py) and installs it
+    (scripts/install-edid.sh, via pkexec)
 """
 
 import tempfile
@@ -51,6 +52,14 @@ def edid_text(wanted):
     return f"active at boot ({wanted})"
 
 
+def navigation_page(content, title, tag):
+    """A page with its own header bar, which shows the back button on pushed pages."""
+    view = Adw.ToolbarView()
+    view.add_top_bar(Adw.HeaderBar())
+    view.set_content(content)
+    return Adw.NavigationPage(child=view, title=title, tag=tag)
+
+
 def install_label(installed):
     if installed:
         return "Installed"
@@ -60,36 +69,44 @@ def install_label(installed):
 
 class Window(Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title="Virtual monitor", default_width=520, default_height=760)
+        super().__init__(application=app, title="Virtual monitor", default_width=520, default_height=840)
         self.backend = displays.detect()
         self.connector = None
         if self.backend:
             self.connector = displays.pick_connector(self.backend)
         self.mode_rows = []
 
-        self.toasts = Adw.ToastOverlay()
-        view = Adw.ToolbarView()
-        view.add_top_bar(Adw.HeaderBar())
-        page = Adw.PreferencesPage()
-        view.set_content(page)
-        self.toasts.set_child(view)
-        self.set_content(self.toasts)
+        # Day to day the window only switches resolutions; the EDID, set once, lives on its own page
+        main = Adw.PreferencesPage()
+        main.add(self.build_status())
+        main.add(self.build_modes())
+        edid_page = Adw.PreferencesPage()
+        edid_page.add(self.build_edid())
 
-        page.add(self.build_status())
-        page.add(self.build_modes())
-        page.add(self.build_edid())
+        self.navigation = Adw.NavigationView()
+        self.navigation.add(navigation_page(main, "Virtual monitor", "main"))
+        self.edid_page = navigation_page(edid_page, "Virtual EDID", "edid")
+        self.navigation.add(self.edid_page)
+
+        self.toasts = Adw.ToastOverlay()
+        self.toasts.set_child(self.navigation)
+        self.set_content(self.toasts)
         self.refresh()
 
     def build_status(self):
         group = Adw.PreferencesGroup(title="Status")
-        self.session_row = Adw.ActionRow(title="Session")
+        self.display_row = Adw.ActionRow(title="Display")
+        group.add(self.display_row)
+
         self.edid_row = Adw.ActionRow(title="Virtual EDID")
-        self.output_row = Adw.ActionRow(title="Output")
-
-        for row in (self.session_row, self.edid_row, self.output_row):
-            group.add(row)
-
+        self.edid_row.set_activatable(True)
+        self.edid_row.add_suffix(Gtk.Image.new_from_icon_name("go-next-symbolic"))
+        self.edid_row.connect("activated", self.on_edid_row)
+        group.add(self.edid_row)
         return group
+
+    def on_edid_row(self, _row):
+        self.navigation.push(self.edid_page)
 
     def build_modes(self):
         self.modes_group = Adw.PreferencesGroup(title="Resolution", description="Tap a mode to switch right away.")
@@ -99,7 +116,7 @@ class Window(Adw.ApplicationWindow):
         return self.modes_group
 
     def build_edid(self):
-        group = Adw.PreferencesGroup(title="EDID", description=EDID_HELP)
+        group = Adw.PreferencesGroup(description=EDID_HELP)
         self.modes_entry = Adw.EntryRow(title="Modes")
         self.modes_entry.set_text(" ".join(edid.DEFAULT_MODES))
         group.add(self.modes_entry)
@@ -124,9 +141,8 @@ class Window(Adw.ApplicationWindow):
         self.toasts.add_toast(Adw.Toast(title=text))
 
     def refresh(self):
-        self.session_row.set_subtitle(self.session_text())
+        self.display_row.set_subtitle(self.display_text())
         self.edid_row.set_subtitle(edid_text(displays.cmdline_connector()))
-        self.output_row.set_subtitle(self.connector or "no monitor found")
 
         for row in self.mode_rows:
             self.modes_group.remove(row)
@@ -139,11 +155,11 @@ class Window(Adw.ApplicationWindow):
             self.modes_group.add(row)
             self.mode_rows.append(row)
 
-    def session_text(self):
+    def display_text(self):
         if not self.backend:
             return "unsupported video environment"
 
-        return self.backend.name
+        return f"{self.backend.name} · {self.connector or 'no monitor found'}"
 
     def mode_row(self, mode):
         row = Adw.ActionRow(title=f"{mode.width}×{mode.height}", subtitle=f"{mode.refresh:.2f} Hz")

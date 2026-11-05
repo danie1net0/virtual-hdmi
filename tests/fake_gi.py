@@ -101,6 +101,15 @@ class ApplicationWindow(Widget):
         self.init_props["application"].props.active_window = self
 
 
+class NavigationView(Widget):
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.pushed = []
+
+    def push(self, page):
+        self.pushed.append(page)
+
+
 class AlertDialog(Widget):
     created = []
 
@@ -211,6 +220,8 @@ Adw = namespace(
     Application=Application,
     ToastOverlay=type("ToastOverlay", (Widget,), {}),
     ToolbarView=type("ToolbarView", (Widget,), {}),
+    NavigationView=NavigationView,
+    NavigationPage=type("NavigationPage", (Widget,), {}),
     HeaderBar=type("HeaderBar", (Widget,), {}),
     PreferencesPage=type("PreferencesPage", (Widget,), {}),
     PreferencesGroup=type("PreferencesGroup", (Widget,), {}),
