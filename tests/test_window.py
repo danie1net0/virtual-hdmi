@@ -55,7 +55,9 @@ class WindowTestCase(unittest.TestCase):
             }
         )
         self.cmdline = "HDMI-A-1"
+        self.installed = self.tmp / "installed.bin"
         patches = [
+            mock.patch.object(edid, "INSTALLED", self.installed),
             mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.tmp / "config")}),
             mock.patch.object(displays, "detect", side_effect=lambda: self.backend),
             mock.patch.object(displays, "cmdline_connector", side_effect=lambda: self.cmdline),
@@ -147,6 +149,24 @@ class LayoutTest(WindowTestCase):
         window = self.window()
         self.assertEqual(window.modes_entry.get_text(), "3440x1440@312 2560x1080@216 3008x1260@241.5")
         self.assertIn("suggested-action", window.install_button.css_classes)
+        self.assertEqual(window.install_button.label, "Install")
+        self.assertTrue(window.install_button.sensitive)
+
+    def test_installed_edid_disables_install(self):
+        self.installed.write_bytes(edid.generate(list(edid.DEFAULT_MODES))[1])
+        window = self.window()
+
+        self.assertEqual(window.install_button.label, "Installed")
+        self.assertFalse(window.install_button.sensitive)
+
+    def test_editing_the_modes_enables_install_again(self):
+        self.installed.write_bytes(edid.generate(list(edid.DEFAULT_MODES))[1])
+        window = self.window()
+        window.modes_entry.set_text("1920x1080@148.5")
+        window.modes_entry.emit("changed")
+
+        self.assertEqual(window.install_button.label, "Install")
+        self.assertTrue(window.install_button.sensitive)
 
     def test_refresh_replaces_mode_rows(self):
         window = self.window()
@@ -263,6 +283,15 @@ class InstallTest(WindowTestCase):
         self.assertEqual(dialog.responses, [("later", "Later"), ("reboot", "Restart")])
         self.assertEqual(dialog.appearances, {"reboot": "destructive"})
         self.assertEqual(dialog.presented_on, [window])
+
+    def test_success_marks_the_new_edid_as_installed(self):
+        window = self.window()
+        self.click_install(window)
+        self.installed.write_bytes(Path(fake_gi.Subprocess.created[0].argv[-1]).read_bytes())
+        fake_gi.Subprocess.created[0].finish(status=0, stdout="Done\n")
+
+        self.assertEqual(window.install_button.label, "Installed")
+        self.assertFalse(window.install_button.sensitive)
 
     def test_reboot_response_reboots(self):
         _window, _props, dialog = self.successful_install()

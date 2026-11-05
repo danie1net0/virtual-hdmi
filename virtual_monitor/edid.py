@@ -35,6 +35,9 @@ DEFAULT_MODES = ("3440x1440@312", "2560x1080@216", "3008x1260@241.5")
 DEFAULT_VICS = (16, 4)  # 1080p60 and 720p60
 DEFAULT_NAME = "Virtual UW"
 
+# Where scripts/install-edid.sh copies the EDID
+INSTALLED = Path("/usr/lib/firmware/edid/ultrawide.bin")
+
 
 class EdidError(ValueError):
     """Invalid mode or EDID that does not fit in 256 bytes."""
@@ -197,6 +200,15 @@ def generate(texts: list[str], vics=DEFAULT_VICS, name: str = DEFAULT_NAME) -> t
     """Mode strings to (timings, EDID). Raises EdidError if something does not fit."""
     timings = [parse_mode(text) for text in texts]
     return timings, build_edid(timings, vics, name)
+
+
+def is_installed(texts: list[str]) -> bool:
+    """Whether the EDID for these modes is the one scripts/install-edid.sh installed."""
+    try:
+        data = generate(texts)[1]
+        return INSTALLED.read_bytes() == data
+    except (EdidError, OSError):
+        return False
 
 
 def main(argv=None) -> int:

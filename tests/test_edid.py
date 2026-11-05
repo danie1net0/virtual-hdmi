@@ -225,6 +225,44 @@ class BuildEdidTest(unittest.TestCase):
             edid.generate(["oi"])
 
 
+class InstalledPathTest(unittest.TestCase):
+    def test_is_where_the_install_script_copies_the_edid(self):
+        script = (ROOT / "scripts" / "install-edid.sh").read_text()
+
+        self.assertEqual(edid.INSTALLED, Path("/usr/lib/firmware/edid/ultrawide.bin"))
+        self.assertIn('EDID_REL="edid/ultrawide.bin"', script)
+        self.assertIn('EDID_DST="$ROOT/usr/lib/firmware/$EDID_REL"', script)
+
+
+class IsInstalledTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.installed = Path(tmp.name) / "ultrawide.bin"
+        patcher = mock.patch.object(edid, "INSTALLED", self.installed)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_same_modes_are_installed(self):
+        self.installed.write_bytes(edid.generate(list(edid.DEFAULT_MODES))[1])
+
+        self.assertTrue(edid.is_installed(list(edid.DEFAULT_MODES)))
+
+    def test_other_modes_are_not_installed(self):
+        self.installed.write_bytes(edid.generate(list(edid.DEFAULT_MODES))[1])
+
+        self.assertFalse(edid.is_installed(["1920x1080@148.5"]))
+
+    def test_nothing_installed(self):
+        self.assertFalse(edid.is_installed(list(edid.DEFAULT_MODES)))
+
+    def test_invalid_modes_are_not_installed(self):
+        self.installed.write_bytes(b"")
+
+        self.assertFalse(edid.is_installed([]))
+        self.assertFalse(edid.is_installed(["oi"]))
+
+
 class MainTest(unittest.TestCase):
     def run_main(self, argv):
         out, err = io.StringIO(), io.StringIO()

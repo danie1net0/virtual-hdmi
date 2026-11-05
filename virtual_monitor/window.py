@@ -51,6 +51,13 @@ def edid_text(wanted):
     return f"active at boot ({wanted})"
 
 
+def install_label(installed):
+    if installed:
+        return "Installed"
+
+    return "Install"
+
+
 class Window(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Virtual monitor", default_width=520, default_height=760)
@@ -103,7 +110,15 @@ class Window(Adw.ApplicationWindow):
         self.install_button.connect("clicked", self.on_install)
         install.add_suffix(self.install_button)
         group.add(install)
+
+        self.modes_entry.connect("changed", self.update_install_button)
+        self.update_install_button()
         return group
+
+    def update_install_button(self, *_args):
+        installed = edid.is_installed(self.modes_entry.get_text().split())
+        self.install_button.set_label(install_label(installed))
+        self.install_button.set_sensitive(not installed)
 
     def toast(self, text):
         self.toasts.add_toast(Adw.Toast(title=text))
@@ -173,7 +188,7 @@ class Window(Adw.ApplicationWindow):
         run_async(["pkexec", "bash", str(INSTALL_SCRIPT), str(out)], self.after_install)
 
     def after_install(self, ok, _text):
-        self.install_button.set_sensitive(True)
+        self.update_install_button()
         if not ok:
             self.toast("Install cancelled or failed")
             return

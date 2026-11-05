@@ -19,6 +19,7 @@ class Widget:
         self.toasts = []
         self.responses = []
         self.subtitle = props.get("subtitle")
+        self.label = props.get("label")
         self.text = ""
         self.active = False
         self.sensitive = True
@@ -62,6 +63,9 @@ class Widget:
 
     def set_subtitle(self, text):
         self.subtitle = text
+
+    def set_label(self, text):
+        self.label = text
 
     def set_text(self, text):
         self.text = text
