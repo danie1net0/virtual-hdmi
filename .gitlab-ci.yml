@@ -2,9 +2,10 @@ probe:
   tags:
     - aurisbook-mac
   script:
-    - uname -a; sw_vers || true
-    - for t in docker orb colima podman uv pyenv brew python3 python3.9 python3.13 gsed; do printf '%s: ' "$t"; command -v "$t" || echo none; done
-    - docker info --format '{{.ServerVersion}} {{.OSType}}/{{.Architecture}}' 2>&1 | tail -1 || true
-    - ls /opt/homebrew/bin | grep -E '^(python3|bash|uv)' || true
-    - /opt/homebrew/bin/bash --version | head -1 || true
-    - uv python list 2>/dev/null | head -20 || true
+    - |
+      uname -a; sw_vers || true
+      for t in docker orb colima podman uv pyenv brew python3 python3.9 python3.13 gsed; do echo "$t = $(command -v "$t" || echo none)"; done
+      docker info --format '{{.ServerVersion}} {{.OSType}}/{{.Architecture}}' 2>&1 | tail -1 || true
+      ls /opt/homebrew/bin 2>/dev/null | grep -E '^(python3|bash|uv)' || true
+      /opt/homebrew/bin/bash --version 2>/dev/null | head -1 || true
+      uv python list 2>/dev/null | head -20 || true
