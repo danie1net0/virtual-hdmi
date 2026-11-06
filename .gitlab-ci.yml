@@ -1,11 +1,49 @@
-probe:
+# Tests on the oldest and newest supported Python, plus coverage (100% required).
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages:
+  - test
+
+# Every job runs on the aurisbook Mac runner (shell executor), so it does not spend the GitLab
+# CI minutes. The Linux jobs run in Docker (OrbStack) on it, in the same images as before.
+.linux:
+  stage: test
+  tags:
+    - aurisbook-mac
+
+test:
+  extends: .linux
+  parallel:
+    matrix:
+      - PYTHON: ["3.9", "3.13"]
+  script:
+    - docker run --rm -v "$CI_PROJECT_DIR":/p -w /p -e PYTHONDONTWRITEBYTECODE=1 "python:${PYTHON}-slim" bash tests/run.sh
+
+# The macOS bash 3.2 and BSD tools, directly on the Mac.
+macos:
+  stage: test
   tags:
     - aurisbook-mac
   script:
-    - |
-      uname -a; sw_vers || true
-      for t in docker orb colima podman uv pyenv brew python3 python3.9 python3.13 gsed; do echo "$t = $(command -v "$t" || echo none)"; done
-      docker info --format '{{.ServerVersion}} {{.OSType}}/{{.Architecture}}' 2>&1 | tail -1 || true
-      ls /opt/homebrew/bin 2>/dev/null | grep -E '^(python3|bash|uv)' || true
-      /opt/homebrew/bin/bash --version 2>/dev/null | head -1 || true
-      uv python list 2>/dev/null | head -20 || true
+    # tests/run.sh calls bash from PATH; keep the system 3.2 ahead of Homebrew's.
+    - export PATH="/bin:/usr/bin:$PATH"
+    - bash --version | head -n 1
+    - python3 --version
+    - bash tests/run.sh
+
+coverage:
+  extends: .linux
+  script:
+    # Shell coverage reads PS4 from the environment, which bash ignores as root.
+    - >-
+      docker run --rm -v "$CI_PROJECT_DIR":/p:ro -w /p --user 1000:1000 -e HOME=/tmp
+      -e PYTHONDONTWRITEBYTECODE=1 python:3.13-slim
+      bash -c 'pip install --quiet --user coverage && bash tests/coverage.sh'
+  coverage: '/^TOTAL\s.*\s(\d+(?:\.\d+)?)%$/'
