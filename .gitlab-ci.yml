@@ -1,4 +1,6 @@
 # Tests on the oldest and newest supported Python, plus coverage (100% required).
+# Every job runs on the aurisbook Mac runner (shell executor), so none spends GitLab CI minutes;
+# uv provides the Python of each job.
 
 workflow:
   rules:
@@ -11,33 +13,38 @@ workflow:
 stages:
   - test
 
-test:
+.mac:
   stage: test
-  image: python:${PYTHON}-slim
+  tags:
+    - aurisbook-mac
+  before_script:
+    - uv venv --quiet --python "$PYTHON" "$CI_PROJECT_DIR/.venv"
+
+# The macOS bash 3.2 and BSD tools; tests/run.sh calls python3 and bash from PATH.
+test:
+  extends: .mac
   parallel:
     matrix:
       - PYTHON: ["3.9", "3.13"]
   script:
-    - bash tests/run.sh
-
-# The macOS bash 3.2 and BSD tools, on the aurisbook Mac runner (shell executor).
-macos:
-  stage: test
-  tags:
-    - aurisbook-mac
-  script:
-    # tests/run.sh calls bash from PATH; keep the system 3.2 ahead of Homebrew's.
-    - export PATH="/bin:/usr/bin:$PATH"
-    - bash --version | head -n 1
+    - export PATH="$CI_PROJECT_DIR/.venv/bin:/bin:/usr/bin:$PATH"
     - python3 --version
+    - bash --version | head -n 1
     - bash tests/run.sh
 
+# Shell coverage needs bash 4.1+, from Homebrew.
 coverage:
-  stage: test
-  image: python:3.13-slim
+  extends: .mac
+  variables:
+    PYTHON: "3.13"
   script:
-    # Shell coverage reads PS4 from the environment, which bash ignores as root.
-    - useradd --create-home ci
-    - chown -R ci "$CI_PROJECT_DIR"
-    - su ci -c 'pip install --quiet --user coverage && bash tests/coverage.sh'
+    - |
+      if [[ ! -x /opt/homebrew/bin/bash ]]; then
+        echo "Shell coverage needs bash 4.1+: run brew install bash on the runner."
+        exit 1
+      fi
+    - export PATH="$CI_PROJECT_DIR/.venv/bin:/opt/homebrew/bin:$PATH"
+    - uv pip install --quiet --python "$CI_PROJECT_DIR/.venv/bin/python" coverage
+    - bash --version | head -n 1
+    - bash tests/coverage.sh
   coverage: '/^TOTAL\s.*\s(\d+(?:\.\d+)?)%$/'
