@@ -1,7 +1,7 @@
 # Tests on the oldest and newest supported Python, on Linux (bash 5, GNU) and on macOS (bash 3.2,
 # BSD tools), plus coverage (100% required). Linux jobs run on the webmaker-runner Docker runner;
-# the macOS job runs on the aurisbook Mac runner, where uv provides the Python. No job spends
-# GitLab CI minutes.
+# the macOS job runs in a fresh Tart VM on the Mac (thrown away after the job), where uv provides
+# the Python. No job spends GitLab CI minutes.
 
 workflow:
   rules:
@@ -16,9 +16,11 @@ stages:
 
 .mac:
   stage: test
-  tags:
-    - aurisbook-mac
+  image: ghcr.io/cirruslabs/macos-tahoe-base:latest
+  tags: [macos-vm]
   before_script:
+    - curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh
+    - export PATH="$HOME/.local/bin:$PATH"
     - uv venv --quiet --python "$PYTHON" "$CI_PROJECT_DIR/.venv"
 
 # The macOS bash 3.2 and BSD tools; tests/run.sh calls python3 and bash from PATH.
