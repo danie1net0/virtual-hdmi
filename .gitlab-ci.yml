@@ -1,6 +1,7 @@
-# Tests on the oldest and newest supported Python, plus coverage (100% required).
-# Every job runs on the aurisbook Mac runner (shell executor), so none spends GitLab CI minutes;
-# uv provides the Python of each job.
+# Tests on the oldest and newest supported Python, on Linux (bash 5, GNU) and on macOS (bash 3.2,
+# BSD tools), plus coverage (100% required). Linux jobs run on the webmaker-runner Docker runner;
+# the macOS job runs on the aurisbook Mac runner, where uv provides the Python. No job spends
+# GitLab CI minutes.
 
 workflow:
   rules:
@@ -21,7 +22,7 @@ stages:
     - uv venv --quiet --python "$PYTHON" "$CI_PROJECT_DIR/.venv"
 
 # The macOS bash 3.2 and BSD tools; tests/run.sh calls python3 and bash from PATH.
-test:
+test:macos:
   extends: .mac
   parallel:
     matrix:
@@ -32,19 +33,28 @@ test:
     - bash --version | head -n 1
     - bash tests/run.sh
 
-# Shell coverage needs bash 4.1+, from Homebrew.
+# The shell scripts expect a regular user, as on a real machine, so the Linux jobs drop root.
+.linux:
+  stage: test
+  image: python:$PYTHON-slim
+  tags: [docker]
+  before_script:
+    - useradd --create-home tester
+    - chown -R tester "$CI_PROJECT_DIR"
+
+test:linux:
+  extends: .linux
+  parallel:
+    matrix:
+      - PYTHON: ["3.9", "3.13"]
+  script:
+    - su tester -c 'python3 --version && bash --version | head -n 1 && bash tests/run.sh'
+
+# Shell coverage needs bash 4.1+, so it runs on Linux.
 coverage:
-  extends: .mac
+  extends: .linux
   variables:
     PYTHON: "3.13"
   script:
-    - |
-      if [[ ! -x /opt/homebrew/bin/bash ]]; then
-        echo "Shell coverage needs bash 4.1+: run brew install bash on the runner."
-        exit 1
-      fi
-    - export PATH="$CI_PROJECT_DIR/.venv/bin:/opt/homebrew/bin:$PATH"
-    - uv pip install --quiet --python "$CI_PROJECT_DIR/.venv/bin/python" coverage
-    - bash --version | head -n 1
-    - bash tests/coverage.sh
+    - su tester -c 'pip install --quiet --user coverage && bash tests/coverage.sh'
   coverage: '/^TOTAL\s.*\s(\d+(?:\.\d+)?)%$/'
