@@ -23,8 +23,8 @@ APP_ID = "br.app.VirtualMonitor"
 ICON_NAME = "virtual-monitor"
 INSTALL_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "install-edid.sh"
 EDID_HELP = (
-    "Modes the virtual monitor advertises, in the format WIDTHxHEIGHT@MHz. "
-    "On the Orange Pi (RK3566) the clock must be 312, 297, 241.5, 216, 200, 148.5 or 74.25. "
+    "Modes the virtual monitor advertises, as WIDTHxHEIGHT or WIDTHxHEIGHT@MHz, separated by spaces. "
+    "Without MHz, the mode takes the Orange Pi (RK3566) clock closest to 60 Hz. "
     "Takes effect after a reboot."
 )
 

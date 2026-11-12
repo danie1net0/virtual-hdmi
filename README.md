@@ -24,7 +24,9 @@
 Headless machines (an Orange Pi, a server, a laptop with the lid closed) give remote desktop
 tools such as VNC, RDP or Jump Desktop a small screen, or none. Virtual Monitor installs an EDID
 in the kernel, so the HDMI output acts like a real monitor with the resolutions you choose. A
-small app then switches between them and remembers your choice.
+small app then switches between them and remembers your choice. The Orange Pi EDID also has
+the iPad Air 11" screen (2360×1640), so Jump Desktop's Fluid protocol can match it when you
+connect from the tablet.
 
 ## Install
 
@@ -66,13 +68,15 @@ The script edits `armbianEnv.txt` or GRUB and keeps a `*.before-edid` backup. Re
 <br>
 
 ```sh
-python3 -m virtual_monitor.edid output.bin 3440x1440@312 2560x1080@216:60 --vic 16
+python3 -m virtual_monitor.edid output.bin 3440x1440@312 2560x1600 1920x1200:50 --vic 16
 ```
 
-Each mode is `WIDTHxHEIGHT@CLOCK_MHZ[:TARGET_HZ]`; `--vic` adds standard CEA modes.
+Each mode is `WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ]`; `--vic` adds standard CEA modes. The app's
+**Modes** field takes the same format.
 
 On the RK3566, use only clocks its PLL can generate exactly (`312`, `297`, `241.5`, `216`,
-`200`, `148.5`, `74.25` MHz). Others fail with `NOCLOCK`.
+`200`, `148.5`, `74.25` MHz). Others fail with `NOCLOCK`. A mode without a clock gets the one
+closest to the rate.
 
 </details>
 

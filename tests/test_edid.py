@@ -93,13 +93,50 @@ class ParseModeTest(unittest.TestCase):
         self.assertEqual(edid.parse_mode("3008x1260@241.5").clock_khz, 241500)
 
     def test_malformed_modes(self):
-        for text in ("", "abc", "3440x1440", "3440x1440@", "3440x1440@x", "1x2x3@100", "3440x1440@312:abc", "ax1@1"):
+        for text in ("", "abc", "3440x1440@", "3440x1440@x", "1x2x3@100", "3440x1440@312:abc", "ax1@1", "3440x1440:abc"):
             with self.subTest(text=text), self.assertRaisesRegex(edid.EdidError, "Invalid mode"):
                 edid.parse_mode(text)
 
     def test_range_errors_pass_through(self):
         with self.assertRaisesRegex(edid.EdidError, "Resolution"):
             edid.parse_mode("5000x1080@216")
+
+    def test_mode_without_clock_takes_a_rockchip_clock(self):
+        self.assertEqual(edid.parse_mode("2360x1640"), edid.build_timing(2360, 1640, 297, 60))
+
+    def test_mode_without_clock_keeps_the_rate(self):
+        self.assertEqual(edid.parse_mode("1920x1080:50"), edid.best_rockchip_timing(1920, 1080, 50))
+
+    def test_mode_without_clock_that_fits_no_clock(self):
+        with self.assertRaisesRegex(edid.EdidError, "No RK3566 clock fits 100x100 at 60 Hz"):
+            edid.parse_mode("100x100")
+
+
+class BestRockchipTimingTest(unittest.TestCase):
+    def test_takes_the_rate_closest_to_the_target(self):
+        timing = edid.best_rockchip_timing(3440, 1440)
+        self.assertEqual(timing.clock_khz, 312000)
+        self.assertAlmostEqual(timing.refresh, 59.24, places=2)
+
+    def test_lowest_clock_wins_when_rates_tie(self):
+        self.assertAlmostEqual(edid.build_timing(1920, 1200, 312).refresh, 60, places=1)
+        self.assertEqual(edid.best_rockchip_timing(1920, 1200).clock_khz, 200000)
+
+    def test_target_rate(self):
+        timing = edid.best_rockchip_timing(1920, 1080, 50)
+        self.assertEqual(timing.clock_khz, 148500)
+        self.assertAlmostEqual(timing.refresh, 50, places=1)
+
+    def test_only_rockchip_clocks(self):
+        for width, height in ((2360, 1640), (2560, 1600), (1280, 720), (3840, 1600)):
+            with self.subTest(width=width, height=height):
+                clock_mhz = edid.best_rockchip_timing(width, height).clock_khz / 1000
+                self.assertIn(clock_mhz, edid.ROCKCHIP_CLOCKS_MHZ)
+
+    def test_no_clock_fits(self):
+        for width, height in ((100, 100), (5000, 1080)):
+            with self.subTest(width=width, height=height), self.assertRaisesRegex(edid.EdidError, "No RK3566 clock"):
+                edid.best_rockchip_timing(width, height)
 
 
 class BytesTest(unittest.TestCase):
@@ -216,7 +253,7 @@ class BuildEdidTest(unittest.TestCase):
     def test_generate_reproduces_committed_rockchip_edid(self):
         timings, data = edid.generate(list(edid.DEFAULT_MODES))
         self.assertEqual(data, (ROOT / "edid" / "ultrawide-rockchip.bin").read_bytes())
-        self.assertEqual([t.width for t in timings], [3440, 2560, 3008])
+        self.assertEqual([timing.width for timing in timings], [3440, 2560, 3008, 2360])
 
     def test_generate_propagates_errors(self):
         with self.assertRaises(edid.EdidError):

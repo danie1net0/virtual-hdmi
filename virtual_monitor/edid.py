@@ -8,7 +8,9 @@ Lenovo ultrawide.bin (319.75 MHz, 181.25 MHz...) does not come up on the Orange 
 
 Usage:
   python3 -m virtual_monitor.edid output.bin 3440x1440@312:60 2560x1080@216:60 ...
-    each mode is WIDTHxHEIGHT@CLOCK_MHZ[:TARGET_HZ] (TARGET_HZ defaults to 60)
+    each mode is WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ] (TARGET_HZ defaults to 60); without
+    CLOCK_MHZ it takes the RK3566 clock that gets closest to TARGET_HZ
+  python3 -m virtual_monitor.edid output.bin 2360x1640 1920x1200:50
   python3 -m virtual_monitor.edid output.bin 3440x1440@312 --vic 16 --vic 4
     adds standard CEA modes by VIC number
 """
@@ -30,8 +32,11 @@ WIDTH_MM, HEIGHT_MM = 800, 335
 MAX_PIXELS = 4095
 MAX_CLOCK_KHZ = 0xFFFF * 10
 
-# What the app offers: clocks the RK3566 PLL generates exactly
-DEFAULT_MODES = ("3440x1440@312", "2560x1080@216", "3008x1260@241.5")
+# Clocks the RK3566 HDMI PLL generates exactly; a mode without a clock gets one of these
+ROCKCHIP_CLOCKS_MHZ = (312, 297, 241.5, 216, 200, 148.5, 74.25)
+
+# What the app offers, on Rockchip clocks: three ultrawide modes and the iPad Air 11" screen
+DEFAULT_MODES = ("3440x1440@312", "2560x1080@216", "3008x1260@241.5", "2360x1640@297")
 DEFAULT_VICS = (16, 4)  # 1080p60 and 720p60
 DEFAULT_NAME = "Virtual UW"
 
@@ -86,16 +91,53 @@ def build_timing(width: int, height: int, clock_mhz: float, target_hz: float = 6
     return Timing(width, height, clock_khz, htotal, vtotal)
 
 
-def parse_mode(text: str) -> Timing:
-    """WIDTHxHEIGHT@CLOCK_MHZ[:TARGET_HZ], like 3440x1440@312 or 2560x1080@216:50."""
-    size, _, rest = text.partition("@")
-    clock, _, hz = rest.partition(":")
+def best_rockchip_timing(width: int, height: int, target_hz: float = 60.0) -> Timing:
+    """The timing on an RK3566 clock whose refresh rate gets closest to target_hz.
+
+    Rates within 0.1 Hz count as a tie, won by the lowest clock: less blanking and HDMI bandwidth.
+    """
+    timings = []
+    for clock_mhz in ROCKCHIP_CLOCKS_MHZ:
+        timings.extend(_fitting_timing(width, height, clock_mhz, target_hz))
+
+    if not timings:
+        raise EdidError(f"No RK3566 clock fits {width}x{height} at {target_hz:g} Hz")
+
+    return min(timings, key=lambda timing: (round(abs(timing.refresh - target_hz), 1), timing.clock_khz))
+
+
+def _fitting_timing(width: int, height: int, clock_mhz: float, target_hz: float) -> list[Timing]:
+    """The timing on this clock, or nothing when the mode does not fit it."""
     try:
-        width, height = (int(n) for n in size.lower().split("x"))
-        clock_mhz = float(clock)
+        return [build_timing(width, height, clock_mhz, target_hz)]
+    except EdidError:
+        return []
+
+
+def _invalid_mode(text: str) -> EdidError:
+    return EdidError(f"Invalid mode: {text} (use WIDTHxHEIGHT[@MHZ][:HZ])")
+
+
+def parse_mode(text: str) -> Timing:
+    """WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ], like 3440x1440@312, 2560x1080@216:50 or 2360x1640.
+
+    Without a clock, the mode takes the RK3566 clock that gets closest to the rate.
+    """
+    mode, _, hz = text.partition(":")
+    size, at_sign, clock = mode.partition("@")
+    try:
+        width, height = (int(number) for number in size.lower().split("x"))
         target_hz = float(hz or 60)
     except ValueError:
-        raise EdidError(f"Invalid mode: {text} (use WIDTHxHEIGHT@MHZ[:HZ])") from None
+        raise _invalid_mode(text) from None
+
+    if not at_sign:
+        return best_rockchip_timing(width, height, target_hz)
+
+    try:
+        clock_mhz = float(clock)
+    except ValueError:
+        raise _invalid_mode(text) from None
 
     return build_timing(width, height, clock_mhz, target_hz)
 
@@ -216,7 +258,7 @@ def main(argv=None) -> int:
         prog="python3 -m virtual_monitor.edid", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("output", type=Path)
-    parser.add_argument("modes", nargs="+", help="WIDTHxHEIGHT@CLOCK_MHZ[:TARGET_HZ]")
+    parser.add_argument("modes", nargs="+", help="WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ]")
     parser.add_argument("--vic", type=int, action="append", default=[], help="standard CEA mode (VIC)")
     parser.add_argument("--name", default=DEFAULT_NAME)
     args = parser.parse_args(argv)

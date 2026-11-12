@@ -11,7 +11,8 @@ app switches the resolution and generates/installs EDIDs.
 - `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, wlr-randr, xrandr backends),
   `choice.py` (remembered resolution and autostart), `cli.py`, `window.py` (GTK).
 - `scripts/`: root-only system scripts. All accept `ROOT=` for tests.
-- `edid/`: ready EDIDs. `ultrawide-rockchip.bin` only uses clocks the RK3566 PLL can generate.
+- `edid/`: ready EDIDs. `ultrawide-rockchip.bin` only uses clocks the RK3566 PLL can generate, and equals
+  `edid.generate(DEFAULT_MODES)`.
 - `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
   1280×640 PNG uploaded in Settings) and the GitLab project avatar.
 - `install.sh`: per-user install of app, icon and launcher (`--dev`, `--dest-dir`, `--uninstall`).
@@ -34,5 +35,6 @@ app switches the resolution and generates/installs EDIDs.
 `bash tests/run.sh` runs everything. `bash tests/coverage.sh` measures coverage; the shell part
 needs bash 4.1+ and a non-root user (on macOS use the container in the script header).
 `.gitlab-ci.yml` runs the tests on Python 3.9 and 3.13, and coverage on 3.13, for every push and MR.
-Every job runs on the aurisbook Mac runner (tag `aurisbook-mac`), so none spends GitLab CI minutes:
-uv provides the Python, the tests use the system bash 3.2, and coverage uses Homebrew's bash.
+No job spends GitLab CI minutes: the Linux jobs (tests and coverage, as a non-root user) run on the
+Docker runner (tag `docker`), and the macOS job runs in a throwaway Tart VM (tag `macos-vm`),
+where uv provides the Python and the tests use the system bash 3.2.

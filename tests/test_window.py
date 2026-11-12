@@ -171,7 +171,7 @@ class LayoutTest(WindowTestCase):
 
     def test_edid_defaults(self):
         window = self.window()
-        self.assertEqual(window.modes_entry.get_text(), "3440x1440@312 2560x1080@216 3008x1260@241.5")
+        self.assertEqual(window.modes_entry.get_text(), "3440x1440@312 2560x1080@216 3008x1260@241.5 2360x1640@297")
         self.assertIn("suggested-action", window.install_button.css_classes)
         self.assertEqual(window.install_button.label, "Install")
         self.assertTrue(window.install_button.sensitive)
@@ -267,8 +267,15 @@ class InstallTest(WindowTestCase):
 
         self.assertEqual(out.read_bytes(), edid.generate(["1920x1080@148.5", "1280x720@74.25"])[1])
 
+    def test_modes_without_clock_install_on_rockchip_clocks(self):
+        window = self.window()
+        self.click_install(window, "2360x1640 1920x1200")
+        out = Path(fake_gi.Subprocess.created[0].argv[-1])
+
+        self.assertEqual(out.read_bytes(), edid.generate(["2360x1640@297", "1920x1200@200"])[1])
+
     def test_invalid_modes_show_toast_without_running_anything(self):
-        for text, message in (("", "at least one mode"), ("3440x1440", "Invalid mode"), ("9000x1@100", "Resolution")):
+        for text, message in (("", "at least one mode"), ("3440x1440@x", "Invalid mode"), ("100x100", "No RK3566 clock"), ("9000x1@100", "Resolution")):
             with self.subTest(text=text):
                 window = self.window()
                 self.click_install(window, text)

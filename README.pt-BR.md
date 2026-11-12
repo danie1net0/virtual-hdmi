@@ -25,7 +25,8 @@ Máquinas sem monitor (um Orange Pi, um servidor, um notebook de tampa fechada) 
 ferramentas de área de trabalho remota, como VNC, RDP ou Jump Desktop, uma tela pequena, ou
 nenhuma. O Monitor virtual instala um EDID no kernel, e a saída HDMI passa a agir como um
 monitor de verdade, com as resoluções que você escolher. Um app pequeno troca entre elas e
-lembra a sua escolha.
+lembra a sua escolha. O EDID do Orange Pi também tem a tela do iPad Air 11" (2360×1640), e o
+protocolo Fluid do Jump Desktop pode usá-la quando você conecta pelo tablet.
 
 ## Instalar
 
@@ -67,13 +68,15 @@ O script edita o `armbianEnv.txt` ou o GRUB e guarda uma cópia `*.before-edid`.
 <br>
 
 ```sh
-python3 -m virtual_monitor.edid saida.bin 3440x1440@312 2560x1080@216:60 --vic 16
+python3 -m virtual_monitor.edid saida.bin 3440x1440@312 2560x1600 1920x1200:50 --vic 16
 ```
 
-Cada modo é `LARGURAxALTURA@CLOCK_MHZ[:HZ_ALVO]`; `--vic` acrescenta modos CEA padrão.
+Cada modo é `LARGURAxALTURA[@CLOCK_MHZ][:HZ_ALVO]`; `--vic` acrescenta modos CEA padrão. O campo
+**Modes** do app aceita o mesmo formato.
 
 No RK3566, use só clocks que o PLL dele gera exatamente (`312`, `297`, `241.5`, `216`, `200`,
-`148.5`, `74.25` MHz). Os outros falham com `NOCLOCK`.
+`148.5`, `74.25` MHz). Os outros falham com `NOCLOCK`. Um modo sem clock fica com o que chega
+mais perto da taxa.
 
 </details>
 

@@ -2,7 +2,8 @@
 #
 # install-edid.sh
 # Installs a virtual ultrawide monitor EDID on the HDMI-A-1 output, so the
-# driver offers 3440x1440, 3008x1260 and 2560x1080 with no physical monitor connected.
+# driver offers its modes with no physical monitor connected (ultrawide-rockchip.bin:
+# 3440x1440, 3008x1260, 2560x1080 and the iPad Air 11" 2360x1640).
 # Works with GRUB (Lenovo) and with Armbian/U-Boot (Orange Pi, /boot/armbianEnv.txt).
 #
 # Usage (on the machine, in the project folder):
