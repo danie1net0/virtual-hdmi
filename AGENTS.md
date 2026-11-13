@@ -8,15 +8,20 @@ app switches the resolution and generates/installs EDIDs.
 
 - `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`
   and `--restore` run in the terminal.
-- `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, wlr-randr, xrandr backends; applying a
-  mode also sets the desktop scale from `auto_scale`),
-  `choice.py` (remembered resolution and autostart), `cli.py`, `window.py` (GTK).
+- `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, wlr-randr, xrandr backends; `apply`
+  takes a `ModeChange` with the mode, desktop scale and rotation),
+  `choice.py` (remembered resolution, autostart, and the scale and rotation saved per mode size in
+  `settings.json`, with `auto_scale` as the default), `cli.py`, `window.py` (GTK; a switch goes back
+  after `REVERT_SECONDS` without Keep).
 - `scripts/`: root-only system scripts. All accept `ROOT=` for tests.
 - `edid/`: ready EDIDs. `ultrawide-rockchip.bin` only uses clocks the RK3566 PLL can generate, and equals
   `edid.generate(DEFAULT_MODES)`.
 - `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
   1280×640 PNG uploaded in Settings) and the GitLab project avatar.
 - `install.sh`: per-user install of app, icon and launcher (`--dev`, `--dest-dir`, `--uninstall`).
+- `CHANGELOG.md`: one `## vX.Y.Z (date)` section per release, newest first; the top one equals
+  `__version__` in `virtual_monitor/__init__.py`. Pushing the tag makes CI create the GitLab release
+  from that section (`tests/test_release.py` checks both).
 - `get.sh`: `curl | bash` installer. Downloads the GitLab archive of `VERSION` (default `master`)
   and runs `install.sh` with the options after `--`.
 
@@ -39,3 +44,4 @@ needs bash 4.1+ and a non-root user (on macOS use the container in the script he
 No job spends GitLab CI minutes: the Linux jobs (tests and coverage, as a non-root user) run on the
 Docker runner (tag `docker`), and the macOS job runs in a throwaway Tart VM (tag `macos-vm`),
 where uv provides the Python and the tests use the system bash 3.2.
+A `vX.Y.Z` tag also runs the `release` job (Docker runner), which creates the GitLab release.

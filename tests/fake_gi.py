@@ -29,6 +29,10 @@ class Widget:
         self.top_bars = []
         self.appearances = {}
         self.presented_on = []
+        self.selected = 0
+        self.body = props.get("body")
+        self.close_response = None
+        self.force_closed = False
 
     def connect(self, signal, handler, *args):
         self.handlers[signal] = (handler, args)
@@ -94,6 +98,25 @@ class Widget:
     def present(self, parent=None):
         self.presented_on.append(parent)
 
+    def set_selected(self, index):
+        """Like GTK, a change of selection fires notify::selected, also when the code makes it."""
+        changed = index != self.selected
+        self.selected = index
+        if changed and "notify::selected" in self.handlers:
+            self.emit("notify::selected", "pspec")
+
+    def get_selected(self):
+        return self.selected
+
+    def set_body(self, text):
+        self.body = text
+
+    def set_close_response(self, response_id):
+        self.close_response = response_id
+
+    def force_close(self):
+        self.force_closed = True
+
 
 class ApplicationWindow(Widget):
     def present(self, parent=None):
@@ -137,6 +160,15 @@ class Image(Widget):
     @classmethod
     def new_from_icon_name(cls, name):
         return cls(icon_name=name)
+
+
+class StringList:
+    def __init__(self, strings):
+        self.strings = strings
+
+    @classmethod
+    def new(cls, strings):
+        return cls(list(strings))
 
 
 class GError(Exception):
@@ -210,6 +242,7 @@ Gtk = namespace(
     Button=type("Button", (Widget,), {}),
     Label=type("Label", (Widget,), {}),
     Image=Image,
+    StringList=StringList,
     Window=type("Window", (), {"default_icons": [], "set_default_icon_name": staticmethod(lambda name: Gtk.Window.default_icons.append(name))}),
     Align=types.SimpleNamespace(CENTER="center"),
 )
@@ -228,9 +261,10 @@ Adw = namespace(
     ActionRow=type("ActionRow", (Widget,), {}),
     SwitchRow=type("SwitchRow", (Widget,), {}),
     EntryRow=type("EntryRow", (Widget,), {}),
+    ComboRow=type("ComboRow", (Widget,), {}),
     Toast=type("Toast", (Widget,), {}),
     AlertDialog=AlertDialog,
-    ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE="destructive"),
+    ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE="destructive", SUGGESTED="suggested"),
 )
 
 Gio = namespace(
@@ -248,10 +282,13 @@ GLib = namespace(
     Error=GError,
     Variant=Variant,
     SOURCE_REMOVE=False,
+    SOURCE_CONTINUE=True,
     timeouts=[],
+    second_timeouts=[],
     prgnames=[],
     set_prgname=lambda name: GLib.prgnames.append(name),
     timeout_add=lambda ms, callback: GLib.timeouts.append((ms, callback)),
+    timeout_add_seconds=lambda seconds, callback, *data: GLib.second_timeouts.append((seconds, callback, data)),
 )
 
 repository = namespace("gi.repository", Adw=Adw, Gio=Gio, GLib=GLib, Gtk=Gtk)
@@ -273,5 +310,6 @@ def reset():
     DBusProxy.calls.clear()
     DBusProxy.next = None
     GLib.timeouts.clear()
+    GLib.second_timeouts.clear()
     GLib.prgnames.clear()
     Gtk.Window.default_icons.clear()

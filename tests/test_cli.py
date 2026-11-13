@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from virtual_monitor import choice, cli, displays
+from virtual_monitor import __version__, choice, cli, displays
 
 
 def mode(mode_id, current=False, preferred=False):
@@ -24,10 +24,12 @@ class Backend(displays.Backend):
     def outputs(self):
         return self._outputs
 
-    def apply(self, connector, mode_id, persistent):
+    def apply(self, change, persistent):
         if self.error:
             raise self.error
-        self.applied.append((connector, mode_id, persistent))
+
+        self.applied.append((change.connector, change.mode_id, persistent))
+        self.last_change = change
 
 
 class CliTest(unittest.TestCase):
@@ -132,10 +134,100 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("Failed: no output", err)
 
+    def test_next_applies_the_mode_after_the_current_one(self):
+        code, out, _ = self.run_cli(["--next"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "applied 1920x1080@60.00 on HDMI-1\n")
+        self.assertEqual(self.backend.applied, [("HDMI-1", "1920x1080@60.00", True)])
+        self.assertEqual(choice.load(), ("HDMI-1", "1920x1080@60.00"))
+
+    def test_next_wraps_after_the_last_mode(self):
+        backend = Backend({"HDMI-1": [mode("3440x1440@59.24"), mode("1920x1080@60.00", current=True)]})
+        self.run_cli(["--next", "--temp"], backend=backend)
+
+        self.assertEqual(backend.applied, [("HDMI-1", "3440x1440@59.24", False)])
+        self.assertIsNone(choice.load())
+
+    def test_next_without_current_mode_takes_the_first(self):
+        backend = Backend({"HDMI-1": [mode("3440x1440@59.24"), mode("1920x1080@60.00")]})
+        self.run_cli(["--next"], backend=backend)
+        self.assertEqual(backend.applied[0][1], "3440x1440@59.24")
+
+    def test_next_without_modes_fails(self):
+        code, _, err = self.run_cli(["--next"], backend=Backend({"HDMI-1": []}))
+
+        self.assertEqual(code, 1)
+        self.assertEqual(err, "Failed: the output has no modes\n")
+
+    def test_apply_with_scale_and_rotation_saves_them_for_the_size(self):
+        code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--scale", "1.25", "--rotation", "left"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(choice.size_settings(1920, 1080), {"scale": 1.25, "rotation": "left"})
+        self.assertEqual(self.backend.last_change, displays.ModeChange("HDMI-1", "1920x1080@60.00", 1.25, "left"))
+
+    def test_scale_alone_rescales_the_current_mode(self):
+        code, out, _ = self.run_cli(["--scale", "2"])
+
+        self.assertEqual((code, out), (0, "applied 2560x1080@59.98 on HDMI-1\n"))
+        self.assertEqual(self.backend.last_change.scale, 2.0)
+        self.assertEqual(choice.size_settings(2560, 1080), {"scale": 2.0})
+
+    def test_rotation_alone_rotates_the_current_mode(self):
+        self.run_cli(["--rotation", "right", "--temp"])
+
+        self.assertEqual(self.backend.last_change.rotation, "right")
+        self.assertIsNone(choice.load())
+
+    def test_auto_scale_removes_the_saved_one(self):
+        choice.save_setting(2560, 1080, "scale", 2.0)
+        self.run_cli(["--scale", "auto"])
+
+        self.assertEqual(choice.size_settings(2560, 1080), {})
+        self.assertEqual(self.backend.last_change.scale, 1.0)
+
+    def test_scale_without_current_mode_fails(self):
+        code, _, err = self.run_cli(["--scale", "2"], backend=Backend({"HDMI-1": [mode("1920x1080@60.00")]}))
+
+        self.assertEqual(code, 1)
+        self.assertEqual(err, "Failed: the output has no current mode\n")
+
+    def test_settings_of_unknown_mode_are_not_saved(self):
+        backend = Backend({"HDMI-1": []})
+        self.run_cli(["--apply", "9x9@1", "--scale", "2"], backend=backend)
+
+        self.assertEqual(choice.load_settings(), {})
+        self.assertEqual(backend.last_change, displays.ModeChange("HDMI-1", "9x9@1"))
+
+    def test_scale_argument(self):
+        self.assertEqual(cli.scale_argument("1.5"), 1.5)
+        self.assertEqual(cli.scale_argument("4"), 4.0)
+        self.assertEqual(cli.scale_argument("auto"), cli.AUTO_SCALE)
+        for text, message in (("big", "not a number"), ("0", "from 0 to 4"), ("4.5", "from 0 to 4"), ("-1", "from 0 to 4")):
+            with self.subTest(text=text), self.assertRaisesRegex(cli.argparse.ArgumentTypeError, message):
+                cli.scale_argument(text)
+
+    def test_unknown_rotation_is_refused(self):
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
+            cli.parse_args(["--rotation", "inverted"])
+        self.assertEqual(raised.exception.code, 2)
+
+    def test_version(self):
+        out = io.StringIO()
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stdout(out):
+            cli.parse_args(["--version"])
+
+        self.assertEqual(raised.exception.code, 0)
+        self.assertEqual(out.getvalue(), f"virtual-monitor {__version__}\n")
+
     def test_options_are_exclusive(self):
         with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
             cli.parse_args(["--list", "--restore"])
         self.assertEqual(raised.exception.code, 2)
+
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            cli.parse_args(["--next", "--apply", "m"])
 
     def test_temp_alone_lists(self):
         code, out, _ = self.run_cli(["--temp"])

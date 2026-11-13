@@ -1,7 +1,8 @@
 # Tests on the oldest and newest supported Python, on Linux (bash 5, GNU) and on macOS (bash 3.2,
 # BSD tools), plus coverage (100% required). Linux jobs run on the webmaker-runner Docker runner;
 # the macOS job runs in a fresh Tart VM on the Mac (thrown away after the job), where uv provides
-# the Python. No job spends GitLab CI minutes.
+# the Python. A version tag (vX.Y.Z) also creates its GitLab release from CHANGELOG.md. No job
+# spends GitLab CI minutes.
 
 workflow:
   rules:
@@ -13,6 +14,7 @@ workflow:
 
 stages:
   - test
+  - release
 
 .mac:
   stage: test
@@ -60,3 +62,20 @@ coverage:
   script:
     - su tester -c 'pip install --quiet --user coverage && bash tests/coverage.sh'
   coverage: '/^TOTAL\s.*\s(\d+(?:\.\d+)?)%$/'
+
+# The release notes are the CHANGELOG.md section of the tag; tests/test_release.py runs the same awk.
+release:
+  stage: release
+  image:
+    name: registry.gitlab.com/gitlab-org/cli:latest
+    entrypoint: [""]
+  tags: [docker]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]+[.][0-9]+[.][0-9]+$/
+  script:
+    - awk -v tag="$CI_COMMIT_TAG" '/^## /{inside = ($2 == tag); next} inside' CHANGELOG.md > release-notes.md
+    - grep -q . release-notes.md
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: $CI_COMMIT_TAG
+    description: ./release-notes.md

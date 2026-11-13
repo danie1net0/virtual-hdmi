@@ -25,15 +25,18 @@ class Backend(displays.Backend):
     def __init__(self, outputs):
         self._outputs = outputs
         self.applied = []
+        self.changes = []
         self.error = None
 
     def outputs(self):
         return self._outputs
 
-    def apply(self, connector, mode_id, persistent):
+    def apply(self, change, persistent):
         if self.error:
             raise self.error
-        self.applied.append((connector, mode_id, persistent))
+
+        self.applied.append((change.connector, change.mode_id, persistent))
+        self.changes.append(change)
 
 
 def titles(widgets):
@@ -107,7 +110,7 @@ class LayoutTest(WindowTestCase):
         self.assertIs(window.toasts.child, window.navigation)
         self.assertEqual((main.init_props["title"], main.init_props["tag"]), ("Virtual monitor", "main"))
         self.assertEqual(len(view.top_bars), 1)
-        self.assertEqual(titles(view.content.children), ["Status", "Resolution"])
+        self.assertEqual(titles(view.content.children), ["Status", "Current mode", "Resolution"])
         self.assertIs(edid_page, window.edid_page)
         self.assertEqual(window.navigation.pushed, [])
 
@@ -120,7 +123,8 @@ class LayoutTest(WindowTestCase):
         self.assertEqual(len(view.top_bars), 1)
         self.assertEqual(group.init_props, {"description": window_module.EDID_HELP})
         self.assertEqual(group.children[0], window.modes_entry)
-        self.assertEqual(group.children[1].suffixes, [window.install_button])
+        self.assertIs(group.children[1], window.timings_row)
+        self.assertEqual(group.children[2].suffixes, [window.install_button])
 
     def test_edid_row_opens_the_edid_page(self):
         window = self.window()
@@ -192,6 +196,23 @@ class LayoutTest(WindowTestCase):
         self.assertEqual(window.install_button.label, "Install")
         self.assertTrue(window.install_button.sensitive)
 
+    def test_timings_preview_follows_the_modes(self):
+        window = self.window()
+        self.assertEqual(window.timings_row.init_props["title"], "Timings")
+        self.assertIn("property", window.timings_row.css_classes)
+        self.assertEqual(
+            window.timings_row.subtitle,
+            "\n".join(timing.label() for timing in edid.generate(list(edid.DEFAULT_MODES))[0]),
+        )
+
+        window.modes_entry.set_text("2360x1640")
+        window.modes_entry.emit("changed")
+        self.assertEqual(window.timings_row.subtitle, "2360x1640 @ 297 MHz = 60.01 Hz")
+
+        window.modes_entry.set_text("100x100")
+        window.modes_entry.emit("changed")
+        self.assertEqual(window.timings_row.subtitle, "Invalid: No RK3566 clock fits 100x100 at 60 Hz")
+
     def test_refresh_replaces_mode_rows(self):
         window = self.window()
         old = list(window.mode_rows)
@@ -204,21 +225,213 @@ class LayoutTest(WindowTestCase):
         self.assertEqual(window.modes_group.children, [window.remember, window.mode_rows[0]])
 
 
-class ModeTest(WindowTestCase):
-    def test_activating_a_row_applies_and_remembers(self):
+class CurrentModeTest(WindowTestCase):
+    def test_rows_show_the_current_mode_settings(self):
         window = self.window()
-        window.mode_rows[0].emit("activated")
 
-        self.assertEqual(self.backend.applied, [("HDMI-1", "3440x1440@59.24", True)])
-        self.assertEqual(choice.load(), ("HDMI-1", "3440x1440@59.24"))
-        self.assertEqual(window.toasts.toasts[-1].init_props["title"], "3440×1440 applied")
+        self.assertEqual(window.current.id, "2560x1080@59.98")
+        self.assertEqual(window.scale_row.init_props["title"], "Scale")
+        self.assertEqual(window.scale_row.init_props["model"].strings, [label for label, _value in window_module.SCALES])
+        self.assertEqual(window.rotation_row.init_props["model"].strings, ["Landscape", "Portrait", "Portrait, flipped"])
+        self.assertEqual((window.scale_row.selected, window.rotation_row.selected), (0, 0))
+        self.assertEqual(window.scale_row.subtitle, "100% at 2560×1080")
+        self.assertTrue(window.scale_row.sensitive)
+        self.assertEqual(self.backend.applied, [])
 
-    def test_without_remember_applies_temporarily(self):
+    def test_rows_show_saved_settings_without_applying(self):
+        choice.save_setting(2560, 1080, "scale", 1.25)
+        choice.save_setting(2560, 1080, "rotation", "left")
+        window = self.window()
+
+        self.assertEqual((window.scale_row.selected, window.rotation_row.selected), (2, 1))
+        self.assertEqual(window.scale_row.subtitle, "125% at 2560×1080")
+        self.assertEqual(self.backend.applied, [])
+
+    def test_rows_are_off_without_current_mode(self):
+        self.backend._outputs = {"HDMI-1": [mode("1920x1080@60.00", 1920, 1080, 60.0)]}
+        window = self.window()
+
+        self.assertIsNone(window.current)
+        self.assertFalse(window.scale_row.sensitive)
+        self.assertFalse(window.rotation_row.sensitive)
+        self.assertEqual(window.scale_row.subtitle, "no current mode")
+
+    def test_changing_the_scale_saves_it_and_applies_again(self):
+        window = self.window()
+        window.scale_row.set_selected(3)
+
+        self.assertEqual(choice.size_settings(2560, 1080), {"scale": 1.5})
+        self.assertEqual(self.backend.changes, [displays.ModeChange("HDMI-1", "2560x1080@59.98", 1.5)])
+        self.assertEqual(choice.load(), ("HDMI-1", "2560x1080@59.98"))
+
+    def test_automatic_scale_removes_the_saved_one(self):
+        choice.save_setting(2560, 1080, "scale", 2.0)
+        window = self.window()
+        window.scale_row.set_selected(0)
+
+        self.assertEqual(choice.size_settings(2560, 1080), {})
+        self.assertEqual(self.backend.changes[-1].scale, 1.0)
+
+    def test_changing_the_orientation_rotates_the_current_mode(self):
         window = self.window()
         window.remember.set_active(False)
+        window.rotation_row.set_selected(2)
+
+        self.assertEqual(choice.size_settings(2560, 1080), {"rotation": "right"})
+        self.assertEqual(self.backend.changes[-1].rotation, "right")
+        self.assertIsNone(choice.load())
+
+    def test_failed_setting_change_keeps_the_choice_unsaved(self):
+        window = self.window()
+        self.backend.error = RuntimeError("refused")
+        window.rotation_row.set_selected(1)
+
+        self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Failed: refused")
+        self.assertIsNone(choice.load())
+
+    def test_setting_without_current_mode_does_nothing(self):
+        self.backend._outputs = {"HDMI-1": [mode("1920x1080@60.00", 1920, 1080, 60.0)]}
+        window = self.window()
+        window.scale_row.set_selected(2)
+
+        self.assertEqual(choice.load_settings(), {})
+        self.assertEqual(self.backend.applied, [])
+
+    def test_refresh_after_a_switch_shows_the_new_mode_settings(self):
+        choice.save_setting(3440, 1440, "rotation", "left")
+        window = self.window()
+        self.backend._outputs = {"HDMI-1": [mode("3440x1440@59.24", 3440, 1440, 59.24, current=True)]}
+        window.refresh()
+
+        self.assertEqual(window.rotation_row.selected, 1)
+        self.assertEqual(self.backend.applied, [])
+
+
+class ModeTest(WindowTestCase):
+    def switch(self, window, index=0):
+        window.mode_rows[index].emit("activated")
+        return fake_gi.AlertDialog.created[-1]
+
+    def test_switch_applies_temporarily_and_asks_to_keep(self):
+        window = self.window()
+        dialog = self.switch(window)
+
+        self.assertEqual(self.backend.applied, [("HDMI-1", "3440x1440@59.24", False)])
+        self.assertEqual(window.toasts.toasts[-1].init_props["title"], "3440×1440 applied")
+        self.assertEqual(dialog.init_props, {"heading": "Keep this resolution?", "body": window_module.countdown_text(15)})
+        self.assertEqual(dialog.responses, [("revert", "Go back"), ("keep", "Keep")])
+        self.assertEqual(dialog.appearances, {"keep": "suggested"})
+        self.assertEqual(dialog.close_response, "revert")
+        self.assertEqual(dialog.presented_on, [window])
+        self.assertEqual(fake_gi.GLib.second_timeouts, [(1, window.count_down, (window.pending,))])
+        self.assertIsNone(choice.load())
+
+    def test_keep_remembers_the_mode(self):
+        window = self.window()
+        self.switch(window).emit("response", "keep")
+
+        self.assertEqual(choice.load(), ("HDMI-1", "3440x1440@59.24"))
+        self.assertIsNone(window.pending)
+        self.assertEqual(len(self.backend.applied), 1)
+
+    def test_keep_without_remember_saves_nothing(self):
+        window = self.window()
+        window.remember.set_active(False)
+        self.switch(window).emit("response", "keep")
+
+        self.assertIsNone(choice.load())
+
+    def test_keep_on_gnome_applies_again_as_persistent(self):
+        self.backend.native_persist = True
+        window = self.window()
+        self.switch(window).emit("response", "keep")
+
+        self.assertEqual(self.backend.applied[-1], ("HDMI-1", "3440x1440@59.24", True))
+
+    def test_keep_failure_shows_toast(self):
+        self.backend.native_persist = True
+        window = self.window()
+        dialog = self.switch(window)
+        self.backend.error = RuntimeError("monitors.xml")
+        dialog.emit("response", "keep")
+
+        self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Failed: monitors.xml")
+
+    def test_go_back_restores_the_previous_mode(self):
+        window = self.window()
+        self.switch(window).emit("response", "revert")
+
+        self.assertEqual(self.backend.applied[-1], ("HDMI-1", "2560x1080@59.98", False))
+        self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Previous resolution restored")
+        self.assertIsNone(choice.load())
+
+    def test_failed_go_back_shows_toast(self):
+        window = self.window()
+        dialog = self.switch(window)
+        self.backend.error = RuntimeError("no output")
+        dialog.emit("response", "revert")
+
+        self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Failed: no output")
+
+    def test_countdown_goes_back_when_nobody_answers(self):
+        window = self.window()
+        dialog = self.switch(window)
+        (_seconds, count_down, (pending,)), = fake_gi.GLib.second_timeouts
+
+        for remaining in range(14, 0, -1):
+            self.assertIs(count_down(pending), fake_gi.GLib.SOURCE_CONTINUE)
+            self.assertEqual(dialog.body, window_module.countdown_text(remaining))
+        self.assertEqual(len(self.backend.applied), 1)
+
+        self.assertIs(count_down(pending), fake_gi.GLib.SOURCE_REMOVE)
+        self.assertTrue(dialog.force_closed)
+        self.assertIsNone(window.pending)
+        self.assertEqual(self.backend.applied[-1], ("HDMI-1", "2560x1080@59.98", False))
+
+    def test_answer_after_the_countdown_is_ignored(self):
+        window = self.window()
+        dialog = self.switch(window)
+        window.pending.remaining = 1
+        window.count_down(window.pending)
+        dialog.emit("response", "keep")
+
+        self.assertEqual(len(self.backend.applied), 2)
+        self.assertIsNone(choice.load())
+
+    def test_countdown_stops_after_an_answer(self):
+        window = self.window()
+        dialog = self.switch(window)
+        (_seconds, count_down, (pending,)), = fake_gi.GLib.second_timeouts
+        dialog.emit("response", "keep")
+
+        self.assertIs(count_down(pending), fake_gi.GLib.SOURCE_REMOVE)
+        self.assertEqual(pending.remaining, 15)
+
+    def test_old_countdown_does_not_touch_a_newer_switch(self):
+        window = self.window()
+        first = self.switch(window)
+        first.emit("response", "keep")
+        self.switch(window)
+        (_seconds, old_count_down, (old_pending,)) = fake_gi.GLib.second_timeouts[0]
+
+        self.assertIs(old_count_down(old_pending), fake_gi.GLib.SOURCE_REMOVE)
+        self.assertEqual(window.pending.remaining, 15)
+
+    def test_current_mode_applies_without_asking(self):
+        window = self.window()
         window.mode_rows[1].emit("activated")
 
+        self.assertEqual(fake_gi.AlertDialog.created, [])
         self.assertEqual(self.backend.applied, [("HDMI-1", "2560x1080@59.98", False)])
+        self.assertEqual(choice.load(), ("HDMI-1", "2560x1080@59.98"))
+
+    def test_without_current_mode_applies_without_asking(self):
+        self.backend._outputs = {"HDMI-1": [mode("1920x1080@60.00", 1920, 1080, 60.0)]}
+        window = self.window()
+        window.remember.set_active(False)
+        window.mode_rows[0].emit("activated")
+
+        self.assertEqual(fake_gi.AlertDialog.created, [])
         self.assertIsNone(choice.load())
 
     def test_refreshes_once_after_applying(self):
@@ -238,7 +451,18 @@ class ModeTest(WindowTestCase):
 
         self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Failed: xrandr: Configure crtc 0 failed")
         self.assertEqual(fake_gi.GLib.timeouts, [])
+        self.assertEqual(fake_gi.AlertDialog.created, [])
         self.assertIsNone(choice.load())
+
+
+class HelpersTest(unittest.TestCase):
+    def test_choice_index(self):
+        self.assertEqual(window_module.choice_index(window_module.SCALES, 1.5), 3)
+        self.assertEqual(window_module.choice_index(window_module.SCALES, 1.1), 0)
+        self.assertEqual(window_module.choice_index(window_module.ROTATIONS, "right"), 2)
+
+    def test_every_rotation_choice_is_known(self):
+        self.assertEqual([value for _label, value in window_module.ROTATIONS], list(displays.ROTATIONS))
 
 
 class InstallTest(WindowTestCase):

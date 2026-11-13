@@ -36,22 +36,29 @@ curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 ```
 
 This adds **Virtual monitor** to the app menu, without sudo. Run the same line to update; add
-`-s -- --uninstall` after `bash` to remove it. From a clone, `bash install.sh` does the same
-(`--help` lists the options).
+`-s -- --uninstall` after `bash` to remove it, or `VERSION=v0.3.0` before `bash` to pin a
+release ([CHANGELOG.md](CHANGELOG.md)). From a clone, `bash install.sh` does the same (`--help`
+lists the options).
 
 ## Use
 
-Open **Virtual monitor** from the menu, or use the terminal:
+Open **Virtual monitor** from the menu and tap a mode. If you do not press **Keep** within 15
+seconds, the previous mode comes back, so a mode without a picture undoes itself. **Scale** and
+**Orientation** (portrait, to use the iPad upright) are saved for each resolution. Without a saved
+scale, tablet-like modes such as 2360×1640 get 150% and the others 100% (on X11, only XFCE scales,
+through its font DPI).
+
+Or use the terminal:
 
 ```sh
 python3 virtual-monitor.py --list                    # outputs and modes
 python3 virtual-monitor.py --apply 2560x1080@59.98   # switch and remember
 python3 virtual-monitor.py --apply 1920x1080@60.00 --temp   # switch only
+python3 virtual-monitor.py --next                    # next mode, for a keyboard shortcut
+python3 virtual-monitor.py --scale 1.25 --rotation left     # current mode: 125%, portrait
 ```
 
-Works on GNOME, KDE Plasma, wlroots (sway, Hyprland) and X11 (XFCE, MATE, i3). Switching also
-sets the desktop scale: 150% on tablet-like modes such as 2360×1640, 100% on the others (on X11,
-only XFCE, through its font DPI).
+Works on GNOME, KDE Plasma, wlroots (sway, Hyprland) and X11 (XFCE, MATE, i3).
 
 ## Install the EDID
 
