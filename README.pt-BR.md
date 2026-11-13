@@ -49,7 +49,9 @@ python3 virtual-monitor.py --apply 2560x1080@59.98   # troca e lembra
 python3 virtual-monitor.py --apply 1920x1080@60.00 --temp   # só troca
 ```
 
-Funciona no GNOME, KDE Plasma, wlroots (sway, Hyprland) e X11 (XFCE, MATE, i3).
+Funciona no GNOME, KDE Plasma, wlroots (sway, Hyprland) e X11 (XFCE, MATE, i3). A troca também
+ajusta a escala do desktop: 150% nos modos de tablet, como 2360×1640, e 100% nos outros (no X11,
+só no XFCE, pelo DPI das fontes).
 
 ## Instalar o EDID
 

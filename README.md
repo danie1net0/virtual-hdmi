@@ -49,7 +49,9 @@ python3 virtual-monitor.py --apply 2560x1080@59.98   # switch and remember
 python3 virtual-monitor.py --apply 1920x1080@60.00 --temp   # switch only
 ```
 
-Works on GNOME, KDE Plasma, wlroots (sway, Hyprland) and X11 (XFCE, MATE, i3).
+Works on GNOME, KDE Plasma, wlroots (sway, Hyprland) and X11 (XFCE, MATE, i3). Switching also
+sets the desktop scale: 150% on tablet-like modes such as 2360×1640, 100% on the others (on X11,
+only XFCE, through its font DPI).
 
 ## Install the EDID
 

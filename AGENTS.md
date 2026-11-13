@@ -8,7 +8,8 @@ app switches the resolution and generates/installs EDIDs.
 
 - `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`
   and `--restore` run in the terminal.
-- `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, wlr-randr, xrandr backends),
+- `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, wlr-randr, xrandr backends; applying a
+  mode also sets the desktop scale from `auto_scale`),
   `choice.py` (remembered resolution and autostart), `cli.py`, `window.py` (GTK).
 - `scripts/`: root-only system scripts. All accept `ROOT=` for tests.
 - `edid/`: ready EDIDs. `ultrawide-rockchip.bin` only uses clocks the RK3566 PLL can generate, and equals

@@ -7,6 +7,9 @@ Lists and switches the video modes of the current graphical session, in any envi
   X11 (XFCE, MATE, i3...)              xrandr
 
 Needs no GTK: GNOME uses only Gio, loaded when the backend is tested.
+
+Applying a mode also sets the desktop scale: 1.5 on dense tablet-like modes (the iPad Air 11"
+2360x1640), 1 on the others. XFCE scales through Xft/DPI; other X11 desktops keep their own.
 """
 
 import json
@@ -19,6 +22,10 @@ from pathlib import Path
 
 CMDLINE = Path("/proc/cmdline")
 MUTTER = ("org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig")
+TABLET_SCALE = 1.5
+TABLET_MIN_HEIGHT = 1500
+TABLET_MAX_ASPECT = 1.6
+XFT_DPI_AT_1X = 96
 
 
 @dataclass(frozen=True)
@@ -29,6 +36,14 @@ class Mode:
     refresh: float
     current: bool
     preferred: bool
+
+
+def auto_scale(width, height):
+    """Desktop scale for a mode: TABLET_SCALE when it is tall and at most 16:10, as on a tablet; 1 otherwise."""
+    if height < TABLET_MIN_HEIGHT or width > height * TABLET_MAX_ASPECT:
+        return 1.0
+
+    return TABLET_SCALE
 
 
 def run(argv):
@@ -142,22 +157,51 @@ def parse_mutter(monitors):
     return outputs
 
 
+def mutter_scale(monitors, connector, mode_id):
+    """The scale Mutter supports for mode_id that is closest to auto_scale; Mutter refuses any other."""
+    modes = [mode for monitor in monitors if monitor[0][0] == connector for mode in monitor[1] if mode[0] == mode_id]
+    if not modes:
+        return 1.0
+
+    _mode_id, width, height, _refresh, _preferred, supported, _props = modes[0]
+    wanted = auto_scale(width, height)
+    return min(supported, key=lambda scale: abs(scale - wanted))
+
+
+def member_scale(scale, members, connector, connector_scale):
+    """Scale of a logical monitor: the new one if it holds connector, the current one otherwise."""
+    if any(member[0] == connector for member in members):
+        return connector_scale
+
+    return scale
+
+
 def mutter_layout(monitors, logical, connector, mode_id):
-    """Builds the logical monitors for ApplyMonitorsConfig, changing only the mode of connector."""
+    """Builds the logical monitors for ApplyMonitorsConfig, changing only the mode and scale of connector."""
     mode_of = {}
     for monitor in monitors:
         mode_of[monitor[0][0]] = next((m[0] for m in monitor[1] if m[6].get("is-current")), None)
     mode_of[connector] = mode_id
+    connector_scale = mutter_scale(monitors, connector, mode_id)
 
     layout = []
     for x, y, scale, transform, primary, mons, _props in logical:
         members = [(mon[0], mode_of[mon[0]], {}) for mon in mons if mode_of.get(mon[0])]
         if members:
-            layout.append((x, y, scale, transform, primary, members))
+            layout.append((x, y, member_scale(scale, members, connector, connector_scale), transform, primary, members))
 
     if not any(connector == member[0] for item in layout for member in item[5]):
-        layout.append((0, 0, 1.0, 0, not layout, [(connector, mode_id, {})]))
+        layout.append((0, 0, connector_scale, 0, not layout, [(connector, mode_id, {})]))
     return layout
+
+
+def set_xfce_dpi(scale):
+    """XFCE scales fonts and widgets through Xft/DPI (96 is 1x); without xfconf-query, nothing changes."""
+    if shutil.which("xfconf-query") is None:
+        return
+
+    dpi = str(round(XFT_DPI_AT_1X * scale))
+    run(["xfconf-query", "-c", "xsettings", "-p", "/Xft/DPI", "-n", "-t", "int", "-s", dpi])
 
 
 class Backend:
@@ -172,6 +216,14 @@ class Backend:
     def modes(self, connector):
         return self.outputs().get(connector, [])
 
+    def scale_for(self, connector, mode_id):
+        """auto_scale of mode_id; 1 when the output does not list it."""
+        mode = next((mode for mode in self.modes(connector) if mode.id == mode_id), None)
+        if mode is None:
+            return 1.0
+
+        return auto_scale(mode.width, mode.height)
+
 
 class XrandrBackend(Backend):
     name = "X11 (xrandr)"
@@ -184,8 +236,10 @@ class XrandrBackend(Backend):
         return parse_xrandr(run(["xrandr", "--query"]))
 
     def apply(self, connector, mode_id, persistent):
+        scale = self.scale_for(connector, mode_id)
         size, rate = mode_id.split("@")
         run(["xrandr", "--output", connector, "--mode", size, "--rate", rate])
+        set_xfce_dpi(scale)
 
 
 class WlrBackend(Backend):
@@ -199,7 +253,8 @@ class WlrBackend(Backend):
         return parse_wlr(run(["wlr-randr", "--json"]))
 
     def apply(self, connector, mode_id, persistent):
-        run(["wlr-randr", "--output", connector, "--mode", f"{mode_id}Hz"])
+        scale = self.scale_for(connector, mode_id)
+        run(["wlr-randr", "--output", connector, "--mode", f"{mode_id}Hz", "--scale", f"{scale:g}"])
 
 
 class KScreenBackend(Backend):
@@ -213,7 +268,8 @@ class KScreenBackend(Backend):
         return parse_kscreen(run(["kscreen-doctor", "-j"]))
 
     def apply(self, connector, mode_id, persistent):
-        run(["kscreen-doctor", f"output.{connector}.mode.{mode_id}"])
+        scale = self.scale_for(connector, mode_id)
+        run(["kscreen-doctor", f"output.{connector}.mode.{mode_id}", f"output.{connector}.scale.{scale:g}"])
 
 
 def mutter_proxy(auto_start):
