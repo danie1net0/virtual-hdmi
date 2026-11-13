@@ -111,7 +111,7 @@ bash tests/run.sh         # all tests
 bash tests/coverage.sh    # 100% required (see the script header on macOS)
 ```
 
-Standard library only. CI runs the tests on Python 3.9 and 3.13 and on macOS bash 3.2.
+Standard library only. CI runs the tests on Python 3.9 and 3.13 and on bash 3.2, the macOS bash.
 See [AGENTS.md](AGENTS.md) for the code layout and rules.
 
 ## License

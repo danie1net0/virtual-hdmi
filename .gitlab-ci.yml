@@ -1,8 +1,6 @@
-# Tests on the oldest and newest supported Python, on Linux (bash 5, GNU) and on macOS (bash 3.2,
-# BSD tools), plus coverage (100% required). Linux jobs run on the webmaker-runner Docker runner;
-# the macOS job runs in a fresh Tart VM on the Mac (thrown away after the job), where uv provides
-# the Python. A version tag (vX.Y.Z) also creates its GitLab release from CHANGELOG.md. No job
-# spends GitLab CI minutes.
+# Tests on the oldest and newest supported Python and on bash 3.2 (the macOS bash), plus coverage
+# (100% required). Every job runs on the webmaker-runner Docker runner (tag docker), so none spends
+# GitLab CI minutes. A version tag (vX.Y.Z) also creates its GitLab release from CHANGELOG.md.
 
 workflow:
   rules:
@@ -15,27 +13,6 @@ workflow:
 stages:
   - test
   - release
-
-.mac:
-  stage: test
-  image: ghcr.io/cirruslabs/macos-tahoe-base:latest
-  tags: [macos-vm]
-  before_script:
-    - curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh
-    - export PATH="$HOME/.local/bin:$PATH"
-    - uv venv --quiet --python "$PYTHON" "$CI_PROJECT_DIR/.venv"
-
-# The macOS bash 3.2 and BSD tools; tests/run.sh calls python3 and bash from PATH.
-test:macos:
-  extends: .mac
-  parallel:
-    matrix:
-      - PYTHON: ["3.9", "3.13"]
-  script:
-    - export PATH="$CI_PROJECT_DIR/.venv/bin:/bin:/usr/bin:$PATH"
-    - python3 --version
-    - bash --version | head -n 1
-    - bash tests/run.sh
 
 # The shell scripts expect a regular user, as on a real machine, so the Linux jobs drop root.
 .linux:
@@ -53,6 +30,21 @@ test:linux:
       - PYTHON: ["3.9", "3.13"]
   script:
     - su tester -c 'python3 --version && bash --version | head -n 1 && bash tests/run.sh'
+
+# The bash of macOS is 3.2. The bash:3.2 image (Alpine) ships it in /usr/local/bin; the test stubs
+# start with #!/bin/bash, which the image lacks. BSD-only behavior is checked by
+# tests/test_shell_portability.py instead.
+test:bash-3.2:
+  stage: test
+  image: bash:3.2
+  tags: [docker]
+  before_script:
+    - ln -s /usr/local/bin/bash /bin/bash
+    - apk add --quiet python3
+    - adduser -D tester
+    - chown -R tester "$CI_PROJECT_DIR"
+  script:
+    - su tester -c 'bash --version | head -n 1 && bash tests/run.sh'
 
 # Shell coverage needs bash 4.1+, so it runs on Linux.
 coverage:

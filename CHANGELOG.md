@@ -16,7 +16,9 @@ the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 - The Orange Pi EDID has the iPad Air 11" mode (2360×1640); a mode without a clock gets the RK3566
   clock closest to the rate.
 - The EDID lives on its own page, and its button shows Installed when it matches the installed EDID.
-- CI runs on the Docker runner and a throwaway macOS VM, without spending GitLab CI minutes.
+- CI runs only on the Docker runner, without spending GitLab CI minutes: bash 3.2 (the macOS bash)
+  runs in the `bash:3.2` image, and `tests/test_shell_portability.py` catches GNU-only options and
+  bash 4 features.
 
 ## v0.2.0 (2026-11-04)
 

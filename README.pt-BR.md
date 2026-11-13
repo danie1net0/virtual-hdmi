@@ -111,7 +111,7 @@ bash tests/run.sh         # todos os testes
 bash tests/coverage.sh    # exige 100% (no macOS, veja o cabeçalho do script)
 ```
 
-Só a biblioteca padrão. O CI roda os testes no Python 3.9 e 3.13 e no bash 3.2 do macOS.
+Só a biblioteca padrão. O CI roda os testes no Python 3.9 e 3.13 e no bash 3.2, o bash do macOS.
 Veja o [AGENTS.md](AGENTS.md) para a organização do código e as regras.
 
 ## Licença

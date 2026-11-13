@@ -28,8 +28,8 @@ app switches the resolution and generates/installs EDIDs.
 ## Rules
 
 - Standard library only (plus `gi` in the window). Everything in English: code, names, messages.
-- Shell scripts must run on macOS bash 3.2 and Linux bash 5: no `sed -i`, `install -D` or
-  associative arrays.
+- Shell scripts must run on macOS bash 3.2 and Linux bash 5: no `sed -i`, `install -D`,
+  associative arrays or other bash 4 features (`tests/test_shell_portability.py` checks it).
 - New or changed code ships with tests and 100% coverage.
 - Flat control flow: no `else`, `elif`, conditional expressions or `if` inside `if`; use guard
   clauses and small functions. `tests/test_flow_rules.py` checks it.
@@ -40,8 +40,8 @@ app switches the resolution and generates/installs EDIDs.
 
 `bash tests/run.sh` runs everything. `bash tests/coverage.sh` measures coverage; the shell part
 needs bash 4.1+ and a non-root user (on macOS use the container in the script header).
-`.gitlab-ci.yml` runs the tests on Python 3.9 and 3.13, and coverage on 3.13, for every push and MR.
-No job spends GitLab CI minutes: the Linux jobs (tests and coverage, as a non-root user) run on the
-Docker runner (tag `docker`), and the macOS job runs in a throwaway Tart VM (tag `macos-vm`),
-where uv provides the Python and the tests use the system bash 3.2.
+`.gitlab-ci.yml` runs the tests on Python 3.9 and 3.13 and on bash 3.2 (the `bash:3.2` image), and
+coverage on 3.13, for every push and MR. Every job runs on the Docker runner (tag `docker`, as a
+non-root user), so none spends GitLab CI minutes; no job runs on macOS, so
+`tests/test_shell_portability.py` checks for GNU-only options and bash 4 features.
 A `vX.Y.Z` tag also runs the `release` job (Docker runner), which creates the GitLab release.
