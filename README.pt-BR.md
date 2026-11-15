@@ -21,25 +21,48 @@
 
 ## Por quê
 
-Máquinas sem monitor (um Orange Pi, um servidor, um notebook de tampa fechada) entregam às
+Uma máquina sem monitor ligado, como um mini PC, um computador de placa única (Raspberry Pi,
+Orange Pi), um desktop ou servidor guardado num canto ou um notebook de tampa fechada, entrega às
 ferramentas de área de trabalho remota, como VNC, RDP ou Jump Desktop, uma tela pequena, ou
-nenhuma. O Monitor virtual instala um EDID no kernel, e a saída HDMI passa a agir como um
-monitor de verdade, com as resoluções que você escolher. Um app pequeno troca entre elas e
-lembra a sua escolha. O EDID do Orange Pi também tem a tela do iPad Air 11" (2360×1640), e o
-protocolo Fluid do Jump Desktop pode usá-la quando você conecta pelo tablet.
+nenhuma. O Monitor virtual faz uma saída de vídeo livre agir como um monitor de verdade, com as
+resoluções que você escolher. Um app pequeno troca entre elas e lembra a sua escolha. As resoluções
+padrão são três ultrawide e a tela do iPad Air 11" (2360×1640), e o protocolo Fluid do Jump Desktop
+pode usá-la quando você conecta pelo tablet.
 
 ## Instalar
 
 ```sh
-sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1   # Debian, Ubuntu, Armbian
+sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1     # Debian, Ubuntu, Pop!_OS, Armbian
+sudo dnf install python3-gobject gtk4 libadwaita            # Fedora
+sudo pacman -S python-gobject gtk4 libadwaita               # Arch
 curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 ```
 
 Isso coloca o **Virtual monitor** no menu de apps e o comando `virtual-monitor` em
-`~/.local/bin`, sem sudo. Rode a mesma linha para atualizar;
-acrescente `-s -- --uninstall` depois de `bash` para remover, ou `VERSION=v0.3.3` antes de
-`bash` para fixar uma versão ([CHANGELOG.md](CHANGELOG.md)). Num clone, `bash install.sh` faz o
-mesmo (`--help` lista as opções).
+`~/.local/bin`, sem sudo. Rode a mesma linha para atualizar; acrescente `-s -- --uninstall` depois
+de `bash` para remover, ou `VERSION=v0.4.0` antes de `bash` para fixar uma versão
+([CHANGELOG.md](CHANGELOG.md)). Num clone, `bash install.sh` faz o mesmo (`--help` lista as
+opções).
+
+## Configurar o monitor virtual
+
+Uma vez por máquina, e depois reinicie:
+
+```sh
+virtual-monitor --install-edid
+sudo reboot
+```
+
+Ele escolhe uma saída livre (HDMI primeiro, depois DisplayPort), gera o EDID dos modos padrão e
+pede o sudo para colocá-lo no boot. A janela faz o mesmo pelo botão **Install** da página **Virtual
+EDID**, onde dá para mudar os modos. Acrescente `--output DP-1` para escolher a saída, ou
+`--modes '2560x1440 1920x1080'` para outras resoluções.
+
+A instalação edita a configuração de boot que encontrar (GRUB, kernelstub no Pop!_OS ou o
+`armbianEnv.txt` do Armbian) e guarda uma cópia `*.before-edid`; o cabeçalho do
+[scripts/install-edid.sh](scripts/install-edid.sh) diz como desfazer. Na NVIDIA, precisa dos
+módulos de kernel abertos (os únicos da RTX 50) com `nvidia-drm.modeset=1`. Se o driver ignorar o
+EDID, um dummy plug HDMI faz o mesmo papel no hardware.
 
 ## Usar
 
@@ -64,19 +87,8 @@ Hyprland, niri...) e X11 (XFCE, MATE, i3). O app usa o primeiro deles que respon
 responde, o `--list` diz por que cada um falhou. Ele acha a sessão do desktop sozinho, então
 funciona também pelo SSH enquanto você está logado no desktop.
 
-## Instalar o EDID
-
-Uma vez por máquina. O app tem um botão **Install** (toque na linha **Virtual EDID**), ou, num clone:
-
-```sh
-sudo bash scripts/install-edid.sh edid/ultrawide-rockchip.bin   # Orange Pi (RK3566)
-sudo bash scripts/install-edid.sh                               # notebook Intel
-```
-
-O script edita o `armbianEnv.txt` ou o GRUB e guarda uma cópia `*.before-edid`. Reinicie depois.
-
 <details>
-<summary><b>Gerar o seu próprio EDID</b></summary>
+<summary><b>Fazer o seu próprio EDID</b></summary>
 
 <br>
 
@@ -85,11 +97,10 @@ python3 -m virtual_monitor.edid saida.bin 3440x1440@312 2560x1600 1920x1200:50 -
 ```
 
 Cada modo é `LARGURAxALTURA[@CLOCK_MHZ][:HZ_ALVO]`; `--vic` acrescenta modos CEA padrão. O campo
-**Modes** do app aceita o mesmo formato.
-
-No RK3566, use só clocks que o PLL dele gera exatamente (`312`, `297`, `241.5`, `216`, `200`,
-`148.5`, `74.25` MHz). Os outros falham com `NOCLOCK`. Um modo sem clock fica com o que chega
-mais perto da taxa.
+**Modes** do app e o `--modes` aceitam o mesmo formato. Um modo sem clock recebe o clock padrão
+(`312`, `297`, `241.5`, `216`, `200`, `148.5` ou `74.25` MHz) mais próximo da taxa. Toda GPU gera
+esses; algumas placas, como a Rockchip RK3566, recusam qualquer outro com `NOCLOCK`.
+`sudo bash scripts/install-edid.sh saida.bin DP-1` instala um arquivo feito por você.
 
 </details>
 

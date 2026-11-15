@@ -2,14 +2,15 @@
 Generates a virtual monitor EDID (256 bytes: base block + CTA-861 extension)
 with the requested resolutions, each one on a chosen pixel clock.
 
-The clock matters: the Rockchip HDMI (RK3566/RK3568) rejects with NOCLOCK
-every mode whose clock the PLL cannot generate exactly, which is why the
-Lenovo ultrawide.bin (319.75 MHz, 181.25 MHz...) does not come up on the Orange Pi.
+The clock matters on some hardware: the Rockchip HDMI (RK3566/RK3568) rejects with NOCLOCK every
+mode whose clock its PLL cannot generate exactly. A mode without a clock gets one of SAFE_CLOCKS_MHZ,
+standard clocks that this PLL and every PC GPU (Intel, AMD, NVIDIA) generate, so the default EDID
+works on any machine.
 
 Usage:
   python3 -m virtual_monitor.edid output.bin 3440x1440@312:60 2560x1080@216:60 ...
     each mode is WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ] (TARGET_HZ defaults to 60); without
-    CLOCK_MHZ it takes the RK3566 clock that gets closest to TARGET_HZ
+    CLOCK_MHZ it takes the safe clock that gets closest to TARGET_HZ
   python3 -m virtual_monitor.edid output.bin 2360x1640 1920x1200:50
   python3 -m virtual_monitor.edid output.bin 3440x1440@312 --vic 16 --vic 4
     adds standard CEA modes by VIC number
@@ -32,16 +33,17 @@ WIDTH_MM, HEIGHT_MM = 800, 335
 MAX_PIXELS = 4095
 MAX_CLOCK_KHZ = 0xFFFF * 10
 
-# Clocks the RK3566 HDMI PLL generates exactly; a mode without a clock gets one of these
-ROCKCHIP_CLOCKS_MHZ = (312, 297, 241.5, 216, 200, 148.5, 74.25)
+# Clocks every HDMI transmitter generates exactly, the RK3566 PLL included; a mode without a clock
+# gets one of these
+SAFE_CLOCKS_MHZ = (312, 297, 241.5, 216, 200, 148.5, 74.25)
 
-# What the app offers, on Rockchip clocks: three ultrawide modes and the iPad Air 11" screen
+# What the app offers, on safe clocks: three ultrawide modes and the iPad Air 11" screen
 DEFAULT_MODES = ("3440x1440@312", "2560x1080@216", "3008x1260@241.5", "2360x1640@297")
 DEFAULT_VICS = (16, 4)  # 1080p60 and 720p60
 DEFAULT_NAME = "Virtual UW"
 
 # Where scripts/install-edid.sh copies the EDID
-INSTALLED = Path("/usr/lib/firmware/edid/ultrawide.bin")
+INSTALLED = Path("/usr/lib/firmware/edid/virtual-monitor.bin")
 
 
 class EdidError(ValueError):
@@ -91,17 +93,17 @@ def build_timing(width: int, height: int, clock_mhz: float, target_hz: float = 6
     return Timing(width, height, clock_khz, htotal, vtotal)
 
 
-def best_rockchip_timing(width: int, height: int, target_hz: float = 60.0) -> Timing:
-    """The timing on an RK3566 clock whose refresh rate gets closest to target_hz.
+def best_safe_timing(width: int, height: int, target_hz: float = 60.0) -> Timing:
+    """The timing on a safe clock whose refresh rate gets closest to target_hz.
 
     Rates within 0.1 Hz count as a tie, won by the lowest clock: less blanking and HDMI bandwidth.
     """
     timings = []
-    for clock_mhz in ROCKCHIP_CLOCKS_MHZ:
+    for clock_mhz in SAFE_CLOCKS_MHZ:
         timings.extend(_fitting_timing(width, height, clock_mhz, target_hz))
 
     if not timings:
-        raise EdidError(f"No RK3566 clock fits {width}x{height} at {target_hz:g} Hz")
+        raise EdidError(f"No safe clock fits {width}x{height} at {target_hz:g} Hz")
 
     return min(timings, key=lambda timing: (round(abs(timing.refresh - target_hz), 1), timing.clock_khz))
 
@@ -121,7 +123,7 @@ def _invalid_mode(text: str) -> EdidError:
 def parse_mode(text: str) -> Timing:
     """WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ], like 3440x1440@312, 2560x1080@216:50 or 2360x1640.
 
-    Without a clock, the mode takes the RK3566 clock that gets closest to the rate.
+    Without a clock, the mode takes the safe clock that gets closest to the rate.
     """
     mode, _, hz = text.partition(":")
     size, at_sign, clock = mode.partition("@")
@@ -132,7 +134,7 @@ def parse_mode(text: str) -> Timing:
         raise _invalid_mode(text) from None
 
     if not at_sign:
-        return best_rockchip_timing(width, height, target_hz)
+        return best_safe_timing(width, height, target_hz)
 
     try:
         clock_mhz = float(clock)

@@ -1,12 +1,22 @@
-"""Terminal mode of the Virtual monitor: lists, applies and restores resolutions, without GTK."""
+"""Terminal mode of the Virtual monitor: lists, applies and restores resolutions, and installs the
+virtual monitor (the EDID), without GTK."""
 
 import argparse
 import os
+import subprocess
 import sys
 
-from virtual_monitor import __version__, choice, displays, session
+from virtual_monitor import __version__, choice, displays, edid, edid_setup, session
 
 AUTO_SCALE = 0.0
+EDID_HINT = (
+    "No output is connected. Plug in a monitor, or install the virtual monitor so an output works "
+    "without one: virtual-monitor --install-edid"
+)
+NO_FREE_OUTPUT = (
+    "No free video output for the virtual monitor (every external output has something plugged in). "
+    "Pick one with --output NAME; the names are the folders after cardN- in /sys/class/drm."
+)
 
 
 def scale_argument(text):
@@ -33,6 +43,18 @@ def parse_args(argv):
     action.add_argument("--apply", metavar="ID", help="applies mode ID and remembers it at the next login")
     action.add_argument("--next", action="store_true", help="applies the mode after the current one, like --apply")
     action.add_argument("--restore", action="store_true", help="reapplies the last remembered mode")
+    action.add_argument(
+        "--install-edid",
+        action="store_true",
+        help="installs the virtual monitor, so a free output works with no monitor plugged in (asks for sudo)",
+    )
+    parser.add_argument("--output", metavar="NAME", help="with --install-edid: the output, like HDMI-A-1 or DP-1")
+    parser.add_argument(
+        "--modes",
+        default=" ".join(edid.DEFAULT_MODES),
+        metavar="'MODE ...'",
+        help="with --install-edid: WIDTHxHEIGHT[@MHZ][:HZ] modes, separated by spaces (default: %(default)s)",
+    )
     parser.add_argument("--temp", action="store_true", help="with --apply or --next: does not remember the choice")
     parser.add_argument(
         "--scale",
@@ -141,16 +163,53 @@ def print_session_hint(err):
     print("No graphical session of this user was found: log in to the desktop first.", file=err)
 
 
+def print_edid_hint(reasons, err):
+    """A backend ran but saw no output: no monitor is plugged in and no virtual EDID makes one up."""
+    if not any(reason == "no connected output" for _name, reason in reasons):
+        return
+
+    print(EDID_HINT, file=err)
+
+
+def elevate():
+    """sudo, unless already root."""
+    if os.geteuid() == 0:
+        return []
+
+    return ["sudo"]
+
+
+def install_edid(args, out, err):
+    """Generates the EDID of --modes and installs it on --output or the output edid_setup picks."""
+    output = args.output or edid_setup.target_output()
+    if output is None:
+        print(NO_FREE_OUTPUT, file=err)
+        return 1
+
+    try:
+        path = edid_setup.write_edid(args.modes.split())
+    except edid.EdidError as error:
+        print(f"Invalid EDID: {error}", file=err)
+        return 1
+
+    print(f"Installing the virtual monitor on {output}", file=out)
+    return subprocess.call(edid_setup.install_command(path, output, elevate()))
+
+
 def main(argv, out=None, err=None):
     out, err = out or sys.stdout, err or sys.stderr
     args = parse_args(argv)
+    if args.install_edid:
+        return install_edid(args, out, err)
 
     backend = displays.detect()
     if backend is None:
         print("No supported video environment in this session:", file=err)
-        for name, reason in displays.diagnose():
+        reasons = displays.diagnose()
+        for name, reason in reasons:
             print(f"  {name}: {reason}", file=err)
         print_session_hint(err)
+        print_edid_hint(reasons, err)
         return 1
 
     try:

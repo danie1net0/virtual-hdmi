@@ -3,6 +3,19 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.4.0 (2026-11-15)
+
+- `virtual-monitor --install-edid` sets up the virtual monitor on any machine in one command: it
+  picks the output (the one the boot already uses, else a free external one, HDMI first), generates
+  the EDID and runs the installer with sudo. `--output NAME` and `--modes '...'` change the choice.
+  The window's Install button uses the same output and shows it.
+- The installer takes the output as an argument and works with GRUB, kernelstub (Pop!_OS) and
+  Armbian; on NVIDIA it needs the open kernel modules.
+- One default EDID, `edid/virtual-monitor.bin`, on standard clocks every GPU generates; the
+  installed file is now `edid/virtual-monitor.bin`, and the boot hooks of earlier versions are
+  removed. Reinstall the EDID after updating.
+- The README covers any machine with no monitor, not one board.
+
 ## v0.3.3 (2026-11-15)
 
 - COSMIC (Pop!_OS) support through `cosmic-randr`, tried after GNOME and KDE: it lists the enabled

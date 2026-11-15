@@ -10,7 +10,7 @@ from tests import fake_gi
 
 fake_gi.install()
 
-from virtual_monitor import choice, displays, edid  # noqa: E402
+from virtual_monitor import choice, displays, edid, edid_setup  # noqa: E402
 from virtual_monitor import window as window_module  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -60,12 +60,14 @@ class WindowTestCase(unittest.TestCase):
             }
         )
         self.cmdline = "HDMI-A-1"
+        self.output = "HDMI-A-1"
         self.installed = self.tmp / "installed.bin"
         patches = [
             mock.patch.object(edid, "INSTALLED", self.installed),
             mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.tmp / "config")}),
             mock.patch.object(displays, "detect", side_effect=lambda: self.backend),
             mock.patch.object(displays, "cmdline_connector", side_effect=lambda: self.cmdline),
+            mock.patch.object(edid_setup, "target_output", side_effect=lambda: self.output),
             mock.patch("tempfile.mkdtemp", side_effect=self.mkdtemp),
         ]
         for patcher in patches:
@@ -213,7 +215,7 @@ class LayoutTest(WindowTestCase):
 
         window.modes_entry.set_text("100x100")
         window.modes_entry.emit("changed")
-        self.assertEqual(window.timings_row.subtitle, "Invalid: No RK3566 clock fits 100x100 at 60 Hz")
+        self.assertEqual(window.timings_row.subtitle, "Invalid: No safe clock fits 100x100 at 60 Hz")
 
     def test_refresh_replaces_mode_rows(self):
         window = self.window()
@@ -477,10 +479,11 @@ class InstallTest(WindowTestCase):
         window = self.window()
         self.click_install(window)
         (process,) = fake_gi.Subprocess.created
-        out = Path(process.argv[-1])
+        out = Path(process.argv[-2])
 
         self.assertEqual(process.argv[:3], ["pkexec", "bash", str(window_module.INSTALL_SCRIPT)])
-        self.assertEqual(out.name, "ultrawide-app.bin")
+        self.assertEqual(process.argv[-1], "HDMI-A-1")
+        self.assertEqual(out.name, "virtual-monitor.bin")
         self.assertTrue(out.parent.name.startswith("edid-"))
         self.assertEqual(out.read_bytes(), edid.generate(list(edid.DEFAULT_MODES))[1])
         self.assertEqual(process.flags, 3)
@@ -489,19 +492,19 @@ class InstallTest(WindowTestCase):
     def test_uses_modes_typed_by_the_user(self):
         window = self.window()
         self.click_install(window, "  1920x1080@148.5   1280x720@74.25 ")
-        out = Path(fake_gi.Subprocess.created[0].argv[-1])
+        out = Path(fake_gi.Subprocess.created[0].argv[-2])
 
         self.assertEqual(out.read_bytes(), edid.generate(["1920x1080@148.5", "1280x720@74.25"])[1])
 
-    def test_modes_without_clock_install_on_rockchip_clocks(self):
+    def test_modes_without_clock_install_on_safe_clocks(self):
         window = self.window()
         self.click_install(window, "2360x1640 1920x1200")
-        out = Path(fake_gi.Subprocess.created[0].argv[-1])
+        out = Path(fake_gi.Subprocess.created[0].argv[-2])
 
         self.assertEqual(out.read_bytes(), edid.generate(["2360x1640@297", "1920x1200@200"])[1])
 
     def test_invalid_modes_show_toast_without_running_anything(self):
-        for text, message in (("", "at least one mode"), ("3440x1440@x", "Invalid mode"), ("100x100", "No RK3566 clock"), ("9000x1@100", "Resolution")):
+        for text, message in (("", "at least one mode"), ("3440x1440@x", "Invalid mode"), ("100x100", "No safe clock"), ("9000x1@100", "Resolution")):
             with self.subTest(text=text):
                 window = self.window()
                 self.click_install(window, text)
@@ -509,6 +512,22 @@ class InstallTest(WindowTestCase):
                 self.assertTrue(window.toasts.toasts[-1].init_props["title"].startswith("Invalid EDID: "))
                 self.assertEqual(fake_gi.Subprocess.created, [])
                 self.assertTrue(window.install_button.sensitive)
+
+    def test_without_free_output_shows_toast_without_running_anything(self):
+        self.output = None
+        window = self.window()
+        self.click_install(window)
+
+        self.assertEqual(window.toasts.toasts[-1].init_props["title"], window_module.NO_FREE_OUTPUT)
+        self.assertEqual(fake_gi.Subprocess.created, [])
+
+    def test_install_row_names_the_output(self):
+        self.assertEqual(window_module.install_subtitle("DP-1"), "On DP-1. Asks for the administrator password.")
+        self.assertEqual(window_module.install_subtitle(None), "No free video output found.")
+        window = self.window()
+        view = window.edid_page.init_props["child"]
+        (group,) = view.content.children
+        self.assertEqual(group.children[2].init_props["subtitle"], "On HDMI-A-1. Asks for the administrator password.")
 
     def test_cancelled_or_failed_install(self):
         window = self.window()
@@ -544,7 +563,7 @@ class InstallTest(WindowTestCase):
     def test_success_marks_the_new_edid_as_installed(self):
         window = self.window()
         self.click_install(window)
-        self.installed.write_bytes(Path(fake_gi.Subprocess.created[0].argv[-1]).read_bytes())
+        self.installed.write_bytes(Path(fake_gi.Subprocess.created[0].argv[-2]).read_bytes())
         fake_gi.Subprocess.created[0].finish(status=0, stdout="Done\n")
 
         self.assertEqual(window.install_button.label, "Installed")

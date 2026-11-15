@@ -21,25 +21,47 @@
 
 ## Why
 
-Headless machines (an Orange Pi, a server, a laptop with the lid closed) give remote desktop
-tools such as VNC, RDP or Jump Desktop a small screen, or none. Virtual Monitor installs an EDID
-in the kernel, so the HDMI output acts like a real monitor with the resolutions you choose. A
-small app then switches between them and remembers your choice. The Orange Pi EDID also has
-the iPad Air 11" screen (2360×1640), so Jump Desktop's Fluid protocol can match it when you
-connect from the tablet.
+A machine with no monitor plugged in, such as a mini PC, a single-board computer (Raspberry Pi,
+Orange Pi), a desktop or server in a closet, or a laptop with the lid closed, gives remote desktop
+tools such as VNC, RDP or Jump Desktop a small screen, or none. Virtual Monitor makes a free video
+output act like a real monitor with the resolutions you choose. A small app then switches between
+them and remembers your choice. The default resolutions are three ultrawide ones and the iPad Air
+11" screen (2360×1640), so Jump Desktop's Fluid protocol can match it when you connect from the
+tablet.
 
 ## Install
 
 ```sh
-sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1   # Debian, Ubuntu, Armbian
+sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1     # Debian, Ubuntu, Pop!_OS, Armbian
+sudo dnf install python3-gobject gtk4 libadwaita            # Fedora
+sudo pacman -S python-gobject gtk4 libadwaita               # Arch
 curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 ```
 
 This adds **Virtual monitor** to the app menu and the `virtual-monitor` command to
-`~/.local/bin`, without sudo. Run the same line to update; add
-`-s -- --uninstall` after `bash` to remove it, or `VERSION=v0.3.3` before `bash` to pin a
-release ([CHANGELOG.md](CHANGELOG.md)). From a clone, `bash install.sh` does the same (`--help`
-lists the options).
+`~/.local/bin`, without sudo. Run the same line to update; add `-s -- --uninstall` after `bash` to
+remove it, or `VERSION=v0.4.0` before `bash` to pin a release ([CHANGELOG.md](CHANGELOG.md)). From
+a clone, `bash install.sh` does the same (`--help` lists the options).
+
+## Set up the virtual monitor
+
+Once per machine, then reboot:
+
+```sh
+virtual-monitor --install-edid
+sudo reboot
+```
+
+It picks a free output (HDMI first, then DisplayPort), generates the EDID of the default modes and
+asks for sudo to add it to the boot. The window does the same with the **Install** button on the
+**Virtual EDID** page, where you can also change the modes. Add `--output DP-1` to pick the
+output, or `--modes '2560x1440 1920x1080'` for other resolutions.
+
+The install edits the boot setup it finds (GRUB, kernelstub on Pop!_OS, or Armbian's
+`armbianEnv.txt`) and keeps a `*.before-edid` backup; the header of
+[scripts/install-edid.sh](scripts/install-edid.sh) says how to undo it. On NVIDIA it needs the
+open kernel modules (the only ones for RTX 50) with `nvidia-drm.modeset=1`. If the driver ignores
+the EDID, an HDMI dummy plug does the same job in hardware.
 
 ## Use
 
@@ -64,17 +86,6 @@ niri...) and X11 (XFCE, MATE, i3). The app uses the first of these that answers;
 `--list` says why each one failed. It finds your desktop session by itself, so it also works over
 SSH while you are logged in to the desktop.
 
-## Install the EDID
-
-Once per machine. The app has an **Install** button (tap the **Virtual EDID** row), or, from a clone:
-
-```sh
-sudo bash scripts/install-edid.sh edid/ultrawide-rockchip.bin   # Orange Pi (RK3566)
-sudo bash scripts/install-edid.sh                               # Intel laptop
-```
-
-The script edits `armbianEnv.txt` or GRUB and keeps a `*.before-edid` backup. Reboot after.
-
 <details>
 <summary><b>Make your own EDID</b></summary>
 
@@ -85,11 +96,10 @@ python3 -m virtual_monitor.edid output.bin 3440x1440@312 2560x1600 1920x1200:50 
 ```
 
 Each mode is `WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ]`; `--vic` adds standard CEA modes. The app's
-**Modes** field takes the same format.
-
-On the RK3566, use only clocks its PLL can generate exactly (`312`, `297`, `241.5`, `216`,
-`200`, `148.5`, `74.25` MHz). Others fail with `NOCLOCK`. A mode without a clock gets the one
-closest to the rate.
+**Modes** field and `--modes` take the same format. A mode without a clock gets the standard clock
+(`312`, `297`, `241.5`, `216`, `200`, `148.5` or `74.25` MHz) closest to the rate. Every GPU
+generates these; some boards, such as the Rockchip RK3566, reject any other with `NOCLOCK`.
+`sudo bash scripts/install-edid.sh output.bin DP-1` installs a file you made.
 
 </details>
 

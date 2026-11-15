@@ -3,8 +3,8 @@
 source "$(dirname "$0")/lib.sh"
 
 SCRIPT="$PROJECT/scripts/install-edid.sh"
-EDID="$PROJECT/edid/ultrawide-rockchip.bin"
-PARAMS="drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin video=HDMI-A-1:e"
+EDID="$PROJECT/edid/virtual-monitor.bin"
+PARAMS="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
 KVER="6.1.0-test"
 
 # Armbian kernel and tools (initramfs-tools); the EDID shows up in the image
@@ -14,7 +14,7 @@ armbian() {
     printf 'verbosity=1\n%s\nrootdev=UUID=abc\n' "$1" > "$ROOT/boot/armbianEnv.txt"
     stub uname "echo $KVER"
     stub update-initramfs
-    stub lsinitramfs 'echo usr/lib/firmware/edid/ultrawide.bin'
+    stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
 }
 
 # Fedora/Lenovo kernel and tools (dracut + GRUB)
@@ -24,8 +24,19 @@ grub() {
     printf 'GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX_DEFAULT="%s"\n' "$1" > "$ROOT/etc/default/grub"
     stub uname "echo $KVER"
     stub dracut
-    stub lsinitrd 'echo usr/lib/firmware/edid/ultrawide.bin'
+    stub lsinitrd 'echo usr/lib/firmware/edid/virtual-monitor.bin'
     stub update-grub
+}
+
+# Pop!_OS: kernelstub (systemd-boot) and initramfs-tools; the configuration keeps the options in JSON
+pop() {
+    new_case
+    mkdir -p "$ROOT/etc/kernelstub" "$ROOT/etc/initramfs-tools/hooks"
+    printf '{"user": {"kernel_options": ["quiet", "splash"%s]}}\n' "$1" > "$ROOT/etc/kernelstub/configuration"
+    stub uname "echo $KVER"
+    stub update-initramfs
+    stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
+    stub kernelstub
 }
 
 line() {
@@ -49,15 +60,15 @@ printf 'short' > "$CASE/short.bin"
 run_script "$SCRIPT" "$CASE/short.bin"
 status_is 1 "a file that is not 256 bytes fails"
 contains "$ERRS" "is not 256 bytes" "explains the size"
-check "does not copy an invalid file" test ! -e "$ROOT/usr/lib/firmware/edid/ultrawide.bin"
+check "does not copy an invalid file" test ! -e "$ROOT/usr/lib/firmware/edid/virtual-monitor.bin"
 
-echo "# Armbian (Orange Pi)"
+echo "# Armbian"
 armbian "extraargs=cma=256M"
 run_script "$SCRIPT" "$EDID"
 status_is 0 "installs on Armbian"
-check "copies the EDID" cmp "$EDID" "$ROOT/usr/lib/firmware/edid/ultrawide.bin"
-check "initramfs hook is executable" test -x "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide"
-contains "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide" 'cp /usr/lib/firmware/edid/ultrawide.bin "${DESTDIR}/usr/lib/firmware/edid/"' "hook copies the EDID into the image"
+check "copies the EDID" cmp "$EDID" "$ROOT/usr/lib/firmware/edid/virtual-monitor.bin"
+check "initramfs hook is executable" test -x "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor"
+contains "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor" 'cp /usr/lib/firmware/edid/virtual-monitor.bin "${DESTDIR}/usr/lib/firmware/edid/"' "hook copies the EDID into the image"
 check "without dracut.conf.d, creates no dracut config" test ! -e "$ROOT/etc/dracut.conf.d"
 called "update-initramfs -u -k $KVER"
 called "lsinitramfs $ROOT/boot/initrd.img-$KVER"
@@ -83,11 +94,11 @@ status_is 0 "installs without an extraargs line"
 check "creates the extraargs line" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=$PARAMS"
 check "creates the line only once" test "$(grep -c '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = 1
 
-echo "# GRUB (Lenovo)"
+echo "# GRUB"
 grub "quiet splash"
 run_script "$SCRIPT" "$EDID"
 status_is 0 "installs with GRUB and dracut"
-contains "$ROOT/etc/dracut.conf.d/90-edid-ultrawide.conf" 'install_items+=" /usr/lib/firmware/edid/ultrawide.bin "' "adds the EDID to dracut"
+contains "$ROOT/etc/dracut.conf.d/90-edid-virtual-monitor.conf" 'install_items+=" /usr/lib/firmware/edid/virtual-monitor.bin "' "adds the EDID to dracut"
 check "without initramfs-tools, creates no hook" test ! -e "$ROOT/etc/initramfs-tools"
 called "dracut -f --kver $KVER"
 called "lsinitrd --kver $KVER"
@@ -108,6 +119,66 @@ check "empty GRUB has no leading space" test "$(line '^GRUB_CMDLINE_LINUX_DEFAUL
 grub "quiet video=HDMI-A-1:D drm.edid_firmware=HDMI-A-1:edid/velho.bin splash"
 run_script "$SCRIPT" "$EDID"
 check "replaces old parameters in GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMS\""
+
+echo "# kernelstub (Pop!_OS)"
+pop ""
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with kernelstub"
+called "kernelstub -a $PARAMS"
+not_called "kernelstub -d"
+check "keeps the original kernelstub configuration" cmp "$ROOT/etc/kernelstub/configuration" "$ROOT/etc/kernelstub/configuration.before-edid"
+called "update-initramfs -u -k $KVER"
+contains "$OUT" "Adjusting the kernel parameters with kernelstub" "says it uses kernelstub"
+not_called update-grub
+
+pop ', "drm.edid_firmware=HDMI-A-1:edid/velho.bin", "video=HDMI-A-1:D", "video=DP-2:e"'
+echo '{"user": {"kernel_options": ["quiet"]}}' > "$ROOT/etc/kernelstub/configuration.before-edid"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "reinstalls with kernelstub"
+called "kernelstub -d drm.edid_firmware=HDMI-A-1:edid/velho.bin video=HDMI-A-1:D"
+called "kernelstub -a $PARAMS"
+check "does not overwrite the saved kernelstub configuration" grep -q '\["quiet"\]' "$ROOT/etc/kernelstub/configuration.before-edid"
+
+pop ""
+mkdir -p "$ROOT/etc/default"
+printf 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"\n' > "$ROOT/etc/default/grub"
+stub update-grub
+run_script "$SCRIPT" "$EDID"
+check "prefers kernelstub over GRUB" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"' "$ROOT/etc/default/grub"
+not_called update-grub
+
+pop ""
+rm "$STUBS/kernelstub"
+run_script "$SCRIPT" "$EDID"
+status_is 1 "kernelstub configuration without kernelstub is not used"
+
+echo "# connector"
+pop ""
+CONNECTOR=DP-1 run_script "$SCRIPT" "$EDID"
+status_is 0 "installs on the CONNECTOR output"
+called "kernelstub -a drm.edid_firmware=DP-1:edid/virtual-monitor.bin video=DP-1:e"
+
+pop ""
+CONNECTOR=DP-1 run_script "$SCRIPT" "$EDID" HDMI-A-2
+status_is 0 "installs on the output given as argument"
+called "kernelstub -a drm.edid_firmware=HDMI-A-2:edid/virtual-monitor.bin video=HDMI-A-2:e"
+contains "$OUT" "Done: HDMI-A-2 gets the virtual monitor" "says which output gets it"
+
+echo "# hooks of earlier versions"
+armbian "extraargs=cma=256M"
+mkdir -p "$ROOT/etc/dracut.conf.d"
+echo old > "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide"
+echo old > "$ROOT/etc/dracut.conf.d/90-edid-ultrawide.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs over an earlier version"
+check "removes the old initramfs hook" test ! -e "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide"
+check "removes the old dracut configuration" test ! -e "$ROOT/etc/dracut.conf.d/90-edid-ultrawide.conf"
+
+new_case
+CONNECTOR='HDMI-A-1 rm -rf /' run_script "$SCRIPT" "$EDID"
+status_is 1 "refuses an invalid connector"
+contains "$ERRS" "Invalid CONNECTOR" "says the connector is invalid"
+check "copies nothing with an invalid connector" test ! -e "$ROOT/usr"
 
 echo "# boot image"
 grub "quiet"
@@ -140,22 +211,22 @@ echo "# boot loader"
 new_case
 stub uname "echo $KVER"
 stub update-initramfs
-stub lsinitramfs 'echo usr/lib/firmware/edid/ultrawide.bin'
+stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
 run_script "$SCRIPT" "$EDID"
-status_is 1 "fails without armbianEnv and GRUB"
+status_is 1 "fails without armbianEnv, kernelstub and GRUB"
 contains "$ERRS" "Add to the kernel command line: $PARAMS" "shows the parameters to set by hand"
 
 echo "# EDID path"
 armbian "extraargs=cma=256M"
 run_script "$SCRIPT"
 status_is 0 "no argument uses the default EDID"
-check "default EDID is the project ultrawide.bin" cmp "$PROJECT/edid/ultrawide.bin" "$ROOT/usr/lib/firmware/edid/ultrawide.bin"
+check "default EDID is the project virtual-monitor.bin" cmp "$PROJECT/edid/virtual-monitor.bin" "$ROOT/usr/lib/firmware/edid/virtual-monitor.bin"
 
 armbian "extraargs=cma=256M"
 cd "$PROJECT" || exit 1
-run_script "$SCRIPT" edid/ultrawide-rockchip.bin
+run_script "$SCRIPT" edid/virtual-monitor.bin
 cd - > /dev/null || exit 1
 status_is 0 "relative path counts from the current folder"
-check "copies the EDID from the relative path" cmp "$EDID" "$ROOT/usr/lib/firmware/edid/ultrawide.bin"
+check "copies the EDID from the relative path" cmp "$EDID" "$ROOT/usr/lib/firmware/edid/virtual-monitor.bin"
 
 summary

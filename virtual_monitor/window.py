@@ -12,9 +12,7 @@ GTK4/libadwaita window of the Virtual monitor:
 """
 
 import sys
-import tempfile
 from dataclasses import dataclass
-from pathlib import Path
 
 import gi
 
@@ -22,16 +20,17 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from virtual_monitor import choice, displays, edid  # noqa: E402
+from virtual_monitor import choice, displays, edid, edid_setup  # noqa: E402
 
 APP_ID = "br.app.VirtualMonitor"
 ICON_NAME = "virtual-monitor"
-INSTALL_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "install-edid.sh"
+INSTALL_SCRIPT = edid_setup.INSTALL_SCRIPT
 EDID_HELP = (
-    "Modes the virtual monitor advertises, as WIDTHxHEIGHT or WIDTHxHEIGHT@MHz, separated by spaces. "
-    "Without MHz, the mode takes the Orange Pi (RK3566) clock closest to 60 Hz. "
-    "Takes effect after a reboot."
+    "The virtual monitor makes a video output work with no monitor plugged in, with these modes: "
+    "WIDTHxHEIGHT or WIDTHxHEIGHT@MHz, separated by spaces. Without MHz, the mode takes the standard "
+    "clock closest to 60 Hz, which every GPU generates. Takes effect after a reboot."
 )
+NO_FREE_OUTPUT = "No free video output: every external output has something plugged in"
 REVERT_SECONDS = 15
 SCALES = (("Automatic", None), ("100%", 1.0), ("125%", 1.25), ("150%", 1.5), ("175%", 1.75), ("200%", 2.0))
 ROTATIONS = (("Landscape", "normal"), ("Portrait", "left"), ("Portrait, flipped", "right"))
@@ -100,6 +99,13 @@ def choice_index(choices, value):
 def combo_row(title, choices):
     labels = [label for label, _value in choices]
     return Adw.ComboRow(title=title, model=Gtk.StringList.new(labels))
+
+
+def install_subtitle(output):
+    if output is None:
+        return "No free video output found."
+
+    return f"On {output}. Asks for the administrator password."
 
 
 def install_label(installed):
@@ -182,7 +188,8 @@ class Window(Adw.ApplicationWindow):
         self.timings_row.add_css_class("property")
         group.add(self.timings_row)
 
-        install = Adw.ActionRow(title="Generate and install EDID", subtitle="Asks for the administrator password.")
+        self.output = edid_setup.target_output()
+        install = Adw.ActionRow(title="Generate and install EDID", subtitle=install_subtitle(self.output))
         self.install_button = Gtk.Button(label="Install", valign=Gtk.Align.CENTER)
         self.install_button.add_css_class("suggested-action")
         self.install_button.connect("clicked", self.on_install)
@@ -358,17 +365,18 @@ class Window(Adw.ApplicationWindow):
         return GLib.SOURCE_REMOVE
 
     def on_install(self, _button):
+        if self.output is None:
+            self.toast(NO_FREE_OUTPUT)
+            return
+
         try:
-            _timings, data = edid.generate(self.modes_entry.get_text().split())
+            path = edid_setup.write_edid(self.modes_entry.get_text().split())
         except edid.EdidError as error:
             self.toast(f"Invalid EDID: {error}")
             return
 
-        out = Path(tempfile.mkdtemp(prefix="edid-")) / "ultrawide-app.bin"
-        out.write_bytes(data)
-
         self.install_button.set_sensitive(False)
-        run_async(["pkexec", "bash", str(INSTALL_SCRIPT), str(out)], self.after_install)
+        run_async(edid_setup.install_command(path, self.output, ["pkexec"]), self.after_install)
 
     def after_install(self, ok, _text):
         self.update_install_button()

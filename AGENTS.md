@@ -1,13 +1,16 @@
 # Virtual monitor
 
-Virtual HDMI monitor for a headless machine (Orange Pi 3B on Armbian, GRUB laptops): an EDID
-installed in the kernel makes the video output offer the resolutions it defines, and a GTK4/libadwaita
-app switches the resolution and generates/installs EDIDs.
+Virtual monitor for any machine with no monitor plugged in (single-board computers, mini PCs,
+desktops, laptops with the lid closed): an EDID installed in the kernel makes a free video output
+look connected to a monitor with the resolutions it defines, and a GTK4/libadwaita app and CLI
+switch the resolution and generate/install the EDID. Nothing in the code or docs may assume one
+board, GPU, distribution or desktop: hardware-specific facts (the RK3566 clocks, NVIDIA's open
+modules) are notes, not defaults.
 
 ## Layout
 
-- `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`
-  and `--restore` run in the terminal.
+- `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`,
+  `--next`, `--restore` and `--install-edid [--output NAME] [--modes ...]` run in the terminal.
 - `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, cosmic-randr, wlr-randr, xrandr backends; `detect`
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
   `ModeChange` with the mode, desktop scale and rotation),
@@ -16,8 +19,11 @@ app switches the resolution and generates/installs EDIDs.
   variables from `/run/user/<uid>` and `/tmp/.X11-unix`, so the app also runs over SSH; `__main__`
   calls it first), `cli.py`, `window.py` (GTK; a switch goes back after `REVERT_SECONDS` without Keep).
 - `scripts/`: root-only system scripts. All accept `ROOT=` for tests.
-- `edid/`: ready EDIDs. `ultrawide-rockchip.bin` only uses clocks the RK3566 PLL can generate, and equals
-  `edid.generate(DEFAULT_MODES)`.
+- `edid/virtual-monitor.bin`: the default EDID, equal to `edid.generate(DEFAULT_MODES)`; its clocks
+  (`SAFE_CLOCKS_MHZ`) are standard ones every GPU generates, the RK3566 PLL included.
+- `virtual_monitor/edid_setup.py`: picks the output for the EDID (the one at boot, else a free
+  external one from `/sys/class/drm`, HDMI first) and builds the `install-edid.sh` command that
+  `--install-edid` (sudo) and the window (pkexec) run.
 - `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
   1280×640 PNG uploaded in Settings) and the GitLab project avatar.
 - `install.sh`: per-user install of app, icon, launcher and the `~/.local/bin/virtual-monitor`

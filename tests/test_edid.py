@@ -25,7 +25,7 @@ def decode_dtd(dtd):
 
 
 class BuildTimingTest(unittest.TestCase):
-    def test_rockchip_modes_land_near_60_hz(self):
+    def test_default_modes_land_near_60_hz(self):
         cases = {
             (3440, 1440, 312): (3600, 1463, 59.24),
             (2560, 1080, 216): (2720, 1324, 59.98),
@@ -101,42 +101,42 @@ class ParseModeTest(unittest.TestCase):
         with self.assertRaisesRegex(edid.EdidError, "Resolution"):
             edid.parse_mode("5000x1080@216")
 
-    def test_mode_without_clock_takes_a_rockchip_clock(self):
+    def test_mode_without_clock_takes_a_safe_clock(self):
         self.assertEqual(edid.parse_mode("2360x1640"), edid.build_timing(2360, 1640, 297, 60))
 
     def test_mode_without_clock_keeps_the_rate(self):
-        self.assertEqual(edid.parse_mode("1920x1080:50"), edid.best_rockchip_timing(1920, 1080, 50))
+        self.assertEqual(edid.parse_mode("1920x1080:50"), edid.best_safe_timing(1920, 1080, 50))
 
     def test_mode_without_clock_that_fits_no_clock(self):
-        with self.assertRaisesRegex(edid.EdidError, "No RK3566 clock fits 100x100 at 60 Hz"):
+        with self.assertRaisesRegex(edid.EdidError, "No safe clock fits 100x100 at 60 Hz"):
             edid.parse_mode("100x100")
 
 
-class BestRockchipTimingTest(unittest.TestCase):
+class BestSafeTimingTest(unittest.TestCase):
     def test_takes_the_rate_closest_to_the_target(self):
-        timing = edid.best_rockchip_timing(3440, 1440)
+        timing = edid.best_safe_timing(3440, 1440)
         self.assertEqual(timing.clock_khz, 312000)
         self.assertAlmostEqual(timing.refresh, 59.24, places=2)
 
     def test_lowest_clock_wins_when_rates_tie(self):
         self.assertAlmostEqual(edid.build_timing(1920, 1200, 312).refresh, 60, places=1)
-        self.assertEqual(edid.best_rockchip_timing(1920, 1200).clock_khz, 200000)
+        self.assertEqual(edid.best_safe_timing(1920, 1200).clock_khz, 200000)
 
     def test_target_rate(self):
-        timing = edid.best_rockchip_timing(1920, 1080, 50)
+        timing = edid.best_safe_timing(1920, 1080, 50)
         self.assertEqual(timing.clock_khz, 148500)
         self.assertAlmostEqual(timing.refresh, 50, places=1)
 
-    def test_only_rockchip_clocks(self):
+    def test_only_safe_clocks(self):
         for width, height in ((2360, 1640), (2560, 1600), (1280, 720), (3840, 1600)):
             with self.subTest(width=width, height=height):
-                clock_mhz = edid.best_rockchip_timing(width, height).clock_khz / 1000
-                self.assertIn(clock_mhz, edid.ROCKCHIP_CLOCKS_MHZ)
+                clock_mhz = edid.best_safe_timing(width, height).clock_khz / 1000
+                self.assertIn(clock_mhz, edid.SAFE_CLOCKS_MHZ)
 
     def test_no_clock_fits(self):
         for width, height in ((100, 100), (5000, 1080)):
-            with self.subTest(width=width, height=height), self.assertRaisesRegex(edid.EdidError, "No RK3566 clock"):
-                edid.best_rockchip_timing(width, height)
+            with self.subTest(width=width, height=height), self.assertRaisesRegex(edid.EdidError, "No safe clock"):
+                edid.best_safe_timing(width, height)
 
 
 class BytesTest(unittest.TestCase):
@@ -250,9 +250,9 @@ class BuildEdidTest(unittest.TestCase):
         self.assertEqual(sum(data[:128]) % 256, 0)
         self.assertEqual(sum(data[128:]) % 256, 0)
 
-    def test_generate_reproduces_committed_rockchip_edid(self):
+    def test_generate_reproduces_the_committed_edid(self):
         timings, data = edid.generate(list(edid.DEFAULT_MODES))
-        self.assertEqual(data, (ROOT / "edid" / "ultrawide-rockchip.bin").read_bytes())
+        self.assertEqual(data, (ROOT / "edid" / "virtual-monitor.bin").read_bytes())
         self.assertEqual([timing.width for timing in timings], [3440, 2560, 3008, 2360])
 
     def test_generate_propagates_errors(self):
@@ -266,8 +266,8 @@ class InstalledPathTest(unittest.TestCase):
     def test_is_where_the_install_script_copies_the_edid(self):
         script = (ROOT / "scripts" / "install-edid.sh").read_text()
 
-        self.assertEqual(edid.INSTALLED, Path("/usr/lib/firmware/edid/ultrawide.bin"))
-        self.assertIn('EDID_REL="edid/ultrawide.bin"', script)
+        self.assertEqual(edid.INSTALLED, Path("/usr/lib/firmware/edid/virtual-monitor.bin"))
+        self.assertIn('EDID_REL="edid/virtual-monitor.bin"', script)
         self.assertIn('EDID_DST="$ROOT/usr/lib/firmware/$EDID_REL"', script)
 
 
@@ -275,7 +275,7 @@ class IsInstalledTest(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.installed = Path(tmp.name) / "ultrawide.bin"
+        self.installed = Path(tmp.name) / "virtual-monitor.bin"
         patcher = mock.patch.object(edid, "INSTALLED", self.installed)
         patcher.start()
         self.addCleanup(patcher.stop)

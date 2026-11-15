@@ -79,6 +79,61 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(err.splitlines()[-1], "No graphical session of this user was found: log in to the desktop first.")
 
+    def test_no_connected_output_suggests_the_virtual_edid(self):
+        reasons = [("COSMIC (cosmic-randr)", "no connected output"), ("X11 (xrandr)", "DISPLAY is not set")]
+        with mock.patch.object(displays, "diagnose", return_value=reasons), mock.patch.dict("os.environ", {"WAYLAND_DISPLAY": "wayland-1"}):
+            code, _out, err = self.run_cli(["--list"], backend=None)
+
+        self.assertEqual(code, 1)
+        self.assertEqual(err.splitlines()[-1], cli.EDID_HINT)
+
+    def run_install(self, argv, target="HDMI-A-1", code=0):
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(cli.edid_setup, "target_output", return_value=target), mock.patch.object(
+            cli.subprocess, "call", return_value=code
+        ) as call, mock.patch.object(displays, "detect") as detect:
+            result = cli.main(argv, out, err)
+
+        detect.assert_not_called()
+        return result, out.getvalue(), err.getvalue(), call
+
+    def test_install_edid_on_the_picked_output_with_sudo(self):
+        with mock.patch("os.geteuid", return_value=1000):
+            code, out, err, call = self.run_install(["--install-edid"])
+
+        self.assertEqual((code, out, err), (0, "Installing the virtual monitor on HDMI-A-1\n", ""))
+        argv = call.call_args.args[0]
+        self.assertEqual(argv[:3], ["sudo", "bash", str(cli.edid_setup.INSTALL_SCRIPT)])
+        self.assertEqual(argv[-1], "HDMI-A-1")
+        self.addCleanup(Path(argv[-2]).parent.rmdir)
+        self.addCleanup(Path(argv[-2]).unlink)
+        self.assertEqual(Path(argv[-2]).read_bytes(), cli.edid.generate(list(cli.edid.DEFAULT_MODES))[1])
+
+    def test_install_edid_as_root_skips_sudo_and_passes_the_exit_status(self):
+        with mock.patch("os.geteuid", return_value=0):
+            code, _out, _err, call = self.run_install(["--install-edid", "--output", "DP-1", "--modes", "1920x1080"], code=3)
+
+        argv = call.call_args.args[0]
+        self.addCleanup(Path(argv[-2]).parent.rmdir)
+        self.addCleanup(Path(argv[-2]).unlink)
+        self.assertEqual(code, 3)
+        self.assertEqual(argv[0], "bash")
+        self.assertEqual(argv[-1], "DP-1")
+        self.assertEqual(Path(argv[-2]).read_bytes(), cli.edid.generate(["1920x1080"])[1])
+
+    def test_install_edid_without_free_output(self):
+        code, _out, err, call = self.run_install(["--install-edid"], target=None)
+
+        self.assertEqual((code, err), (1, cli.NO_FREE_OUTPUT + "\n"))
+        call.assert_not_called()
+
+    def test_install_edid_with_invalid_modes(self):
+        code, _out, err, call = self.run_install(["--install-edid", "--modes", "100x100"])
+
+        self.assertEqual(code, 1)
+        self.assertEqual(err, "Invalid EDID: No safe clock fits 100x100 at 60 Hz\n")
+        call.assert_not_called()
+
     def test_list_without_edid_on_boot(self):
         with mock.patch.object(displays, "cmdline_connector", return_value=None):
             _, out, _ = self.run_cli(["--list"])
