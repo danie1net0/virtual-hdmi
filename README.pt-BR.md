@@ -36,7 +36,7 @@ curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 ```
 
 Isso coloca o **Virtual monitor** no menu de apps, sem sudo. Rode a mesma linha para atualizar;
-acrescente `-s -- --uninstall` depois de `bash` para remover, ou `VERSION=v0.3.0` antes de
+acrescente `-s -- --uninstall` depois de `bash` para remover, ou `VERSION=v0.3.1` antes de
 `bash` para fixar uma versão ([CHANGELOG.md](CHANGELOG.md)). Num clone, `bash install.sh` faz o
 mesmo (`--help` lista as opções).
 
@@ -58,7 +58,9 @@ python3 virtual-monitor.py --next                    # próximo modo, para um at
 python3 virtual-monitor.py --scale 1.25 --rotation left     # modo atual: 125%, retrato
 ```
 
-Funciona no GNOME, KDE Plasma, wlroots (sway, Hyprland) e X11 (XFCE, MATE, i3).
+Funciona no GNOME, KDE Plasma, compositores que o `wlr-randr` controla (sway, Hyprland, niri...) e
+X11 (XFCE, MATE, i3). O app usa o primeiro deles que responde; se nenhum responde, o `--list` diz
+por que cada um falhou.
 
 ## Instalar o EDID
 

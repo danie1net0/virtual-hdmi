@@ -6,6 +6,11 @@ Lists and switches the video modes of the current graphical session, in any envi
   wlroots (sway, labwc, Hyprland...)   wlr-randr
   X11 (XFCE, MATE, i3...)              xrandr
 
+detect() tries each backend in that order and takes the first that lists an output, so it does not
+depend on the desktop name: wlr-randr also drives the other compositors with wlr-output-management
+(Hyprland, niri, Wayfire...), kscreen-doctor works on KDE under X11 or Wayland, and xrandr skips the
+XWayland outputs it cannot change. diagnose() says why each backend was left out.
+
 Needs no GTK: GNOME uses only Gio, loaded when the backend is tested.
 
 Applying a mode also sets the desktop scale and the rotation (ModeChange). The default scale is
@@ -69,8 +74,41 @@ def auto_scale(width, height):
     return TABLET_SCALE
 
 
+class DisplayError(RuntimeError):
+    """A display tool is missing or refused the command; the message says what it printed."""
+
+
+def command_message(error):
+    """First line the failed command printed, or its exit status when it printed nothing."""
+    lines = (error.stderr or error.stdout or "").strip().splitlines()
+    if not lines:
+        return f"exit status {error.returncode}"
+
+    return lines[0]
+
+
 def run(argv):
-    return subprocess.run(argv, capture_output=True, text=True, check=True).stdout
+    try:
+        return subprocess.run(argv, capture_output=True, text=True, check=True).stdout
+    except FileNotFoundError:
+        raise DisplayError(f"{argv[0]} is not installed") from None
+    except subprocess.CalledProcessError as error:
+        raise DisplayError(f"{' '.join(argv[:2])}: {command_message(error)}") from None
+
+
+def missing_variable(name):
+    """Why a backend cannot run without the environment variable name; "" when it is set."""
+    if os.environ.get(name):
+        return ""
+
+    return f"{name} is not set"
+
+
+def missing_tool(tool):
+    if shutil.which(tool) is not None:
+        return ""
+
+    return f"{tool} is not installed"
 
 
 def normalize(connector):
@@ -236,10 +274,14 @@ def set_xfce_dpi(scale):
 
 
 class Backend:
-    """Base of the backends: each one has name, available(), outputs() and apply(change, persistent)."""
+    """Base of the backends: each one has name, requirement(), outputs() and apply(change, persistent)."""
 
     name = ""
     native_persist = False
+
+    @classmethod
+    def available(cls):
+        return not cls.requirement()
 
     def connectors(self):
         return list(self.outputs())
@@ -256,11 +298,18 @@ class XrandrBackend(Backend):
     name = "X11 (xrandr)"
 
     @classmethod
-    def available(cls):
-        return bool(os.environ.get("DISPLAY")) and shutil.which("xrandr") is not None
+    def requirement(cls):
+        """Why the backend cannot run here; "" when it can."""
+        return missing_variable("DISPLAY") or missing_tool("xrandr")
 
     def outputs(self):
-        return parse_xrandr(run(["xrandr", "--query"]))
+        """Connected outputs, without the XWAYLAND ones: a Wayland session ignores modes set on them."""
+        outputs = parse_xrandr(run(["xrandr", "--query"]))
+        real = {name: modes for name, modes in outputs.items() if not name.startswith("XWAYLAND")}
+        if outputs and not real:
+            raise DisplayError("only XWayland outputs, which xrandr cannot change")
+
+        return real
 
     def apply(self, change, persistent):
         size, rate = change.mode_id.split("@")
@@ -272,8 +321,8 @@ class WlrBackend(Backend):
     name = "Wayland (wlr-randr)"
 
     @classmethod
-    def available(cls):
-        return bool(os.environ.get("WAYLAND_DISPLAY")) and shutil.which("wlr-randr") is not None
+    def requirement(cls):
+        return missing_variable("WAYLAND_DISPLAY") or missing_tool("wlr-randr")
 
     def outputs(self):
         return parse_wlr(run(["wlr-randr", "--json"]))
@@ -298,8 +347,8 @@ class KScreenBackend(Backend):
     name = "KDE Plasma (kscreen-doctor)"
 
     @classmethod
-    def available(cls):
-        return "KDE" in os.environ.get("XDG_CURRENT_DESKTOP", "") and shutil.which("kscreen-doctor") is not None
+    def requirement(cls):
+        return missing_tool("kscreen-doctor")
 
     def outputs(self):
         return parse_kscreen(run(["kscreen-doctor", "-j"]))
@@ -334,11 +383,16 @@ class MutterBackend(Backend):
         self.proxy = mutter_proxy(auto_start=True)
 
     @classmethod
-    def available(cls):
+    def requirement(cls):
         try:
-            return mutter_proxy(auto_start=False).get_name_owner() is not None
-        except Exception:
-            return False
+            owner = mutter_proxy(auto_start=False).get_name_owner()
+        except Exception as error:  # no gi, no session bus
+            return f"no session bus ({error})"
+
+        if owner is None:
+            return "GNOME Shell is not running"
+
+        return ""
 
     def state(self):
         from gi.repository import Gio
@@ -368,12 +422,36 @@ class MutterBackend(Backend):
 BACKENDS = (MutterBackend, KScreenBackend, WlrBackend, XrandrBackend)
 
 
+def probe(cls):
+    """(backend, "") when cls lists an output in this session; (None, why not) otherwise."""
+    reason = cls.requirement()
+    if reason:
+        return None, reason
+
+    try:
+        backend = cls()
+        outputs = backend.outputs()
+    except Exception as error:  # the tool, DBus or gi refused
+        return None, str(error)
+
+    if not outputs:
+        return None, "no connected output"
+
+    return backend, ""
+
+
 def detect():
-    """Backend of the current session, or None."""
+    """The first backend that works in the current session, or None."""
     for cls in BACKENDS:
-        if cls.available():
-            return cls()
+        backend, _reason = probe(cls)
+        if backend is not None:
+            return backend
     return None
+
+
+def diagnose():
+    """(backend name, why it does not work) for every backend, to explain a None from detect()."""
+    return [(cls.name, probe(cls)[1]) for cls in BACKENDS]
 
 
 def cmdline_connector():

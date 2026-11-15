@@ -3,6 +3,14 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.3.1 (2026-11-15)
+
+- The display backend is found by trying each one (GNOME, KDE, `wlr-randr`, `xrandr`) and taking the
+  first that lists an output, instead of going by the desktop name. `kscreen-doctor` works without
+  `XDG_CURRENT_DESKTOP=KDE`, and `xrandr` skips the XWayland outputs it cannot change.
+- A failed display command shows what it printed (`xrandr --query: Can't open display :0`) instead of
+  its exit status, and when no backend works the terminal lists why each one failed.
+
 ## v0.3.0 (2026-11-13)
 
 - After a switch, the window asks to keep the new mode and goes back to the previous one after 15

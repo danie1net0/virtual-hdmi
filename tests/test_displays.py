@@ -276,31 +276,65 @@ class RunTest(unittest.TestCase):
     def test_returns_stdout(self):
         self.assertEqual(displays.run([sys.executable, "-c", "print('hi')"]), "hi\n")
 
-    def test_raises_on_failure(self):
-        with self.assertRaises(subprocess.CalledProcessError):
+    def test_failure_says_what_the_command_printed(self):
+        script = "import sys; print('Can\\'t open display :0', file=sys.stderr); print('second'); raise SystemExit(1)"
+        with self.assertRaisesRegex(displays.DisplayError, r"^\S+ -c: Can't open display :0$"):
+            displays.run([sys.executable, "-c", script])
+
+    def test_failure_without_output_gives_the_exit_status(self):
+        with self.assertRaisesRegex(displays.DisplayError, r"-c: exit status 3$"):
             displays.run([sys.executable, "-c", "raise SystemExit(3)"])
+
+    def test_failure_with_only_stdout_uses_it(self):
+        error = subprocess.CalledProcessError(1, ["xrandr"], output="  stdout line\n", stderr="")
+        self.assertEqual(displays.command_message(error), "stdout line")
+
+    def test_missing_tool(self):
+        with self.assertRaisesRegex(displays.DisplayError, "^no-such-tool-here is not installed$"):
+            displays.run(["no-such-tool-here", "--query"])
+
+    def test_display_error_is_a_runtime_error(self):
+        self.assertTrue(issubclass(displays.DisplayError, RuntimeError))
 
 
 class CommandBackendsTest(unittest.TestCase):
-    def check_available(self, cls, env, tool):
+    def check_requirement(self, cls, env, tool):
+        variable = next(iter(env), None)
         cases = [
-            (env, f"/usr/bin/{tool}", True),
-            (env, None, False),
-            ({}, f"/usr/bin/{tool}", False),
+            (env, f"/usr/bin/{tool}", ""),
+            (env, None, f"{tool} is not installed"),
         ]
+        if variable:
+            cases.append(({}, f"/usr/bin/{tool}", f"{variable} is not set"))
+
         for environ, which, expected in cases:
-            with self.subTest(env=environ, which=which):
+            with self.subTest(cls=cls.name, env=environ, which=which):
                 with mock.patch.dict("os.environ", environ, clear=True), mock.patch("shutil.which", return_value=which):
-                    self.assertIs(cls.available(), expected)
+                    self.assertEqual(cls.requirement(), expected)
+                    self.assertIs(cls.available(), not expected)
 
-    def test_available(self):
-        self.check_available(displays.XrandrBackend, {"DISPLAY": ":0"}, "xrandr")
-        self.check_available(displays.WlrBackend, {"WAYLAND_DISPLAY": "wayland-0"}, "wlr-randr")
-        self.check_available(displays.KScreenBackend, {"XDG_CURRENT_DESKTOP": "KDE"}, "kscreen-doctor")
+    def test_requirements(self):
+        self.check_requirement(displays.XrandrBackend, {"DISPLAY": ":0"}, "xrandr")
+        self.check_requirement(displays.WlrBackend, {"WAYLAND_DISPLAY": "wayland-0"}, "wlr-randr")
+        self.check_requirement(displays.KScreenBackend, {}, "kscreen-doctor")
 
-    def test_kscreen_needs_kde_desktop(self):
+    def test_kscreen_does_not_need_the_kde_desktop_name(self):
         with mock.patch.dict("os.environ", {"XDG_CURRENT_DESKTOP": "XFCE"}), mock.patch("shutil.which", return_value="/x"):
-            self.assertFalse(displays.KScreenBackend.available())
+            self.assertTrue(displays.KScreenBackend.available())
+
+    def test_xrandr_skips_xwayland_outputs(self):
+        text = XRANDR.replace("DP-1 connected", "XWAYLAND0 connected")
+        with mock.patch.object(displays, "run", return_value=text):
+            self.assertEqual(displays.XrandrBackend().connectors(), ["HDMI-1"])
+
+    def test_xrandr_with_only_xwayland_outputs_fails(self):
+        text = "XWAYLAND0 connected 1920x1080+0+0\n   1920x1080     59.96*+\n"
+        with mock.patch.object(displays, "run", return_value=text), self.assertRaisesRegex(displays.DisplayError, "only XWayland"):
+            displays.XrandrBackend().outputs()
+
+    def test_xrandr_without_outputs_is_empty(self):
+        with mock.patch.object(displays, "run", return_value=""):
+            self.assertEqual(displays.XrandrBackend().outputs(), {})
 
     def test_xrandr(self):
         backend = displays.XrandrBackend()
@@ -380,6 +414,7 @@ class MutterBackendTest(unittest.TestCase):
         fake_gi.DBusProxy.next = self.proxy
 
     def test_available_when_mutter_owns_the_name(self):
+        self.assertEqual(displays.MutterBackend.requirement(), "")
         self.assertTrue(displays.MutterBackend.available())
         bus, flags, info, *names, cancellable = fake_gi.DBusProxy.calls[-1]
 
@@ -388,11 +423,11 @@ class MutterBackendTest(unittest.TestCase):
 
     def test_not_available_without_owner(self):
         self.proxy.owner = None
-        self.assertFalse(displays.MutterBackend.available())
+        self.assertEqual(displays.MutterBackend.requirement(), "GNOME Shell is not running")
 
     def test_not_available_when_dbus_fails(self):
         fake_gi.DBusProxy.next = RuntimeError("no bus")
-        self.assertFalse(displays.MutterBackend.available())
+        self.assertEqual(displays.MutterBackend.requirement(), "no session bus (no bus)")
 
     def test_init_auto_starts(self):
         backend = displays.MutterBackend()
@@ -415,20 +450,81 @@ class MutterBackendTest(unittest.TestCase):
                 self.assertEqual(variant.value, (7, method, [(0, 0, 1.0, 0, True, [("HDMI-1", "b", {})])], {}))
 
 
-class DetectTest(unittest.TestCase):
-    def test_first_available_backend_wins(self):
-        with (
-            mock.patch.object(displays.MutterBackend, "available", return_value=False),
-            mock.patch.object(displays.KScreenBackend, "available", return_value=False),
-            mock.patch.object(displays.WlrBackend, "available", return_value=True),
-            mock.patch.object(displays.XrandrBackend, "available", return_value=True),
-        ):
-            self.assertIsInstance(displays.detect(), displays.WlrBackend)
+class ProbeBackend(displays.Backend):
+    """Backend whose requirement and outputs the test sets on the class."""
 
-    def test_none_available(self):
-        with mock.patch.multiple(displays, BACKENDS=(displays.XrandrBackend,)):
-            with mock.patch.object(displays.XrandrBackend, "available", return_value=False):
-                self.assertIsNone(displays.detect())
+    name = "Probe"
+    reason = ""
+    listed = {"HDMI-1": []}
+    error = None
+
+    @classmethod
+    def requirement(cls):
+        return cls.reason
+
+    def outputs(self):
+        if self.error:
+            raise self.error
+
+        return self.listed
+
+
+def probe_backend(name, reason="", listed=None, error=None):
+    attributes = {"name": name, "reason": reason, "error": error}
+    if listed is not None:
+        attributes["listed"] = listed
+
+    return type(name, (ProbeBackend,), attributes)
+
+
+class DetectTest(unittest.TestCase):
+    def test_first_working_backend_wins(self):
+        missing = probe_backend("Missing", reason="tool is not installed")
+        broken = probe_backend("Broken", error=displays.DisplayError("xrandr --query: Can't open display"))
+        empty = probe_backend("Empty", listed={})
+        working = probe_backend("Working")
+        later = probe_backend("Later")
+
+        with mock.patch.object(displays, "BACKENDS", (missing, broken, empty, working, later)):
+            self.assertIsInstance(displays.detect(), working)
+
+    def test_none_working(self):
+        missing = probe_backend("Missing", reason="tool is not installed")
+        with mock.patch.object(displays, "BACKENDS", (missing,)):
+            self.assertIsNone(displays.detect())
+
+    def test_diagnose_says_why_each_backend_fails(self):
+        backends = (
+            probe_backend("Missing", reason="wlr-randr is not installed"),
+            probe_backend("Broken", error=RuntimeError("xrandr --query: Can't open display :0")),
+            probe_backend("Empty", listed={}),
+            probe_backend("Working"),
+        )
+        with mock.patch.object(displays, "BACKENDS", backends):
+            self.assertEqual(
+                displays.diagnose(),
+                [
+                    ("Missing", "wlr-randr is not installed"),
+                    ("Broken", "xrandr --query: Can't open display :0"),
+                    ("Empty", "no connected output"),
+                    ("Working", ""),
+                ],
+            )
+
+    def test_probe_catches_a_failing_constructor(self):
+        class FailingInit(ProbeBackend):
+            name = "FailingInit"
+
+            def __init__(self):
+                raise RuntimeError("DBus refused")
+
+        self.assertEqual(displays.probe(FailingInit), (None, "DBus refused"))
+
+    def test_backend_order_prefers_native_tools(self):
+        self.assertEqual(
+            displays.BACKENDS,
+            (displays.MutterBackend, displays.KScreenBackend, displays.WlrBackend, displays.XrandrBackend),
+        )
 
 
 class ConnectorTest(unittest.TestCase):

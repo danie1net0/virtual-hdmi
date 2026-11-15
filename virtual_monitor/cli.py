@@ -139,7 +139,9 @@ def main(argv, out=None, err=None):
 
     backend = displays.detect()
     if backend is None:
-        print("No supported video environment in this session.", file=err)
+        print("No supported video environment in this session:", file=err)
+        for name, reason in displays.diagnose():
+            print(f"  {name}: {reason}", file=err)
         return 1
 
     try:

@@ -75,10 +75,20 @@ class CliTest(unittest.TestCase):
             _, out, _ = self.run_cli(["--list"])
         self.assertIn("(EDID at boot: no)", out)
 
-    def test_no_session(self):
-        code, out, err = self.run_cli(["--list"], backend=None)
+    def test_no_session_says_why_each_backend_failed(self):
+        reasons = [("GNOME (Mutter)", "GNOME Shell is not running"), ("X11 (xrandr)", "xrandr --query: Can't open display :0")]
+        with mock.patch.object(displays, "diagnose", return_value=reasons):
+            code, out, err = self.run_cli(["--list"], backend=None)
+
         self.assertEqual((code, out), (1, ""))
-        self.assertIn("No supported video environment", err)
+        self.assertEqual(
+            err.splitlines(),
+            [
+                "No supported video environment in this session:",
+                "  GNOME (Mutter): GNOME Shell is not running",
+                "  X11 (xrandr): xrandr --query: Can't open display :0",
+            ],
+        )
 
     def test_no_connector(self):
         code, _, err = self.run_cli(["--list"], backend=Backend({}))
