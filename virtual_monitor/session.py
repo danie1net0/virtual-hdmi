@@ -5,7 +5,8 @@ shell opened over SSH or on a text console. Only fills what is missing, never ch
   XDG_RUNTIME_DIR           /run/user/<uid>
   DBUS_SESSION_BUS_ADDRESS  the session bus in it (GNOME is reached through DBus)
   WAYLAND_DISPLAY           the first wayland-N socket in it (KDE, wlroots compositors)
-  DISPLAY                   the lowest X server socket in /tmp/.X11-unix (X11, or XWayland)
+  DISPLAY                   the X server socket in /tmp/.X11-unix (X11, or XWayland): the lowest one the
+                            user owns, else the lowest one (the login screen may hold :0)
   XAUTHORITY                the X cookie that the display manager or the compositor wrote
 
 It only finds sessions of the same user: the sockets of other users are not readable anyway.
@@ -50,19 +51,26 @@ def socket_number(path, prefix):
     return int(found.group(1))
 
 
-def lowest_socket(folder, prefix):
-    """Name of the prefix + N socket with the lowest N in folder, or None."""
+def owner(path):
+    try:
+        return path.stat().st_uid
+    except OSError:
+        return None
+
+
+def lowest_socket(folder, prefix, uid=None):
+    """Name of the prefix + N socket in folder with the lowest N, those owned by uid first; or None."""
     try:
         entries = list(folder.iterdir())
     except OSError:
         return None
 
     numbered = [(socket_number(entry, prefix), entry) for entry in entries if is_socket(entry)]
-    numbered = [(number, entry) for number, entry in numbered if number is not None]
-    if not numbered:
+    ranked = [(owner(entry) != uid, number, entry.name) for number, entry in numbered if number is not None]
+    if not ranked:
         return None
 
-    return min(numbered)[1].name
+    return min(ranked)[2]
 
 
 def xauthority(runtime, home):
@@ -83,11 +91,11 @@ def add_runtime_variables(found, environ, runtime):
         found["WAYLAND_DISPLAY"] = wayland
 
 
-def add_x11_variables(found, environ, runtime, home, x11_sockets):
+def add_x11_variables(found, environ, runtime, home, x11_sockets, uid):
     if environ.get("DISPLAY"):
         return
 
-    socket = lowest_socket(x11_sockets, "X")
+    socket = lowest_socket(x11_sockets, "X", uid)
     if socket is None:
         return
 
@@ -108,7 +116,7 @@ def missing_variables(environ, uid, home, runtime_root=RUNTIME_ROOT, x11_sockets
         found["XDG_RUNTIME_DIR"] = str(runtime)
 
     add_runtime_variables(found, environ, runtime)
-    add_x11_variables(found, environ, runtime, home, x11_sockets)
+    add_x11_variables(found, environ, runtime, home, x11_sockets, uid)
     return found
 
 

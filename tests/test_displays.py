@@ -57,6 +57,33 @@ KSCREEN = json.dumps(
 )
 
 
+COSMIC = """output "HDMI-A-1" enabled=#true {
+  description make="Linux Foundation" model="Virtual UW"
+  physical 800 335
+  position 0 0
+  scale 1.00
+  transform "normal"
+  modes {
+    mode 3440 1440 59240 preferred=#true
+    mode 2360 1640 60010 current=#true
+    mode 1920 1080 60000
+  }
+}
+output "DP-1" enabled=#false {
+  description model="Other"
+  modes {
+    mode 1920 1080 60000 current=#true
+  }
+}
+output "DP-2" enabled=#true {
+  description model="Second"
+  modes {
+    mode 2560 1440 143912 current=#true preferred=#true
+  }
+}
+"""
+
+
 def mutter_monitor(connector, *modes):
     """Monitor in the GetCurrentState format; each mode is (id, current, preferred)."""
     return (
@@ -140,6 +167,23 @@ class ParseOtherBackendsTest(unittest.TestCase):
         self.assertTrue(first.preferred and not first.current)
         self.assertTrue(second.current and not second.preferred)
         self.assertEqual(outputs["DP-1"], [])
+
+    def test_cosmic(self):
+        outputs = displays.parse_cosmic(COSMIC)
+
+        self.assertEqual(list(outputs), ["HDMI-A-1", "DP-2"])
+        self.assertEqual(
+            outputs["HDMI-A-1"],
+            [
+                displays.Mode("3440x1440@59.240", 3440, 1440, 59.24, False, True),
+                displays.Mode("2360x1640@60.010", 2360, 1640, 60.01, True, False),
+                displays.Mode("1920x1080@60.000", 1920, 1080, 60.0, False, False),
+            ],
+        )
+        self.assertEqual(outputs["DP-2"][0].id, "2560x1440@143.912")
+
+    def test_cosmic_ignores_modes_before_any_output(self):
+        self.assertEqual(displays.parse_cosmic("    mode 1920 1080 60000\n"), {})
 
     def test_kscreen_without_outputs(self):
         self.assertEqual(displays.parse_kscreen("{}"), {})
@@ -317,6 +361,33 @@ class CommandBackendsTest(unittest.TestCase):
         self.check_requirement(displays.XrandrBackend, {"DISPLAY": ":0"}, "xrandr")
         self.check_requirement(displays.WlrBackend, {"WAYLAND_DISPLAY": "wayland-0"}, "wlr-randr")
         self.check_requirement(displays.KScreenBackend, {}, "kscreen-doctor")
+        self.check_requirement(displays.CosmicBackend, {"WAYLAND_DISPLAY": "wayland-1"}, "cosmic-randr")
+
+    def test_cosmic(self):
+        backend = displays.CosmicBackend()
+        with mock.patch.object(displays, "run", return_value=COSMIC) as run:
+            self.assertEqual(backend.connectors(), ["HDMI-A-1", "DP-2"])
+            run.assert_called_with(["cosmic-randr", "list", "--kdl"])
+            backend.apply(change("HDMI-A-1", "2360x1640@60.010", 1.5, "left"), True)
+            run.assert_called_with(
+                [
+                    "cosmic-randr",
+                    "mode",
+                    "HDMI-A-1",
+                    "2360",
+                    "1640",
+                    "--refresh",
+                    "60.010",
+                    "--scale",
+                    "1.5",
+                    "--transform",
+                    "rotate90",
+                ]
+            )
+
+    def test_cosmic_transforms(self):
+        self.assertEqual(set(displays.COSMIC_TRANSFORMS), set(displays.ROTATIONS))
+        self.assertEqual(displays.COSMIC_TRANSFORMS["right"], "rotate270")
 
     def test_kscreen_does_not_need_the_kde_desktop_name(self):
         with mock.patch.dict("os.environ", {"XDG_CURRENT_DESKTOP": "XFCE"}), mock.patch("shutil.which", return_value="/x"):
@@ -523,7 +594,13 @@ class DetectTest(unittest.TestCase):
     def test_backend_order_prefers_native_tools(self):
         self.assertEqual(
             displays.BACKENDS,
-            (displays.MutterBackend, displays.KScreenBackend, displays.WlrBackend, displays.XrandrBackend),
+            (
+                displays.MutterBackend,
+                displays.KScreenBackend,
+                displays.CosmicBackend,
+                displays.WlrBackend,
+                displays.XrandrBackend,
+            ),
         )
 
 

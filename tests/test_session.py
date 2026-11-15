@@ -91,6 +91,18 @@ class MissingVariablesTest(SessionTestCase):
                 cookie.write_text("cookie")
                 self.assertEqual(self.missing()["XAUTHORITY"], str(cookie))
 
+    def test_display_prefers_the_socket_the_user_owns(self):
+        self.make_socket(self.x11 / "X0")
+        self.make_socket(self.x11 / "X1")
+        self.make_socket(self.x11 / "X2")
+        owners = {"X0": 120, "X1": 1000, "X2": 1000}
+        with mock.patch.object(session, "owner", side_effect=lambda path: owners[path.name]):
+            self.assertEqual(self.missing()["DISPLAY"], ":1")
+
+    def test_owner_of_a_missing_path(self):
+        self.assertIsNone(session.owner(self.base / "gone"))
+        self.assertEqual(session.owner(self.base), os.getuid())
+
     def test_display_without_cookie(self):
         self.make_socket(self.x11 / "X2")
         self.assertEqual(self.missing(), {"XDG_RUNTIME_DIR": str(self.runtime), "DISPLAY": ":2"})

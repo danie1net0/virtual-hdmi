@@ -3,6 +3,7 @@ Lists and switches the video modes of the current graphical session, in any envi
 
   GNOME (Mutter)                       DBus org.gnome.Mutter.DisplayConfig
   KDE Plasma                           kscreen-doctor
+  COSMIC (Pop!_OS)                     cosmic-randr
   wlroots (sway, labwc, Hyprland...)   wlr-randr
   X11 (XFCE, MATE, i3...)              xrandr
 
@@ -36,6 +37,7 @@ XFT_DPI_AT_1X = 96
 # "left" turns the picture a quarter turn counter-clockwise, as xrandr --rotate left
 ROTATIONS = ("normal", "left", "right")
 WLR_TRANSFORMS = {"normal": "normal", "left": "90", "right": "270"}
+COSMIC_TRANSFORMS = {"normal": "normal", "left": "rotate90", "right": "rotate270"}
 MUTTER_TRANSFORMS = {"normal": 0, "left": 1, "right": 3}
 
 
@@ -205,6 +207,38 @@ def parse_kscreen(text):
     return outputs
 
 
+def parse_cosmic(text):
+    """Enabled outputs of `cosmic-randr list --kdl`; mode lines are "mode WIDTH HEIGHT MILLIHERTZ [flags]"."""
+    outputs = {}
+    modes = None
+    for line in text.splitlines():
+        header = re.match(r'^output "([^"]+)" enabled=#(true|false)', line)
+        if header:
+            modes = start_cosmic_output(outputs, header)
+            continue
+
+        row = re.match(r"^\s+mode (\d+) (\d+) (\d+)(.*)$", line)
+        if not row or modes is None:
+            continue
+
+        width, height, refresh = int(row.group(1)), int(row.group(2)), int(row.group(3)) / 1000
+        flags = row.group(4)
+        modes.append(
+            Mode(f"{width}x{height}@{refresh:.3f}", width, height, refresh, "current=#true" in flags, "preferred=#true" in flags)
+        )
+    return outputs
+
+
+def start_cosmic_output(outputs, header):
+    """Mode list of an enabled output, registered in outputs; None for a disabled one."""
+    if header.group(2) != "true":
+        return None
+
+    modes = []
+    outputs[header.group(1)] = modes
+    return modes
+
+
 def parse_mutter(monitors):
     """Monitors from GetCurrentState: ((connector, ...), [(id, w, h, hz, scale, scales, props)], ...)."""
     outputs = {}
@@ -365,6 +399,36 @@ class KScreenBackend(Backend):
         )
 
 
+class CosmicBackend(Backend):
+    name = "COSMIC (cosmic-randr)"
+
+    @classmethod
+    def requirement(cls):
+        return missing_variable("WAYLAND_DISPLAY") or missing_tool("cosmic-randr")
+
+    def outputs(self):
+        return parse_cosmic(run(["cosmic-randr", "list", "--kdl"]))
+
+    def apply(self, change, persistent):
+        size, rate = change.mode_id.split("@")
+        width, height = size.split("x")
+        run(
+            [
+                "cosmic-randr",
+                "mode",
+                change.connector,
+                width,
+                height,
+                "--refresh",
+                rate,
+                "--scale",
+                f"{change.scale:g}",
+                "--transform",
+                COSMIC_TRANSFORMS[change.rotation],
+            ]
+        )
+
+
 def mutter_proxy(auto_start):
     from gi.repository import Gio
 
@@ -419,7 +483,7 @@ class MutterBackend(Backend):
         self.proxy.call_sync("ApplyMonitorsConfig", args, Gio.DBusCallFlags.NONE, -1, None)
 
 
-BACKENDS = (MutterBackend, KScreenBackend, WlrBackend, XrandrBackend)
+BACKENDS = (MutterBackend, KScreenBackend, CosmicBackend, WlrBackend, XrandrBackend)
 
 
 def probe(cls):

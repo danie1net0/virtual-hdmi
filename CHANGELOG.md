@@ -3,6 +3,12 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.3.3 (2026-11-15)
+
+- COSMIC (Pop!_OS) support through `cosmic-randr`, tried after GNOME and KDE: it lists the enabled
+  outputs and sets mode, refresh rate, scale and rotation.
+- Over SSH, the X display picked is the one the user owns, not the login screen's `:0`.
+
 ## v0.3.2 (2026-11-15)
 
 - The app finds the user's desktop session by itself when the shell does not point to it, as over

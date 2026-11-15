@@ -8,7 +8,7 @@ app switches the resolution and generates/installs EDIDs.
 
 - `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`
   and `--restore` run in the terminal.
-- `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, wlr-randr, xrandr backends; `detect`
+- `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, cosmic-randr, wlr-randr, xrandr backends; `detect`
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
   `ModeChange` with the mode, desktop scale and rotation),
   `choice.py` (remembered resolution, autostart, and the scale and rotation saved per mode size in
