@@ -245,6 +245,8 @@ Gtk = namespace(
     StringList=StringList,
     Window=type("Window", (), {"default_icons": [], "set_default_icon_name": staticmethod(lambda name: Gtk.Window.default_icons.append(name))}),
     Align=types.SimpleNamespace(CENTER="center"),
+    displays=[True],
+    init_check=lambda: Gtk.displays[0],
 )
 
 Adw = namespace(
@@ -313,3 +315,4 @@ def reset():
     GLib.second_timeouts.clear()
     GLib.prgnames.clear()
     Gtk.Window.default_icons.clear()
+    Gtk.displays[0] = True

@@ -3,6 +3,14 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.3.2 (2026-11-15)
+
+- The app finds the user's desktop session by itself when the shell does not point to it, as over
+  SSH or on a text console: the session bus, the Wayland socket, the X display and its cookie, from
+  `/run/user/<uid>` and `/tmp/.X11-unix`. Variables already set are kept.
+- Without a desktop session, the window explains it instead of a GTK traceback, and the terminal
+  says to log in to the desktop first.
+
 ## v0.3.1 (2026-11-15)
 
 - The display backend is found by trying each one (GNOME, KDE, `wlr-randr`, `xrandr`) and taking the

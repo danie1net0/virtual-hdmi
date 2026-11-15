@@ -12,8 +12,9 @@ app switches the resolution and generates/installs EDIDs.
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
   `ModeChange` with the mode, desktop scale and rotation),
   `choice.py` (remembered resolution, autostart, and the scale and rotation saved per mode size in
-  `settings.json`, with `auto_scale` as the default), `cli.py`, `window.py` (GTK; a switch goes back
-  after `REVERT_SECONDS` without Keep).
+  `settings.json`, with `auto_scale` as the default), `session.py` (fills the missing session
+  variables from `/run/user/<uid>` and `/tmp/.X11-unix`, so the app also runs over SSH; `__main__`
+  calls it first), `cli.py`, `window.py` (GTK; a switch goes back after `REVERT_SECONDS` without Keep).
 - `scripts/`: root-only system scripts. All accept `ROOT=` for tests.
 - `edid/`: ready EDIDs. `ultrawide-rockchip.bin` only uses clocks the RK3566 PLL can generate, and equals
   `edid.generate(DEFAULT_MODES)`.

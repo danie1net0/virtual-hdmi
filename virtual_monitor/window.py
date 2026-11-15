@@ -11,6 +11,7 @@ GTK4/libadwaita window of the Virtual monitor:
     of the timings, and installs it (scripts/install-edid.sh, via pkexec)
 """
 
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -397,7 +398,17 @@ class App(Adw.Application):
         (self.props.active_window or Window(self)).present()
 
 
+NO_DISPLAY = (
+    "No graphical session to open the window in. Log in to the desktop, or use the terminal options "
+    "(virtual-monitor --help)."
+)
+
+
 def run():
+    if not Gtk.init_check():
+        print(NO_DISPLAY, file=sys.stderr)
+        return 1
+
     # The panel matches the window to the launcher by its class and icon name.
     GLib.set_prgname(ICON_NAME)
     Gtk.Window.set_default_icon_name(ICON_NAME)

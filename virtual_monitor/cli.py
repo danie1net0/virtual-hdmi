@@ -1,9 +1,10 @@
 """Terminal mode of the Virtual monitor: lists, applies and restores resolutions, without GTK."""
 
 import argparse
+import os
 import sys
 
-from virtual_monitor import __version__, choice, displays
+from virtual_monitor import __version__, choice, displays, session
 
 AUTO_SCALE = 0.0
 
@@ -133,6 +134,13 @@ def run_action(args, backend, out, err):
     return 0
 
 
+def print_session_hint(err):
+    if session.has_display(os.environ):
+        return
+
+    print("No graphical session of this user was found: log in to the desktop first.", file=err)
+
+
 def main(argv, out=None, err=None):
     out, err = out or sys.stdout, err or sys.stderr
     args = parse_args(argv)
@@ -142,6 +150,7 @@ def main(argv, out=None, err=None):
         print("No supported video environment in this session:", file=err)
         for name, reason in displays.diagnose():
             print(f"  {name}: {reason}", file=err)
+        print_session_hint(err)
         return 1
 
     try:

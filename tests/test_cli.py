@@ -1,5 +1,6 @@
 import contextlib
 import io
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -70,6 +71,14 @@ class CliTest(unittest.TestCase):
             ],
         )
 
+    def test_no_session_without_display_says_to_log_in(self):
+        environ = {key: value for key, value in os.environ.items() if key not in ("DISPLAY", "WAYLAND_DISPLAY")}
+        with mock.patch.object(displays, "diagnose", return_value=[]), mock.patch.dict("os.environ", environ, clear=True):
+            code, _out, err = self.run_cli(["--list"], backend=None)
+
+        self.assertEqual(code, 1)
+        self.assertEqual(err.splitlines()[-1], "No graphical session of this user was found: log in to the desktop first.")
+
     def test_list_without_edid_on_boot(self):
         with mock.patch.object(displays, "cmdline_connector", return_value=None):
             _, out, _ = self.run_cli(["--list"])
@@ -77,7 +86,7 @@ class CliTest(unittest.TestCase):
 
     def test_no_session_says_why_each_backend_failed(self):
         reasons = [("GNOME (Mutter)", "GNOME Shell is not running"), ("X11 (xrandr)", "xrandr --query: Can't open display :0")]
-        with mock.patch.object(displays, "diagnose", return_value=reasons):
+        with mock.patch.object(displays, "diagnose", return_value=reasons), mock.patch.dict("os.environ", {"DISPLAY": ":0"}):
             code, out, err = self.run_cli(["--list"], backend=None)
 
         self.assertEqual((code, out), (1, ""))

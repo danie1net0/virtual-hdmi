@@ -37,7 +37,7 @@ curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 
 This adds **Virtual monitor** to the app menu and the `virtual-monitor` command to
 `~/.local/bin`, without sudo. Run the same line to update; add
-`-s -- --uninstall` after `bash` to remove it, or `VERSION=v0.3.1` before `bash` to pin a
+`-s -- --uninstall` after `bash` to remove it, or `VERSION=v0.3.2` before `bash` to pin a
 release ([CHANGELOG.md](CHANGELOG.md)). From a clone, `bash install.sh` does the same (`--help`
 lists the options).
 
@@ -61,7 +61,8 @@ virtual-monitor --scale 1.25 --rotation left     # current mode: 125%, portrait
 
 Works on GNOME, KDE Plasma, compositors that `wlr-randr` drives (sway, Hyprland, niri...) and X11
 (XFCE, MATE, i3). The app uses the first of these that answers; if none does, `--list` says why
-each one failed.
+each one failed. It finds your desktop session by itself, so it also works over SSH while you are
+logged in to the desktop.
 
 ## Install the EDID
 

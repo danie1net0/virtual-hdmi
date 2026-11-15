@@ -14,6 +14,17 @@ ROOT = Path(__file__).resolve().parent.parent
 class MainTest(unittest.TestCase):
     def setUp(self):
         fake_gi.install()
+        patcher = mock.patch("virtual_monitor.session.attach", return_value=True)
+        self.attach = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_attaches_to_the_session_first(self):
+        with mock.patch("virtual_monitor.cli.main", return_value=0):
+            entry.main(["--list"])
+        with mock.patch("virtual_monitor.window.run", return_value=0):
+            entry.main([])
+
+        self.assertEqual(self.attach.call_count, 2)
 
     def test_arguments_go_to_cli(self):
         with mock.patch("virtual_monitor.cli.main", return_value=3) as cli_main:

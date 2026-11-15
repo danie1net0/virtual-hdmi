@@ -1,4 +1,6 @@
+import contextlib
 import importlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -598,6 +600,17 @@ class AppTest(WindowTestCase):
         app.do_activate()
         self.assertIs(app.props.active_window, window)
         self.assertEqual(window.presented_on, [None, None])
+
+    def test_run_without_display_explains_and_fails(self):
+        fake_gi.Gtk.displays[0] = False
+        apps_before = len(fake_gi.Application.created)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(window_module.run(), 1)
+
+        self.assertEqual(err.getvalue(), window_module.NO_DISPLAY + "\n")
+        self.assertEqual(len(fake_gi.Application.created), apps_before)
+        self.assertEqual(fake_gi.GLib.prgnames, [])
 
     def test_run(self):
         self.assertEqual(window_module.run(), 0)
