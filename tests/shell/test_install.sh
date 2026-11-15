@@ -25,6 +25,7 @@ app() { echo "$DATA/$NAME"; }
 icon() { echo "$DATA/icons/hicolor/512x512/apps/$NAME.png"; }
 launcher() { echo "$DATA/applications/$NAME.desktop"; }
 autostart() { echo "$CONFIG/autostart/$NAME-restore.desktop"; }
+command_file() { echo "$HOME/.local/bin/$NAME"; }
 mode_file() { echo "$CONFIG/$NAME/mode.json"; }
 legacy_app() { echo "$DATA/$LEGACY"; }
 legacy_icon() { echo "$DATA/icons/hicolor/512x512/apps/$LEGACY.png"; }
@@ -86,6 +87,15 @@ called "python3 -c import gi; gi.require_version(\"Gtk\", \"4.0\"); gi.require_v
 check "leaves no install leftovers" test -z "$(ls -A "$DATA" | grep '^\.virtual-monitor-install')"
 check "creates no autostart" test ! -e "$(autostart)"
 contains "$OUT" "Open it from the menu" "says how to open it"
+check "installs the executable command" test -x "$(command_file)"
+contains "$OUT" "Command installed: $(command_file)" "says where the command is"
+contains "$OUT" "$HOME/.local/bin is not in PATH yet" "warns when ~/.local/bin is not in PATH"
+stub python3 'exit 7'
+: > "$CALLS"
+PATH="$STUBS:$BIN" "$(command_file)" --list "two words" > /dev/null 2>&1
+check "command passes its exit status" test $? -eq 7
+called "python3 $(app)/$NAME.py --list two words"
+stub python3
 if PATH=/usr/bin:/bin command -v python3 > /dev/null; then
     check "installed app works outside the project" env -i PATH=/usr/bin:/bin python3 "$(app)/$NAME.py" --help
 fi
@@ -94,6 +104,13 @@ echo 'old' > "$(app)/leftover.py"
 run_script "$SCRIPT"
 status_is 0 "reinstalls over the previous one"
 check "reinstall cleans old files" test ! -e "$(app)/leftover.py"
+
+user
+EXTRA_PATH="$HOME/.local/bin"
+run_script "$SCRIPT"
+unset EXTRA_PATH
+status_is 0 "installs with ~/.local/bin in PATH"
+not_contains "$OUT" "is not in PATH yet" "does not warn when ~/.local/bin is in PATH"
 
 user
 export XDG_DATA_HOME="$CASE/data" XDG_CONFIG_HOME="$CASE/config"
@@ -199,6 +216,7 @@ check "--dest-dir points the launcher there" grep -qx "Exec=python3 \"$(app)/$NA
 not_called gtk-update-icon-cache
 not_called update-desktop-database
 check "--dest-dir leaves the autostart alone" grep -qx "Exec=existing" "$(autostart)"
+check "--dest-dir installs no command" test ! -e "$(command_file)"
 check "--dest-dir does not migrate modo.json" test ! -e "$(mode_file)"
 check "--dest-dir leaves the old autostart" test -f "$CONFIG/autostart/monitor-virtual-restaurar.desktop"
 check "--dest-dir leaves the old app of the user" test -d "$HOME/.local/share/$LEGACY"
@@ -259,6 +277,8 @@ check "app removed" test ! -e "$(app)"
 check "icon removed" test ! -e "$(icon)"
 check "launcher removed" test ! -e "$(launcher)"
 check "autostart removed" test ! -e "$(autostart)"
+check "command removed" test ! -e "$(command_file)"
+contains "$OUT" "Removed: $(command_file)" "says the command was removed"
 check "old app removed" test ! -e "$(legacy_app)"
 check "old icon removed" test ! -e "$(legacy_icon)"
 check "old launcher removed" test ! -e "$(legacy_launcher)"
@@ -279,5 +299,6 @@ run_script "$SCRIPT" --uninstall --dest-dir "$DATA"
 status_is 0 "removes from --dest-dir"
 check "removes the app from --dest-dir" test ! -e "$(app)"
 check "--dest-dir does not remove the user autostart" test -f "$(autostart)"
+not_contains "$OUT" "Removed: $(command_file)" "--dest-dir does not mention the command"
 
 summary

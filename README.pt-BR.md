@@ -35,7 +35,8 @@ sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1   # Debian, Ubuntu, Armb
 curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 ```
 
-Isso coloca o **Virtual monitor** no menu de apps, sem sudo. Rode a mesma linha para atualizar;
+Isso coloca o **Virtual monitor** no menu de apps e o comando `virtual-monitor` em
+`~/.local/bin`, sem sudo. Rode a mesma linha para atualizar;
 acrescente `-s -- --uninstall` depois de `bash` para remover, ou `VERSION=v0.3.1` antes de
 `bash` para fixar uma versão ([CHANGELOG.md](CHANGELOG.md)). Num clone, `bash install.sh` faz o
 mesmo (`--help` lista as opções).
@@ -48,14 +49,14 @@ segundos, o modo anterior volta, então um modo sem imagem se desfaz sozinho. **
 salva, os modos de tablet, como 2360×1640, ficam em 150% e os outros em 100% (no X11, só o XFCE
 muda a escala, pelo DPI das fontes).
 
-Ou use o terminal:
+Ou use o terminal (num clone, `python3 virtual-monitor.py` faz o mesmo):
 
 ```sh
-python3 virtual-monitor.py --list                    # saídas e modos
-python3 virtual-monitor.py --apply 2560x1080@59.98   # troca e lembra
-python3 virtual-monitor.py --apply 1920x1080@60.00 --temp   # só troca
-python3 virtual-monitor.py --next                    # próximo modo, para um atalho de teclado
-python3 virtual-monitor.py --scale 1.25 --rotation left     # modo atual: 125%, retrato
+virtual-monitor --list                           # saídas e modos
+virtual-monitor --apply 2560x1080@59.98          # troca e lembra
+virtual-monitor --apply 1920x1080@60.00 --temp   # só troca
+virtual-monitor --next                           # próximo modo, para um atalho de teclado
+virtual-monitor --scale 1.25 --rotation left     # modo atual: 125%, retrato
 ```
 
 Funciona no GNOME, KDE Plasma, compositores que o `wlr-randr` controla (sway, Hyprland, niri...) e

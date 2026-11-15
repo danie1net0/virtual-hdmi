@@ -8,6 +8,8 @@ the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 - The display backend is found by trying each one (GNOME, KDE, `wlr-randr`, `xrandr`) and taking the
   first that lists an output, instead of going by the desktop name. `kscreen-doctor` works without
   `XDG_CURRENT_DESKTOP=KDE`, and `xrandr` skips the XWayland outputs it cannot change.
+- The installer adds the `virtual-monitor` command to `~/.local/bin`, so the terminal mode needs no
+  path or alias (`virtual-monitor --list`); `--uninstall` removes it.
 - A failed display command shows what it printed (`xrandr --query: Can't open display :0`) instead of
   its exit status, and when no backend works the terminal lists why each one failed.
 

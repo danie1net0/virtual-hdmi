@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # install.sh
-# Installs the Virtual monitor for the current user: app, icon and menu launcher.
+# Installs the Virtual monitor for the current user: app, icon, menu launcher and the
+# virtual-monitor command in ~/.local/bin.
 # Run without sudo. Only the EDID install (inside the app) asks for a password.
 #
 # Usage:
@@ -24,10 +25,10 @@ Usage: bash install.sh [options]
   --dev             Link to this folder (development).
   --dest-dir DIR    Install into another data folder, without updating caches or the autostart.
   --skip-check      Do not check the app dependencies.
-  --uninstall       Remove the app, icon, launcher and the resolution autostart.
+  --uninstall       Remove the app, icon, launcher, command and the resolution autostart.
   --help, -h        Show this help.
 
-With no options, installs a copy in ~/.local/share/${NAME}.
+With no options, installs a copy in ~/.local/share/${NAME} and the command ~/.local/bin/${NAME}.
 Run without sudo."
 
 DEV=0
@@ -82,6 +83,7 @@ APP="$DATA/$NAME"
 ICON="$DATA/icons/hicolor/512x512/apps/$NAME.png"
 LAUNCHER="$DATA/applications/$NAME.desktop"
 AUTOSTART="$CONFIG/autostart/$NAME-restore.desktop"
+COMMAND="$HOME/.local/bin/$NAME"
 
 LEGACY_APP="$DATA/$LEGACY_NAME"
 LEGACY_ICON="$DATA/icons/hicolor/512x512/apps/$LEGACY_NAME.png"
@@ -117,14 +119,37 @@ remove_autostart() {
     rm -f "$AUTOSTART"
 }
 
+remove_command() {
+    is_user_install || return 0
+    rm -f "$COMMAND"
+}
+
+# The virtual-monitor command: runs the app with its arguments, from any folder (user installs only)
+install_command() {
+    is_user_install || return 0
+    mkdir -p "$(dirname "$COMMAND")"
+    printf '#!/bin/sh\nexec python3 "%s/%s.py" "$@"\n' "$APP" "$NAME" > "$COMMAND"
+    chmod 755 "$COMMAND"
+    echo "Command installed: $COMMAND"
+    warn_path
+}
+
+# ~/.local/bin enters PATH at the next login on most distributions, if it exists by then
+warn_path() {
+    case ":$PATH:" in *":$(dirname "$COMMAND"):"*) return 0 ;; esac
+    echo "$(dirname "$COMMAND") is not in PATH yet: log in again, or run it as $COMMAND"
+}
+
 uninstall() {
     rm -rf "$APP"
     rm -f "$ICON" "$LAUNCHER"
+    remove_command
     remove_autostart
     remove_legacy
     update_caches
 
     echo "Removed: $APP, $ICON, $LAUNCHER"
+    is_user_install && echo "Removed: $COMMAND"
     echo "The remembered resolution stays in $CONFIG/$NAME; delete it if you no longer want it."
     exit 0
 }
@@ -218,10 +243,11 @@ mv -f "$STAGING/launcher.desktop" "$LAUNCHER"
 
 migrate_legacy
 remove_legacy
+install_command
 
 update_caches
 
 echo "App installed: $APP"
 echo "Icon installed: $ICON"
 echo "Launcher installed: $LAUNCHER"
-echo "Open it from the menu (Virtual monitor) or with: python3 \"$APP/$NAME.py\""
+echo "Open it from the menu (Virtual monitor), or run $NAME --help in a terminal."

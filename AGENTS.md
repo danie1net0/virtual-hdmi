@@ -19,7 +19,8 @@ app switches the resolution and generates/installs EDIDs.
   `edid.generate(DEFAULT_MODES)`.
 - `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
   1280×640 PNG uploaded in Settings) and the GitLab project avatar.
-- `install.sh`: per-user install of app, icon and launcher (`--dev`, `--dest-dir`, `--uninstall`).
+- `install.sh`: per-user install of app, icon, launcher and the `~/.local/bin/virtual-monitor`
+  command (`--dev`, `--dest-dir`, `--uninstall`).
 - `CHANGELOG.md`: one `## vX.Y.Z (date)` section per release, newest first; the top one equals
   `__version__` in `virtual_monitor/__init__.py`. Pushing the tag makes CI create the GitLab release
   from that section (`tests/test_release.py` checks both).

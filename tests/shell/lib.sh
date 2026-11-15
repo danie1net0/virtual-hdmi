@@ -46,17 +46,18 @@ stub() {
     chmod +x "$STUBS/$name"
 }
 
-# run_script script [args...]: runs in the sandbox; leaves stdout in $OUT, stderr in $ERRS and the exit code in $STATUS
+# run_script script [args...]: runs in the sandbox; leaves stdout in $OUT, stderr in $ERRS and the exit code in $STATUS.
+# EXTRA_PATH, when set, goes at the end of the sandbox PATH.
 run_script() {
-    local script="$1"
+    local script="$1" path="$STUBS:$BIN${EXTRA_PATH:+:$EXTRA_PATH}"
     shift
     if [[ -z "${COVERAGE:-}" ]]; then
-        ROOT="$ROOT" PATH="$STUBS:$BIN" bash "$script" "$@" > "$OUT" 2> "$ERRS"
+        ROOT="$ROOT" PATH="$path" bash "$script" "$@" > "$OUT" 2> "$ERRS"
         STATUS=$?
         return
     fi
 
-    PS4='+@@${BASH_SOURCE}:${LINENO}@@ ' BASH_XTRACEFD=7 ROOT="$ROOT" PATH="$STUBS:$BIN" \
+    PS4='+@@${BASH_SOURCE}:${LINENO}@@ ' BASH_XTRACEFD=7 ROOT="$ROOT" PATH="$path" \
         bash -x "$script" "$@" > "$OUT" 2> "$ERRS" 7>> "$COVERAGE"
     STATUS=$?
 }
