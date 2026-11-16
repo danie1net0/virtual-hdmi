@@ -69,7 +69,7 @@ status_is 0 "installs on Armbian"
 check "copies the EDID" cmp "$EDID" "$ROOT/usr/lib/firmware/edid/virtual-monitor.bin"
 check "initramfs hook is executable" test -x "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor"
 contains "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor" 'cp /usr/lib/firmware/edid/virtual-monitor.bin "${DESTDIR}/usr/lib/firmware/edid/"' "hook copies the EDID into the image"
-check "without dracut.conf.d, creates no dracut config" test ! -e "$ROOT/etc/dracut.conf.d"
+check "without dracut, creates no dracut config" test ! -e "$ROOT/etc/dracut.conf.d"
 called "update-initramfs -u -k $KVER"
 called "lsinitramfs $ROOT/boot/initrd.img-$KVER"
 check "appends the parameters to extraargs" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=cma=256M $PARAMS"
@@ -99,7 +99,7 @@ grub "quiet splash"
 run_script "$SCRIPT" "$EDID"
 status_is 0 "installs with GRUB and dracut"
 contains "$ROOT/etc/dracut.conf.d/90-edid-virtual-monitor.conf" 'install_items+=" /usr/lib/firmware/edid/virtual-monitor.bin "' "adds the EDID to dracut"
-check "without initramfs-tools, creates no hook" test ! -e "$ROOT/etc/initramfs-tools"
+check "without update-initramfs, creates no hook" test ! -e "$ROOT/etc/initramfs-tools"
 called "dracut -f --kver $KVER"
 called "lsinitrd --kver $KVER"
 called "update-grub"
@@ -138,6 +138,18 @@ status_is 0 "reinstalls with kernelstub"
 called "kernelstub -d drm.edid_firmware=HDMI-A-1:edid/velho.bin video=HDMI-A-1:D"
 called "kernelstub -a $PARAMS"
 check "does not overwrite the saved kernelstub configuration" grep -q '\["quiet"\]' "$ROOT/etc/kernelstub/configuration.before-edid"
+
+pop ""
+rm -r "$ROOT/etc/initramfs-tools"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs when the initramfs-tools hooks folder does not exist yet"
+check "creates the hooks folder and the hook" test -x "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor"
+
+grub "quiet"
+rm -r "$ROOT/etc/dracut.conf.d"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs when dracut.conf.d does not exist yet"
+contains "$ROOT/etc/dracut.conf.d/90-edid-virtual-monitor.conf" "edid/virtual-monitor.bin" "creates the dracut folder and config"
 
 pop ""
 mkdir -p "$ROOT/etc/default"
@@ -201,6 +213,19 @@ stub lsinitrd 'echo nada'
 run_script "$SCRIPT" "$EDID"
 status_is 0 "lsinitrd without the EDID falls back to lsinitramfs"
 contains "$OUT" "ok (lsinitramfs)" "uses lsinitramfs after lsinitrd"
+
+# A real image lists thousands of files after the EDID; grep -q would stop reading and the lister
+# would die of SIGPIPE, which pipefail turns into a failed check
+armbian "extraargs=cma=256M"
+stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin; index=0; while [ $index -lt 50000 ]; do echo usr/lib/modules/file-$index; index=$((index + 1)); done'
+run_script "$SCRIPT" "$EDID"
+status_is 0 "finds the EDID at the top of a long listing"
+contains "$OUT" "ok (lsinitramfs)" "accepts the long listing"
+
+armbian "extraargs=cma=256M"
+stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin; exit 1'
+run_script "$SCRIPT" "$EDID"
+status_is 0 "a lister that fails after printing the EDID still counts"
 
 armbian "extraargs=cma=256M"
 rm "$STUBS/lsinitramfs"

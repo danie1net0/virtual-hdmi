@@ -3,6 +3,14 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.4.1 (2026-11-15)
+
+- The EDID install no longer stops with "The EDID was not found in the boot image" when it is
+  there: the check read the image listing through `grep -q`, which, with `pipefail`, failed as
+  soon as the long listing was cut short.
+- The boot image hook is written for the tool that builds the image (`update-initramfs` or
+  `dracut`), creating its folder when it does not exist yet.
+
 ## v0.4.0 (2026-11-15)
 
 - `virtual-monitor --install-edid` sets up the virtual monitor on any machine in one command: it

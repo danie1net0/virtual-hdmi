@@ -64,13 +64,21 @@ build_boot_image() {
     exit 1
 }
 
+# Whether the listing printed by the command names the EDID. The listing is read whole first: with
+# pipefail, "lister | grep -q" fails when grep stops early and the lister dies of SIGPIPE.
+image_has_edid() {
+    local listing
+    listing="$("$@" 2>/dev/null || true)"
+    [[ "$listing" == *"$EDID_REL"* ]]
+}
+
 check_boot_image() {
-    if command -v lsinitrd >/dev/null 2>&1 && lsinitrd --kver "$KVER" 2>/dev/null | grep -q "$EDID_REL"; then
+    if command -v lsinitrd >/dev/null 2>&1 && image_has_edid lsinitrd --kver "$KVER"; then
         echo "    ok (lsinitrd)"
         return
     fi
 
-    if command -v lsinitramfs >/dev/null 2>&1 && lsinitramfs "$ROOT/boot/initrd.img-$KVER" 2>/dev/null | grep -q "$EDID_REL"; then
+    if command -v lsinitramfs >/dev/null 2>&1 && image_has_edid lsinitramfs "$ROOT/boot/initrd.img-$KVER"; then
         echo "    ok (lsinitramfs)"
         return
     fi
@@ -162,11 +170,14 @@ KVER="$(uname -r)"
 echo "==> Adding the EDID to the boot image (kernel $KVER)"
 # The boot image hooks of earlier versions, which used edid/ultrawide.bin
 rm -f "$ROOT/etc/dracut.conf.d/90-edid-ultrawide.conf" "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide"
-if [[ -d "$ROOT/etc/dracut.conf.d" ]]; then
+# The hook goes wherever the tool that builds the image reads it; the folder may not exist yet
+if command -v dracut >/dev/null 2>&1; then
+    mkdir -p "$ROOT/etc/dracut.conf.d"
     echo "install_items+=\" /usr/lib/firmware/$EDID_REL \"" > "$ROOT/etc/dracut.conf.d/90-edid-virtual-monitor.conf"
 fi
 
-if [[ -d "$ROOT/etc/initramfs-tools/hooks" ]]; then
+if command -v update-initramfs >/dev/null 2>&1; then
+    mkdir -p "$ROOT/etc/initramfs-tools/hooks"
     cat > "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor" <<'EOF'
 #!/bin/sh
 PREREQ=""

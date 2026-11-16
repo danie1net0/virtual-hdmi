@@ -40,7 +40,7 @@ curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 
 Isso coloca o **Virtual monitor** no menu de apps e o comando `virtual-monitor` em
 `~/.local/bin`, sem sudo. Rode a mesma linha para atualizar; acrescente `-s -- --uninstall` depois
-de `bash` para remover, ou `VERSION=v0.4.0` antes de `bash` para fixar uma versão
+de `bash` para remover, ou `VERSION=v0.4.1` antes de `bash` para fixar uma versão
 ([CHANGELOG.md](CHANGELOG.md)). Num clone, `bash install.sh` faz o mesmo (`--help` lista as
 opções).
 
