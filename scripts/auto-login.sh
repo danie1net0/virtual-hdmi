@@ -6,7 +6,8 @@
 # SSH all need that session. Usually run by the app: virtual-monitor --auto-login [on|off].
 #
 # Finds the display manager from display-manager.service: GDM, SDDM, LightDM or greetd (COSMIC's
-# cosmic-greeter included). Keeps a *.before-auto-login copy of every file it edits.
+# cosmic-greeter included). For greetd it also marks the session as graphical in greetd's PAM
+# service, which remote desktop servers need. Keeps a *.before-auto-login copy of every file it edits.
 #
 # Usage:
 #   sudo bash scripts/auto-login.sh USER [on|off]
@@ -136,8 +137,58 @@ greetd_command() {
     sed -n 's/^Exec=//p' "$file" | head -n 1
 }
 
+# x11 when the only session found is an X11 one, else wayland (COSMIC and the Wayland sessions)
+session_type() {
+    local file
+    file="$(session_file)"
+    [[ "$file" == */xsessions/* ]] || { echo wayland; return; }
+    echo x11
+}
+
+# The PAM service greetd logs in with: [general] service in its configuration, else greetd
+greetd_service() {
+    local service
+    service="$(awk -F '"' '/^\[/ { general = ($0 ~ /^\[general\]/) } general && /^[[:space:]]*service[[:space:]]*=/ { print $2; exit }' "$1")"
+    echo "${service:-greetd}"
+}
+
+# greetd starts [initial_session] without saying it is graphical, so logind records it as a tty
+# session and remote desktop servers (Jump Desktop Connect, for one) find no graphical session.
+# A pam_env line in greetd's PAM service sets XDG_SESSION_TYPE before pam_systemd reads it.
+SESSION_TYPE_CONF="/etc/security/virtual-monitor-session.conf"
+PAM_LINE="session optional pam_env.so readenv=0 conffile=$SESSION_TYPE_CONF"
+
+configure_session_type() {
+    local pam="$ROOT/etc/pam.d/$1" content
+    [[ -f "$pam" ]] || { echo "    no $pam: the session type stays as greetd sets it"; return 0; }
+    backup "$pam"
+
+    content="$(awk -v line="$PAM_LINE" -v state="$STATE" '
+        index($0, "virtual-monitor-session.conf") { next }
+        { lines[++count] = $0 }
+        /^session[[:space:]].*pam_env\.so/ { last_env = count }
+        /^(session|@include[[:space:]]+common-session)/ && !first_session { first_session = count }
+        END {
+            at = last_env ? last_env + 1 : first_session
+            for (index_line = 1; index_line <= count; index_line++) {
+                if (state == "on" && index_line == at) { print line }
+                print lines[index_line]
+            }
+            if (state == "on" && !at) { print line }
+        }
+    ' "$pam")"
+    rewrite "$pam" "$content"
+    echo "    $pam"
+
+    rm -f "$ROOT$SESSION_TYPE_CONF"
+    [[ "$STATE" == on ]] || return 0
+    mkdir -p "$(dirname "$ROOT$SESSION_TYPE_CONF")"
+    echo "XDG_SESSION_TYPE OVERRIDE=$(session_type)" > "$ROOT$SESSION_TYPE_CONF"
+    echo "    $ROOT$SESSION_TYPE_CONF"
+}
+
 configure_greetd() {
-    local file command content
+    local file command content service
     file="$(greetd_config)"
     [[ -n "$file" ]] || fail "greetd has no configuration in $ROOT/etc/greetd."
     backup "$file"
@@ -146,10 +197,12 @@ configure_greetd() {
     content="$(awk '/^\[initial_session\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$file")"
     rewrite "$file" "$content"
     echo "    $file"
-    [[ "$STATE" == on ]] || return 0
+    service="$(greetd_service "$file")"
+    [[ "$STATE" == on ]] || { configure_session_type "$service"; return 0; }
 
     command="$(greetd_command)"
     [[ -n "$command" ]] || fail "No desktop session found for greetd to start."
+    configure_session_type "$service"
     printf '\n[initial_session]\ncommand = "%s"\nuser = "%s"\n' "$command" "$USER_NAME" >> "$file"
 }
 

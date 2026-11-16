@@ -23,7 +23,8 @@ user() {
 
 app() { echo "$DATA/$NAME"; }
 icon() { echo "$DATA/icons/hicolor/512x512/apps/$NAME.png"; }
-launcher() { echo "$DATA/applications/$NAME.desktop"; }
+launcher() { echo "$DATA/applications/br.app.VirtualMonitor.desktop"; }
+named_launcher() { echo "$DATA/applications/$NAME.desktop"; }
 autostart() { echo "$CONFIG/autostart/$NAME-restore.desktop"; }
 command_file() { echo "$HOME/.local/bin/$NAME"; }
 mode_file() { echo "$CONFIG/$NAME/mode.json"; }
@@ -67,6 +68,8 @@ check "as root installs nothing" test ! -e "$(app)"
 
 echo "# user install"
 user
+mkdir -p "$DATA/applications"
+echo old > "$(named_launcher)"
 run_script "$SCRIPT"
 status_is 0 "installs into ~/.local/share"
 check "copies the executable launcher" test -x "$(app)/$NAME.py"
@@ -82,6 +85,7 @@ check "installs the icon" cmp "$PROJECT/assets/$NAME.png" "$(icon)"
 check "launcher points to the app" grep -qx "Exec=python3 \"$(app)/$NAME.py\"" "$(launcher)"
 check "launcher points to the icon" grep -qx "Icon=$(icon)" "$(launcher)"
 check "launcher keeps the name" grep -qx "Name=Virtual monitor" "$(launcher)"
+check "removes the launcher named after the command" test ! -e "$(named_launcher)"
 called "gtk-update-icon-cache -q -t $DATA/icons/hicolor"
 called "update-desktop-database $DATA/applications"
 called "python3 -c import gi; gi.require_version(\"Gtk\", \"4.0\"); gi.require_version(\"Adw\", \"1\")"
@@ -226,7 +230,7 @@ cd "$CASE" || exit 1
 run_script "$SCRIPT" --skip-check --dest-dir relative
 cd - > /dev/null || exit 1
 status_is 0 "relative --dest-dir"
-check "relative --dest-dir becomes absolute in the launcher" grep -qx "Exec=python3 \"$CASE/relative/$NAME/$NAME.py\"" "$CASE/relative/applications/$NAME.desktop"
+check "relative --dest-dir becomes absolute in the launcher" grep -qx "Exec=python3 \"$CASE/relative/$NAME/$NAME.py\"" "$CASE/relative/applications/br.app.VirtualMonitor.desktop"
 
 user
 DATA="$CASE/dev"
@@ -271,12 +275,14 @@ mkdir -p "$CONFIG/autostart" "$CONFIG/$NAME"
 echo "x" > "$(autostart)"
 echo "{}" > "$(mode_file)"
 make_legacy
+echo old > "$(named_launcher)"
 : > "$CALLS"
 run_script "$SCRIPT" --uninstall
 status_is 0 "removes everything"
 check "app removed" test ! -e "$(app)"
 check "icon removed" test ! -e "$(icon)"
 check "launcher removed" test ! -e "$(launcher)"
+check "launcher named after the command removed" test ! -e "$(named_launcher)"
 check "autostart removed" test ! -e "$(autostart)"
 check "command removed" test ! -e "$(command_file)"
 contains "$OUT" "Removed: $(command_file)" "says the command was removed"

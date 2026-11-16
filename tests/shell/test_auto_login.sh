@@ -102,22 +102,31 @@ check "off removes the LightDM file" test ! -e "$ROOT/etc/lightdm/lightdm.conf.d
 echo "# greetd (COSMIC)"
 manager greetd
 mkdir -p "$ROOT/etc/greetd"
-printf '[terminal]\nvt = 1\n\n[default_session]\ncommand = "cosmic-comp cosmic-greeter"\nuser = "cosmic-greeter"\n' > "$ROOT/etc/greetd/cosmic-greeter.toml"
+printf '[terminal]\nvt = 1\n\n[general]\nservice = "cosmic-greeter"\n\n[default_session]\ncommand = "cosmic-comp cosmic-greeter"\nuser = "cosmic-greeter"\n' > "$ROOT/etc/greetd/cosmic-greeter.toml"
 echo "old" > "$ROOT/etc/greetd/config.toml"
+mkdir -p "$ROOT/etc/pam.d"
+printf 'auth required pam_unix.so\nsession required pam_limits.so\nsession required pam_env.so readenv=1\n@include common-session\n' > "$ROOT/etc/pam.d/cosmic-greeter"
 stub start-cosmic
 run_script "$SCRIPT" daniel
 status_is 0 "turns greetd auto-login on"
+check "marks the session as graphical in the PAM service of the greeter" test "$(sed -n 4p "$ROOT/etc/pam.d/cosmic-greeter")" = "session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf"
+check "the line goes before pam_systemd's include" test "$(sed -n 5p "$ROOT/etc/pam.d/cosmic-greeter")" = "@include common-session"
+check "COSMIC is a Wayland session" grep -qx "XDG_SESSION_TYPE OVERRIDE=wayland" "$ROOT/etc/security/virtual-monitor-session.conf"
+check "keeps a copy of the PAM service" test "$(grep -c virtual-monitor "$ROOT/etc/pam.d/cosmic-greeter.before-auto-login")" = 0
 check "adds the automatic session with COSMIC" test "$(tail -n 3 "$ROOT/etc/greetd/cosmic-greeter.toml")" = "$(printf '[initial_session]\ncommand = "start-cosmic"\nuser = "daniel"')"
 check "keeps the greeter session" grep -qx 'user = "cosmic-greeter"' "$ROOT/etc/greetd/cosmic-greeter.toml"
 check "edits the COSMIC file, not config.toml" grep -qx "old" "$ROOT/etc/greetd/config.toml"
 
 run_script "$SCRIPT" daniel
 check "running again keeps one automatic session" test "$(grep -c '^\[initial_session\]' "$ROOT/etc/greetd/cosmic-greeter.toml")" = 1
+check "running again keeps one PAM line" test "$(grep -c virtual-monitor-session "$ROOT/etc/pam.d/cosmic-greeter")" = 1
 
 run_script "$SCRIPT" daniel off
 status_is 0 "turns greetd auto-login off"
 not_contains "$ROOT/etc/greetd/cosmic-greeter.toml" "initial_session" "off removes the automatic session"
 check "off keeps the rest" grep -qx "\[default_session\]" "$ROOT/etc/greetd/cosmic-greeter.toml"
+check "off removes the PAM line" test "$(cat "$ROOT/etc/pam.d/cosmic-greeter")" = "$(cat "$ROOT/etc/pam.d/cosmic-greeter.before-auto-login")"
+check "off removes the session type file" test ! -e "$ROOT/etc/security/virtual-monitor-session.conf"
 
 manager cosmic-greeter
 mkdir -p "$ROOT/etc/greetd"
@@ -127,6 +136,24 @@ status_is 0 "greetd without COSMIC uses the first session"
 check "replaces the old automatic session" test "$(grep -c 'someone' "$ROOT/etc/greetd/config.toml")" = 0
 check "keeps the table after the old session" grep -qx "vt = 2" "$ROOT/etc/greetd/config.toml"
 check "runs the Exec of the Wayland session" grep -qx 'command = "/usr/bin/startplasma-wayland"' "$ROOT/etc/greetd/config.toml"
+contains "$OUT" "no $ROOT/etc/pam.d/greetd" "without the PAM service of greetd, says the type stays"
+
+manager greetd
+mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"
+echo '[default_session]' > "$ROOT/etc/greetd/config.toml"
+printf '#%%PAM-1.0\nauth include system-login\nsession include system-login\n' > "$ROOT/etc/pam.d/greetd"
+rm "$ROOT/usr/share/wayland-sessions/plasma.desktop"
+run_script "$SCRIPT" daniel
+status_is 0 "greetd with only an X11 session"
+check "without pam_env, the line goes before the first session line" test "$(sed -n 3p "$ROOT/etc/pam.d/greetd")" = "session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf"
+check "an X11 session is marked x11" grep -qx "XDG_SESSION_TYPE OVERRIDE=x11" "$ROOT/etc/security/virtual-monitor-session.conf"
+
+manager greetd
+mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"
+echo '[default_session]' > "$ROOT/etc/greetd/config.toml"
+printf 'auth required pam_unix.so\n' > "$ROOT/etc/pam.d/greetd"
+run_script "$SCRIPT" daniel
+check "without session lines, the line goes at the end" test "$(tail -n 1 "$ROOT/etc/pam.d/greetd")" = "session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf"
 
 manager greetd
 mkdir -p "$ROOT/etc/greetd"
@@ -135,6 +162,7 @@ rm "$ROOT/usr/share/wayland-sessions/plasma.desktop" "$ROOT/usr/share/xsessions/
 run_script "$SCRIPT" daniel
 status_is 1 "greetd without any session fails"
 contains "$ERRS" "No desktop session found" "says there is no session"
+check "fails before touching PAM" test ! -e "$ROOT/etc/security/virtual-monitor-session.conf"
 
 manager greetd
 run_script "$SCRIPT" daniel

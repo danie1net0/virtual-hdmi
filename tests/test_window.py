@@ -85,6 +85,12 @@ class WindowTestCase(unittest.TestCase):
 
 
 class ModuleTest(unittest.TestCase):
+    def test_the_launcher_is_named_after_the_application_id(self):
+        # Wayland docks match the window to its launcher by this name; a mismatch shows a generic icon
+        install = (Path(__file__).parent.parent / "install.sh").read_text()
+        self.assertIn(f'APP_ID="{window_module.APP_ID}"', install)
+        self.assertIn('LAUNCHER="$DATA/applications/$APP_ID.desktop"', install)
+
     def test_requires_gtk4_and_libadwaita(self):
         fake_gi.install()
         fake_gi.gi.versions.clear()
@@ -284,6 +290,28 @@ class CurrentModeTest(WindowTestCase):
         self.assertEqual(choice.size_settings(2560, 1080), {"rotation": "right"})
         self.assertEqual(self.backend.changes[-1].rotation, "right")
         self.assertIsNone(choice.load())
+
+    def test_setting_applies_to_the_mode_switched_by_another_app(self):
+        window = self.window()
+        self.backend._outputs = {
+            "HDMI-1": [
+                mode("3440x1440@59.24", 3440, 1440, 59.24, current=True),
+                mode("2560x1080@59.98", 2560, 1080, 59.98),
+            ]
+        }
+        window.rotation_row.set_selected(1)
+
+        self.assertEqual(choice.size_settings(3440, 1440), {"rotation": "left"})
+        self.assertEqual(choice.size_settings(2560, 1080), {})
+        self.assertEqual(self.backend.changes[-1], displays.ModeChange("HDMI-1", "3440x1440@59.24", 1.0, "left"))
+
+    def test_setting_keeps_the_known_mode_when_none_is_current_now(self):
+        window = self.window()
+        self.backend._outputs = {"HDMI-1": [mode("2560x1080@59.98", 2560, 1080, 59.98)]}
+        window.rotation_row.set_selected(1)
+
+        self.assertEqual(choice.size_settings(2560, 1080), {"rotation": "left"})
+        self.assertEqual(self.backend.changes[-1].mode_id, "2560x1080@59.98")
 
     def test_failed_setting_change_keeps_the_choice_unsaved(self):
         window = self.window()

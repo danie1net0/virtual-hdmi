@@ -356,9 +356,18 @@ class Window(Adw.ApplicationWindow):
         if self.syncing or self.current is None:
             return
 
-        choice.save_setting(self.current.width, self.current.height, name, value)
-        if self.apply(self.current.id, False):
-            self.keep(self.current.id)
+        current = self.mode_on_screen()
+        choice.save_setting(current.width, current.height, name, value)
+        if self.apply(current.id, False):
+            self.keep(current.id)
+
+    def mode_on_screen(self):
+        """The current mode read again: the remote desktop client may have switched it since the last refresh."""
+        for mode in self.backend.modes(self.connector):
+            if mode.current:
+                return mode
+
+        return self.current
 
     def refresh_once(self):
         self.refresh()

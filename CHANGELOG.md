@@ -3,6 +3,17 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.5.1 (2026-11-16)
+
+- With greetd (COSMIC), `--auto-login` also marks the automatic session as graphical in greetd's
+  PAM service. Without it logind recorded a tty session, and remote desktop servers such as Jump
+  Desktop Connect found no graphical session to show.
+- Changing the scale or orientation in the window applies it to the mode on screen now, not the
+  one shown at the last refresh: the remote desktop client may have switched the mode since, and
+  the window then switched it back.
+- The launcher is now installed as `br.app.VirtualMonitor.desktop`, the app id of the window, so
+  Wayland docks (COSMIC, GNOME) show the app's icon instead of a generic one.
+
 ## v0.5.0 (2026-11-15)
 
 - `virtual-monitor --auto-login [on|off]` turns automatic login on (or off) in GDM, SDDM, LightDM

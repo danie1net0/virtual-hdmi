@@ -14,6 +14,9 @@ NAME="virtual-monitor"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Names used by the old Portuguese-named version, cleaned up on user installs
+# The launcher is named after the application id: Wayland docks find the icon of a window by its
+# app id, which GTK takes from the application id (APP_ID in virtual_monitor/window.py).
+APP_ID="br.app.VirtualMonitor"
 LEGACY_NAME="monitor-virtual"
 LEGACY_AUTOSTART_NAME="monitor-virtual-restaurar"
 LEGACY_MODE_FILE="modo.json"
@@ -81,7 +84,9 @@ CONFIG="$(xdg "${XDG_CONFIG_HOME:-}" "$HOME/.config")"
 
 APP="$DATA/$NAME"
 ICON="$DATA/icons/hicolor/512x512/apps/$NAME.png"
-LAUNCHER="$DATA/applications/$NAME.desktop"
+LAUNCHER="$DATA/applications/$APP_ID.desktop"
+# Name of the launcher up to v0.5.1, which Wayland docks did not match to the window
+OLD_LAUNCHER="$DATA/applications/$NAME.desktop"
 AUTOSTART="$CONFIG/autostart/$NAME-restore.desktop"
 COMMAND="$HOME/.local/bin/$NAME"
 
@@ -142,7 +147,7 @@ warn_path() {
 
 uninstall() {
     rm -rf "$APP"
-    rm -f "$ICON" "$LAUNCHER"
+    rm -f "$ICON" "$LAUNCHER" "$OLD_LAUNCHER"
     remove_command
     remove_autostart
     remove_legacy
@@ -240,6 +245,7 @@ rm -rf "$APP"
 mv "$STAGING/app" "$APP"
 mv -f "$STAGING/icon.png" "$ICON"
 mv -f "$STAGING/launcher.desktop" "$LAUNCHER"
+rm -f "$OLD_LAUNCHER"
 
 migrate_legacy
 remove_legacy
