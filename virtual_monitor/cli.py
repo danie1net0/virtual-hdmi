@@ -2,13 +2,16 @@
 virtual monitor (the EDID), without GTK."""
 
 import argparse
+import getpass
 import os
 import subprocess
 import sys
+from pathlib import Path
 
-from virtual_monitor import __version__, choice, displays, edid, edid_setup, session
+from virtual_monitor import __version__, choice, displays, edid, edid_setup
 
 AUTO_SCALE = 0.0
+AUTO_LOGIN_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "auto-login.sh"
 EDID_HINT = (
     "No output is connected. Plug in a monitor, or install the virtual monitor so an output works "
     "without one: virtual-monitor --install-edid"
@@ -47,6 +50,14 @@ def parse_args(argv):
         "--install-edid",
         action="store_true",
         help="installs the virtual monitor, so a free output works with no monitor plugged in (asks for sudo)",
+    )
+    action.add_argument(
+        "--auto-login",
+        nargs="?",
+        const="on",
+        choices=("on", "off"),
+        help="opens your desktop session at boot (on, the default) or stops it (off), so the machine works "
+        "with no one at it (asks for sudo)",
     )
     parser.add_argument("--output", metavar="NAME", help="with --install-edid: the output, like HDMI-A-1 or DP-1")
     parser.add_argument(
@@ -156,11 +167,19 @@ def run_action(args, backend, out, err):
     return 0
 
 
+SESSION_HINT = (
+    "If no desktop session of yours is open (after a reboot, nobody logged in), log in to the "
+    "desktop, or turn on automatic login: virtual-monitor --auto-login"
+)
+
+
 def print_session_hint(err):
-    if session.has_display(os.environ):
+    """Hints at a closed session when the user has no Wayland socket: an X display alone may be the
+    login screen's."""
+    if os.environ.get("WAYLAND_DISPLAY"):
         return
 
-    print("No graphical session of this user was found: log in to the desktop first.", file=err)
+    print(SESSION_HINT, file=err)
 
 
 def print_edid_hint(reasons, err):
@@ -196,11 +215,23 @@ def install_edid(args, out, err):
     return subprocess.call(edid_setup.install_command(path, output, elevate()))
 
 
+def login_user():
+    """The user who runs the command, also under sudo."""
+    return os.environ.get("SUDO_USER") or getpass.getuser()
+
+
+def auto_login(state):
+    return subprocess.call([*elevate(), "bash", str(AUTO_LOGIN_SCRIPT), login_user(), state])
+
+
 def main(argv, out=None, err=None):
     out, err = out or sys.stdout, err or sys.stderr
     args = parse_args(argv)
     if args.install_edid:
         return install_edid(args, out, err)
+
+    if args.auto_login:
+        return auto_login(args.auto_login)
 
     backend = displays.detect()
     if backend is None:

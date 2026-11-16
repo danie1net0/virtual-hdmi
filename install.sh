@@ -205,7 +205,7 @@ if [[ $UNINSTALL -eq 1 ]]; then
     uninstall
 fi
 
-FILES=("$NAME.py" scripts/install-edid.sh)
+FILES=("$NAME.py" scripts/install-edid.sh scripts/auto-login.sh)
 for module in "$DIR"/virtual_monitor/*.py; do
     FILES+=("virtual_monitor/$(basename "$module")")
 done
@@ -227,7 +227,7 @@ trap 'rm -rf "$STAGING"' EXIT
 for file in "${FILES[@]}"; do
     stage_file "$file"
 done
-[[ $DEV -eq 1 ]] || chmod 755 "$STAGING/app/$NAME.py" "$STAGING/app/scripts/install-edid.sh"
+[[ $DEV -eq 1 ]] || chmod 755 "$STAGING/app/$NAME.py" "$STAGING/app/scripts/install-edid.sh" "$STAGING/app/scripts/auto-login.sh"
 
 install -m 644 "$DIR/assets/$NAME.png" "$STAGING/icon.png"
 

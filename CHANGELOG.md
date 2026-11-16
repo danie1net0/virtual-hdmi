@@ -3,6 +3,14 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.5.0 (2026-11-15)
+
+- `virtual-monitor --auto-login [on|off]` turns automatic login on (or off) in GDM, SDDM, LightDM
+  or greetd (COSMIC's cosmic-greeter included), so a machine with no monitor opens the desktop
+  session at boot and the remote desktop and `virtual-monitor` over SSH find it. It keeps a
+  `*.before-auto-login` copy of every file it edits.
+- When `--list` finds no desktop session over SSH, the message points to `--auto-login`.
+
 ## v0.4.1 (2026-11-15)
 
 - The EDID install no longer stops with "The EDID was not found in the boot image" when it is

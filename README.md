@@ -40,7 +40,7 @@ curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 
 This adds **Virtual monitor** to the app menu and the `virtual-monitor` command to
 `~/.local/bin`, without sudo. Run the same line to update; add `-s -- --uninstall` after `bash` to
-remove it, or `VERSION=v0.4.1` before `bash` to pin a release ([CHANGELOG.md](CHANGELOG.md)). From
+remove it, or `VERSION=v0.5.0` before `bash` to pin a release ([CHANGELOG.md](CHANGELOG.md)). From
 a clone, `bash install.sh` does the same (`--help` lists the options).
 
 ## Set up the virtual monitor
@@ -49,8 +49,13 @@ Once per machine, then reboot:
 
 ```sh
 virtual-monitor --install-edid
+virtual-monitor --auto-login
 sudo reboot
 ```
+
+`--auto-login` makes the display manager (GDM, SDDM, LightDM or greetd/COSMIC) open your desktop
+session at boot, since no one is there to log in; `--auto-login off` undoes it. Anyone at the
+machine then gets the desktop without a password, while remote access keeps its own.
 
 It picks a free output (HDMI first, then DisplayPort), generates the EDID of the default modes and
 asks for sudo to add it to the boot. The window does the same with the **Install** button on the

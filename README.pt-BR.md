@@ -40,7 +40,7 @@ curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 
 Isso coloca o **Virtual monitor** no menu de apps e o comando `virtual-monitor` em
 `~/.local/bin`, sem sudo. Rode a mesma linha para atualizar; acrescente `-s -- --uninstall` depois
-de `bash` para remover, ou `VERSION=v0.4.1` antes de `bash` para fixar uma versão
+de `bash` para remover, ou `VERSION=v0.5.0` antes de `bash` para fixar uma versão
 ([CHANGELOG.md](CHANGELOG.md)). Num clone, `bash install.sh` faz o mesmo (`--help` lista as
 opções).
 
@@ -50,8 +50,13 @@ Uma vez por máquina, e depois reinicie:
 
 ```sh
 virtual-monitor --install-edid
+virtual-monitor --auto-login
 sudo reboot
 ```
+
+O `--auto-login` faz o gerenciador de login (GDM, SDDM, LightDM ou greetd/COSMIC) abrir a sua sessão
+do desktop no boot, já que não há ninguém para fazer o login; `--auto-login off` desfaz. Quem
+estiver na máquina passa a entrar no desktop sem senha, e o acesso remoto continua com a senha dele.
 
 Ele escolhe uma saída livre (HDMI primeiro, depois DisplayPort), gera o EDID dos modos padrão e
 pede o sudo para colocá-lo no boot. A janela faz o mesmo pelo botão **Install** da página **Virtual

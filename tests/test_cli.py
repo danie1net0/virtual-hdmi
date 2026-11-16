@@ -77,7 +77,7 @@ class CliTest(unittest.TestCase):
             code, _out, err = self.run_cli(["--list"], backend=None)
 
         self.assertEqual(code, 1)
-        self.assertEqual(err.splitlines()[-1], "No graphical session of this user was found: log in to the desktop first.")
+        self.assertEqual(err.splitlines()[-1], cli.SESSION_HINT)
 
     def test_no_connected_output_suggests_the_virtual_edid(self):
         reasons = [("COSMIC (cosmic-randr)", "no connected output"), ("X11 (xrandr)", "DISPLAY is not set")]
@@ -86,6 +86,34 @@ class CliTest(unittest.TestCase):
 
         self.assertEqual(code, 1)
         self.assertEqual(err.splitlines()[-1], cli.EDID_HINT)
+
+    def run_auto_login(self, argv, environ, euid=1000):
+        with mock.patch.object(cli.subprocess, "call", return_value=4) as call, mock.patch(
+            "os.geteuid", return_value=euid
+        ), mock.patch.dict("os.environ", environ), mock.patch("getpass.getuser", return_value="daniel"), mock.patch.object(
+            displays, "detect"
+        ) as detect:
+            code = cli.main(argv, io.StringIO(), io.StringIO())
+
+        detect.assert_not_called()
+        return code, call.call_args.args[0]
+
+    def test_auto_login_turns_it_on_for_the_user_with_sudo(self):
+        code, argv = self.run_auto_login(["--auto-login"], {"SUDO_USER": ""})
+
+        self.assertEqual(code, 4)
+        self.assertEqual(argv, ["sudo", "bash", str(cli.AUTO_LOGIN_SCRIPT), "daniel", "on"])
+
+    def test_auto_login_off_under_sudo_keeps_the_real_user(self):
+        _code, argv = self.run_auto_login(["--auto-login", "off"], {"SUDO_USER": "maria"}, euid=0)
+        self.assertEqual(argv, ["bash", str(cli.AUTO_LOGIN_SCRIPT), "maria", "off"])
+
+    def test_auto_login_script_ships_with_the_app(self):
+        self.assertTrue(cli.AUTO_LOGIN_SCRIPT.is_file())
+
+    def test_auto_login_refuses_other_states(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            cli.parse_args(["--auto-login", "maybe"])
 
     def run_install(self, argv, target="HDMI-A-1", code=0):
         out, err = io.StringIO(), io.StringIO()
@@ -141,7 +169,7 @@ class CliTest(unittest.TestCase):
 
     def test_no_session_says_why_each_backend_failed(self):
         reasons = [("GNOME (Mutter)", "GNOME Shell is not running"), ("X11 (xrandr)", "xrandr --query: Can't open display :0")]
-        with mock.patch.object(displays, "diagnose", return_value=reasons), mock.patch.dict("os.environ", {"DISPLAY": ":0"}):
+        with mock.patch.object(displays, "diagnose", return_value=reasons), mock.patch.dict("os.environ", {"WAYLAND_DISPLAY": "wayland-1"}):
             code, out, err = self.run_cli(["--list"], backend=None)
 
         self.assertEqual((code, out), (1, ""))

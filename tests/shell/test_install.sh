@@ -71,6 +71,7 @@ run_script "$SCRIPT"
 status_is 0 "installs into ~/.local/share"
 check "copies the executable launcher" test -x "$(app)/$NAME.py"
 check "copies the executable EDID installer" test -x "$(app)/scripts/install-edid.sh"
+check "copies the executable auto-login script" test -x "$(app)/scripts/auto-login.sh"
 for module in "$PROJECT"/virtual_monitor/*.py; do
     check "copies virtual_monitor/$(basename "$module")" cmp "$module" "$(app)/virtual_monitor/$(basename "$module")"
 done

@@ -10,7 +10,8 @@ modules) are notes, not defaults.
 ## Layout
 
 - `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`,
-  `--next`, `--restore` and `--install-edid [--output NAME] [--modes ...]` run in the terminal.
+  `--next`, `--restore`, `--install-edid [--output NAME] [--modes ...]` and `--auto-login [on|off]`
+  run in the terminal.
 - `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, cosmic-randr, wlr-randr, xrandr backends; `detect`
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
   `ModeChange` with the mode, desktop scale and rotation),
@@ -18,7 +19,9 @@ modules) are notes, not defaults.
   `settings.json`, with `auto_scale` as the default), `session.py` (fills the missing session
   variables from `/run/user/<uid>` and `/tmp/.X11-unix`, so the app also runs over SSH; `__main__`
   calls it first), `cli.py`, `window.py` (GTK; a switch goes back after `REVERT_SECONDS` without Keep).
-- `scripts/`: root-only system scripts. All accept `ROOT=` for tests.
+- `scripts/`: root-only system scripts. All accept `ROOT=` for tests. `install-edid.sh` and
+  `auto-login.sh` (GDM, SDDM, LightDM, greetd) ship with the app and back `--install-edid` and
+  `--auto-login`.
 - `edid/virtual-monitor.bin`: the default EDID, equal to `edid.generate(DEFAULT_MODES)`; its clocks
   (`SAFE_CLOCKS_MHZ`) are standard ones every GPU generates, the RK3566 PLL included.
 - `virtual_monitor/edid_setup.py`: picks the output for the EDID (the one at boot, else a free

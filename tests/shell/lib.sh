@@ -15,7 +15,7 @@ BIN="$TMP/bin"
 FAILURES=0
 TOTAL=0
 
-TOOLS=(bash sh cat sed grep awk tail head mkdir install chmod cp mv rm ln ls dirname basename mktemp tr wc env touch sort cmp)
+TOOLS=(bash sh cat sed grep awk tail head mkdir install chmod cp mv rm ln ls dirname basename mktemp tr wc env touch sort cmp readlink)
 mkdir -p "$BIN"
 for tool in "${TOOLS[@]}"; do
     ln -s "$(command -v "$tool")" "$BIN/$tool"
