@@ -3,6 +3,16 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.5.2 (2026-11-17)
+
+- The orientation setting is gone from the window, and `--rotation` from the terminal. Remote
+  desktop servers that capture the screen through KMS (Jump Desktop Connect, for one) ignore a
+  rotation set by the desktop, so a portrait output broke their image and input. Changing a mode
+  now keeps the output's rotation as it is, and a rotation saved by v0.5.1 is ignored.
+- `--auto-login on` says how to open the session again after logging out: logging out ends it
+  until the next boot. With greetd the command also removes its runfile, without which a restart
+  skips the automatic session.
+
 ## v0.5.1 (2026-11-16)
 
 - With greetd (COSMIC), `--auto-login` also marks the automatic session as graphical in greetd's
