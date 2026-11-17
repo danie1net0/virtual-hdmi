@@ -145,11 +145,12 @@ session_type() {
     echo x11
 }
 
-# The PAM service greetd logs in with: [general] service in its configuration, else greetd
-greetd_service() {
-    local service
-    service="$(awk -F '"' '/^\[/ { general = ($0 ~ /^\[general\]/) } general && /^[[:space:]]*service[[:space:]]*=/ { print $2; exit }' "$1")"
-    echo "${service:-greetd}"
+# A [general] setting of greetd's configuration (FILE KEY DEFAULT): service is the PAM service it
+# logs in with, runfile the file that makes it skip [initial_session] when it starts again
+greetd_setting() {
+    local value
+    value="$(awk -F '"' -v key="$2" '/^\[/ { general = ($0 ~ /^\[general\]/) } general && $1 ~ "^[[:space:]]*" key "[[:space:]]*=" { print $2; exit }' "$1")"
+    echo "${value:-$3}"
 }
 
 # greetd starts [initial_session] without saying it is graphical, so logind records it as a tty
@@ -197,7 +198,9 @@ configure_greetd() {
     content="$(awk '/^\[initial_session\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$file")"
     rewrite "$file" "$content"
     echo "    $file"
-    service="$(greetd_service "$file")"
+    service="$(greetd_setting "$file" service greetd)"
+    # greetd runs [initial_session] once per boot: restarting it opens the session only without the runfile
+    REOPEN="sudo rm -f $(greetd_setting "$file" runfile /run/greetd.run) && $REOPEN"
     [[ "$STATE" == on ]] || { configure_session_type "$service"; return 0; }
 
     command="$(greetd_command)"
@@ -206,6 +209,8 @@ configure_greetd() {
     printf '\n[initial_session]\ncommand = "%s"\nuser = "%s"\n' "$command" "$USER_NAME" >> "$file"
 }
 
+# The command that opens the session again after logging out
+REOPEN="sudo systemctl restart display-manager"
 MANAGER="$(display_manager)"
 echo "==> Automatic login of $USER_NAME: $STATE (${MANAGER:-no display manager})"
 case "$MANAGER" in
@@ -221,3 +226,4 @@ echo
 echo "Done. It takes effect at the next boot: sudo reboot"
 [[ "$STATE" == on ]] || exit 0
 echo "Anyone at the machine now gets the desktop without a password; remote access keeps its own."
+echo "Logging out ends the session until the next boot; to open it again: $REOPEN"

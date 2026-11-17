@@ -57,6 +57,8 @@ sudo reboot
 O `--auto-login` faz o gerenciador de login (GDM, SDDM, LightDM ou greetd/COSMIC) abrir a sua sessão
 do desktop no boot, já que não há ninguém para fazer o login; `--auto-login off` desfaz. Quem
 estiver na máquina passa a entrar no desktop sem senha, e o acesso remoto continua com a senha dele.
+Encerrar a sessão a fecha até o próximo boot: feche só a janela do acesso remoto ou abra a sessão
+de novo com `sudo systemctl restart display-manager` (no greetd, antes `sudo rm -f /run/greetd.run`).
 
 Ele escolhe uma saída livre (HDMI primeiro, depois DisplayPort), gera o EDID dos modos padrão e
 pede o sudo para colocá-lo no boot. A janela faz o mesmo pelo botão **Install** da página **Virtual

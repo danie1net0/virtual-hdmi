@@ -53,6 +53,7 @@ check "keeps the other sections" grep -qx "\[security\]" "$ROOT/etc/gdm3/custom.
 check "keeps a copy of the original" grep -qx "AutomaticLoginEnable = false" "$ROOT/etc/gdm3/custom.conf.before-auto-login"
 contains "$OUT" "Automatic login of daniel: on (gdm3)" "says what it does"
 contains "$OUT" "without a password" "warns about the open desktop"
+contains "$OUT" "to open it again: sudo systemctl restart display-manager" "says how to open the session again after logging out"
 
 run_script "$SCRIPT" daniel
 check "running again does not duplicate the settings" test "$(grep -c '^AutomaticLogin=' "$ROOT/etc/gdm3/custom.conf")" = 1
@@ -63,6 +64,7 @@ status_is 0 "turns GDM auto-login off"
 check "off removes the settings" test "$(grep -c '^AutomaticLogin' "$ROOT/etc/gdm3/custom.conf")" = 0
 check "off keeps [daemon]" grep -qx "\[daemon\]" "$ROOT/etc/gdm3/custom.conf"
 not_contains "$OUT" "without a password" "off does not warn"
+not_contains "$OUT" "restart display-manager" "off does not mention logging out"
 
 manager gdm
 run_script "$SCRIPT" daniel
@@ -116,6 +118,7 @@ check "keeps a copy of the PAM service" test "$(grep -c virtual-monitor "$ROOT/e
 check "adds the automatic session with COSMIC" test "$(tail -n 3 "$ROOT/etc/greetd/cosmic-greeter.toml")" = "$(printf '[initial_session]\ncommand = "start-cosmic"\nuser = "daniel"')"
 check "keeps the greeter session" grep -qx 'user = "cosmic-greeter"' "$ROOT/etc/greetd/cosmic-greeter.toml"
 check "edits the COSMIC file, not config.toml" grep -qx "old" "$ROOT/etc/greetd/config.toml"
+contains "$OUT" "to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager" "greetd opens the session again only without its runfile"
 
 run_script "$SCRIPT" daniel
 check "running again keeps one automatic session" test "$(grep -c '^\[initial_session\]' "$ROOT/etc/greetd/cosmic-greeter.toml")" = 1
@@ -140,13 +143,14 @@ contains "$OUT" "no $ROOT/etc/pam.d/greetd" "without the PAM service of greetd, 
 
 manager greetd
 mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"
-echo '[default_session]' > "$ROOT/etc/greetd/config.toml"
+printf '[general]\nrunfile = "/var/run/greetd-custom.run"\n\n[default_session]\n' > "$ROOT/etc/greetd/config.toml"
 printf '#%%PAM-1.0\nauth include system-login\nsession include system-login\n' > "$ROOT/etc/pam.d/greetd"
 rm "$ROOT/usr/share/wayland-sessions/plasma.desktop"
 run_script "$SCRIPT" daniel
 status_is 0 "greetd with only an X11 session"
 check "without pam_env, the line goes before the first session line" test "$(sed -n 3p "$ROOT/etc/pam.d/greetd")" = "session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf"
 check "an X11 session is marked x11" grep -qx "XDG_SESSION_TYPE OVERRIDE=x11" "$ROOT/etc/security/virtual-monitor-session.conf"
+contains "$OUT" "sudo rm -f /var/run/greetd-custom.run &&" "uses the runfile set in the configuration"
 
 manager greetd
 mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"

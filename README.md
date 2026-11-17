@@ -55,7 +55,9 @@ sudo reboot
 
 `--auto-login` makes the display manager (GDM, SDDM, LightDM or greetd/COSMIC) open your desktop
 session at boot, since no one is there to log in; `--auto-login off` undoes it. Anyone at the
-machine then gets the desktop without a password, while remote access keeps its own.
+machine then gets the desktop without a password, while remote access keeps its own. Logging out
+ends the session until the next boot: close the remote window instead, or open the session again
+with `sudo systemctl restart display-manager` (with greetd, `sudo rm -f /run/greetd.run` first).
 
 It picks a free output (HDMI first, then DisplayPort), generates the EDID of the default modes and
 asks for sudo to add it to the boot. The window does the same with the **Install** button on the
