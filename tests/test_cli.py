@@ -262,12 +262,12 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(err, "Failed: the output has no modes\n")
 
-    def test_apply_with_scale_and_rotation_saves_them_for_the_size(self):
-        code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--scale", "1.25", "--rotation", "left"])
+    def test_apply_with_scale_saves_it_for_the_size(self):
+        code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--scale", "1.25"])
 
         self.assertEqual(code, 0)
-        self.assertEqual(choice.size_settings(1920, 1080), {"scale": 1.25, "rotation": "left"})
-        self.assertEqual(self.backend.last_change, displays.ModeChange("HDMI-1", "1920x1080@60.00", 1.25, "left"))
+        self.assertEqual(choice.size_settings(1920, 1080), {"scale": 1.25})
+        self.assertEqual(self.backend.last_change, displays.ModeChange("HDMI-1", "1920x1080@60.00", 1.25))
 
     def test_scale_alone_rescales_the_current_mode(self):
         code, out, _ = self.run_cli(["--scale", "2"])
@@ -276,10 +276,10 @@ class CliTest(unittest.TestCase):
         self.assertEqual(self.backend.last_change.scale, 2.0)
         self.assertEqual(choice.size_settings(2560, 1080), {"scale": 2.0})
 
-    def test_rotation_alone_rotates_the_current_mode(self):
-        self.run_cli(["--rotation", "right", "--temp"])
+    def test_scale_with_temp_does_not_remember_the_mode(self):
+        self.run_cli(["--scale", "2", "--temp"])
 
-        self.assertEqual(self.backend.last_change.rotation, "right")
+        self.assertEqual(self.backend.last_change.scale, 2.0)
         self.assertIsNone(choice.load())
 
     def test_auto_scale_removes_the_saved_one(self):
@@ -310,9 +310,9 @@ class CliTest(unittest.TestCase):
             with self.subTest(text=text), self.assertRaisesRegex(cli.argparse.ArgumentTypeError, message):
                 cli.scale_argument(text)
 
-    def test_unknown_rotation_is_refused(self):
+    def test_rotation_is_no_longer_an_option(self):
         with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
-            cli.parse_args(["--rotation", "inverted"])
+            cli.parse_args(["--rotation", "left"])
         self.assertEqual(raised.exception.code, 2)
 
     def test_version(self):

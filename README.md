@@ -73,9 +73,8 @@ the EDID, an HDMI dummy plug does the same job in hardware.
 ## Use
 
 Open **Virtual monitor** from the menu and tap a mode. If you do not press **Keep** within 15
-seconds, the previous mode comes back, so a mode without a picture undoes itself. **Scale** and
-**Orientation** (portrait, to use the iPad upright) are saved for each resolution. Without a saved
-scale, tablet-like modes such as 2360×1640 get 150% and the others 100% (on X11, only XFCE scales,
+seconds, the previous mode comes back, so a mode without a picture undoes itself. **Scale** is
+saved for each resolution. Without a saved scale, tablet-like modes such as 2360×1640 get 150% and the others 100% (on X11, only XFCE scales,
 through its font DPI).
 
 Or use the terminal (from a clone, `python3 virtual-monitor.py` does the same):
@@ -85,7 +84,7 @@ virtual-monitor --list                           # outputs and modes
 virtual-monitor --apply 2560x1080@59.98          # switch and remember
 virtual-monitor --apply 1920x1080@60.00 --temp   # switch only
 virtual-monitor --next                           # next mode, for a keyboard shortcut
-virtual-monitor --scale 1.25 --rotation left     # current mode: 125%, portrait
+virtual-monitor --scale 1.25                     # current mode at 125%
 ```
 
 Works on GNOME, KDE Plasma, COSMIC (Pop!_OS), compositors that `wlr-randr` drives (sway, Hyprland,

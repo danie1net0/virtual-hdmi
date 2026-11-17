@@ -14,7 +14,7 @@ XWayland outputs it cannot change. diagnose() says why each backend was left out
 
 Needs no GTK: GNOME uses only Gio, loaded when the backend is tested.
 
-Applying a mode also sets the desktop scale and the rotation (ModeChange). The default scale is
+Applying a mode also sets the desktop scale (ModeChange) and keeps the output's rotation. The default scale is
 1.5 on dense tablet-like modes (the iPad Air 11" 2360x1640) and 1 on the others. XFCE scales
 through Xft/DPI; other X11 desktops keep their own.
 """
@@ -34,12 +34,6 @@ TABLET_MIN_HEIGHT = 1500
 TABLET_MAX_ASPECT = 1.6
 XFT_DPI_AT_1X = 96
 
-# "left" turns the picture a quarter turn counter-clockwise, as xrandr --rotate left
-ROTATIONS = ("normal", "left", "right")
-WLR_TRANSFORMS = {"normal": "normal", "left": "90", "right": "270"}
-COSMIC_TRANSFORMS = {"normal": "normal", "left": "rotate90", "right": "rotate270"}
-MUTTER_TRANSFORMS = {"normal": 0, "left": 1, "right": 3}
-
 
 @dataclass(frozen=True)
 class Mode:
@@ -53,17 +47,13 @@ class Mode:
 
 @dataclass(frozen=True)
 class ModeChange:
-    """What apply() sets on an output: the mode, the desktop scale and the rotation."""
+    """What apply() sets on an output: the mode and the desktop scale."""
 
     connector: str
     mode_id: str
     scale: float = 1.0
-    rotation: str = "normal"
 
     def __post_init__(self):
-        if self.rotation not in ROTATIONS:
-            raise ValueError(f"Unknown rotation: {self.rotation} (use {', '.join(ROTATIONS)})")
-
         if self.scale <= 0:
             raise ValueError(f"The scale must be positive: {self.scale:g}")
 
@@ -273,13 +263,12 @@ def holds(members, connector):
 
 
 def mutter_layout(monitors, logical, change):
-    """Builds the logical monitors for ApplyMonitorsConfig, changing only the mode, scale and rotation of the connector."""
+    """Builds the logical monitors for ApplyMonitorsConfig, changing only the mode and scale of the connector."""
     mode_of = {}
     for monitor in monitors:
         mode_of[monitor[0][0]] = next((mode[0] for mode in monitor[1] if mode[6].get("is-current")), None)
     mode_of[change.connector] = change.mode_id
     scale = mutter_scale(monitors, change)
-    transform = MUTTER_TRANSFORMS[change.rotation]
 
     layout = []
     for x, y, own_scale, own_transform, primary, monitors_in, _props in logical:
@@ -288,13 +277,13 @@ def mutter_layout(monitors, logical, change):
             continue
 
         if holds(members, change.connector):
-            layout.append((x, y, scale, transform, primary, members))
+            layout.append((x, y, scale, own_transform, primary, members))
             continue
 
         layout.append((x, y, own_scale, own_transform, primary, members))
 
     if not any(holds(item[5], change.connector) for item in layout):
-        layout.append((0, 0, scale, transform, not layout, [(change.connector, change.mode_id, {})]))
+        layout.append((0, 0, scale, 0, not layout, [(change.connector, change.mode_id, {})]))
     return layout
 
 
@@ -347,7 +336,7 @@ class XrandrBackend(Backend):
 
     def apply(self, change, persistent):
         size, rate = change.mode_id.split("@")
-        run(["xrandr", "--output", change.connector, "--mode", size, "--rate", rate, "--rotate", change.rotation])
+        run(["xrandr", "--output", change.connector, "--mode", size, "--rate", rate])
         set_xfce_dpi(change.scale)
 
 
@@ -371,8 +360,6 @@ class WlrBackend(Backend):
                 f"{change.mode_id}Hz",
                 "--scale",
                 f"{change.scale:g}",
-                "--transform",
-                WLR_TRANSFORMS[change.rotation],
             ]
         )
 
@@ -394,7 +381,6 @@ class KScreenBackend(Backend):
                 "kscreen-doctor",
                 f"{output}.mode.{change.mode_id}",
                 f"{output}.scale.{change.scale:g}",
-                f"{output}.rotation.{change.rotation}",
             ]
         )
 
@@ -423,8 +409,6 @@ class CosmicBackend(Backend):
                 rate,
                 "--scale",
                 f"{change.scale:g}",
-                "--transform",
-                COSMIC_TRANSFORMS[change.rotation],
             ]
         )
 

@@ -73,11 +73,6 @@ def parse_args(argv):
         metavar="N",
         help="desktop scale (1.25, 1.5...) or auto, saved for the size of the mode; alone, rescales the current mode",
     )
-    parser.add_argument(
-        "--rotation",
-        choices=displays.ROTATIONS,
-        help="rotation saved for the size of the mode (left or right: portrait); alone, rotates the current mode",
-    )
 
     return parser.parse_args(argv)
 
@@ -127,23 +122,20 @@ def target_mode(args, modes):
     if args.next:
         return next_mode(modes)
 
-    if args.scale is None and args.rotation is None:
+    if args.scale is None:
         return None
 
     return current_mode(modes)
 
 
 def save_settings(args, backend, connector, mode_id):
-    """Saves --scale and --rotation for the size of mode_id; an unknown mode keeps nothing."""
+    """Saves --scale for the size of mode_id; an unknown mode keeps nothing."""
     mode = backend.find_mode(connector, mode_id)
     if mode is None:
         return
 
     if args.scale is not None:
         choice.save_setting(mode.width, mode.height, "scale", args.scale or None)
-
-    if args.rotation is not None:
-        choice.save_setting(mode.width, mode.height, "rotation", args.rotation)
 
 
 def run_action(args, backend, out, err):

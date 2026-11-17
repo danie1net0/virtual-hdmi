@@ -6,7 +6,7 @@ GTK4/libadwaita window of the Virtual monitor:
     goes back to the previous one after REVERT_SECONDS unless Keep is pressed, in case it shows
     no picture
   - "Remember choice" reapplies the resolution at every login (choice.py)
-  - scale and orientation of the current mode, saved for each mode size (choice.py)
+  - scale of the current mode, saved for each mode size (choice.py)
   - on its own page, opened from the status row, generates a new EDID (edid.py), with a preview
     of the timings, and installs it (scripts/install-edid.sh, via pkexec)
 """
@@ -33,7 +33,6 @@ EDID_HELP = (
 NO_FREE_OUTPUT = "No free video output: every external output has something plugged in"
 REVERT_SECONDS = 15
 SCALES = (("Automatic", None), ("100%", 1.0), ("125%", 1.25), ("150%", 1.5), ("175%", 1.75), ("200%", 2.0))
-ROTATIONS = (("Landscape", "normal"), ("Portrait", "left"), ("Portrait, flipped", "right"))
 
 
 @dataclass
@@ -165,10 +164,6 @@ class Window(Adw.ApplicationWindow):
         self.scale_row = combo_row("Scale", SCALES)
         self.scale_row.connect("notify::selected", self.on_scale)
         group.add(self.scale_row)
-
-        self.rotation_row = combo_row("Orientation", ROTATIONS)
-        self.rotation_row.connect("notify::selected", self.on_rotation)
-        group.add(self.rotation_row)
         return group
 
     def build_modes(self):
@@ -235,9 +230,8 @@ class Window(Adw.ApplicationWindow):
             self.current = mode
 
     def sync_current(self):
-        """Shows the scale and orientation of the current mode, without applying them again."""
+        """Shows the scale of the current mode, without applying them again."""
         self.scale_row.set_sensitive(self.current is not None)
-        self.rotation_row.set_sensitive(self.current is not None)
         if self.current is None:
             self.scale_row.set_subtitle("no current mode")
             return
@@ -246,7 +240,6 @@ class Window(Adw.ApplicationWindow):
         change = choice.change_for(self.backend, self.connector, self.current.id)
         self.syncing = True
         self.scale_row.set_selected(choice_index(SCALES, settings.get("scale")))
-        self.rotation_row.set_selected(choice_index(ROTATIONS, change.rotation))
         self.syncing = False
         self.scale_row.set_subtitle(f"{change.scale * 100:g}% at {self.current.width}×{self.current.height}")
 
@@ -347,9 +340,6 @@ class Window(Adw.ApplicationWindow):
 
     def on_scale(self, row, _pspec):
         self.save_current_setting("scale", SCALES[row.get_selected()][1])
-
-    def on_rotation(self, row, _pspec):
-        self.save_current_setting("rotation", ROTATIONS[row.get_selected()][1])
 
     def save_current_setting(self, name, value):
         """Saves a setting of the current mode size and applies the mode again with it."""

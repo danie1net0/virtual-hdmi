@@ -14,8 +14,8 @@ modules) are notes, not defaults.
   run in the terminal.
 - `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, cosmic-randr, wlr-randr, xrandr backends; `detect`
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
-  `ModeChange` with the mode, desktop scale and rotation),
-  `choice.py` (remembered resolution, autostart, and the scale and rotation saved per mode size in
+  `ModeChange` with the mode and desktop scale),
+  `choice.py` (remembered resolution, autostart, and the scale saved per mode size in
   `settings.json`, with `auto_scale` as the default), `session.py` (fills the missing session
   variables from `/run/user/<uid>` and `/tmp/.X11-unix`, so the app also runs over SSH; `__main__`
   calls it first), `cli.py`, `window.py` (GTK; a switch goes back after `REVERT_SECONDS` without Keep).

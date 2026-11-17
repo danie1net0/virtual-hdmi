@@ -242,18 +242,17 @@ class CurrentModeTest(WindowTestCase):
         self.assertEqual(window.current.id, "2560x1080@59.98")
         self.assertEqual(window.scale_row.init_props["title"], "Scale")
         self.assertEqual(window.scale_row.init_props["model"].strings, [label for label, _value in window_module.SCALES])
-        self.assertEqual(window.rotation_row.init_props["model"].strings, ["Landscape", "Portrait", "Portrait, flipped"])
-        self.assertEqual((window.scale_row.selected, window.rotation_row.selected), (0, 0))
+        self.assertEqual(window.scale_row.selected, 0)
+        self.assertFalse(hasattr(window, "rotation_row"))
         self.assertEqual(window.scale_row.subtitle, "100% at 2560×1080")
         self.assertTrue(window.scale_row.sensitive)
         self.assertEqual(self.backend.applied, [])
 
     def test_rows_show_saved_settings_without_applying(self):
         choice.save_setting(2560, 1080, "scale", 1.25)
-        choice.save_setting(2560, 1080, "rotation", "left")
         window = self.window()
 
-        self.assertEqual((window.scale_row.selected, window.rotation_row.selected), (2, 1))
+        self.assertEqual(window.scale_row.selected, 2)
         self.assertEqual(window.scale_row.subtitle, "125% at 2560×1080")
         self.assertEqual(self.backend.applied, [])
 
@@ -263,7 +262,6 @@ class CurrentModeTest(WindowTestCase):
 
         self.assertIsNone(window.current)
         self.assertFalse(window.scale_row.sensitive)
-        self.assertFalse(window.rotation_row.sensitive)
         self.assertEqual(window.scale_row.subtitle, "no current mode")
 
     def test_changing_the_scale_saves_it_and_applies_again(self):
@@ -282,13 +280,13 @@ class CurrentModeTest(WindowTestCase):
         self.assertEqual(choice.size_settings(2560, 1080), {})
         self.assertEqual(self.backend.changes[-1].scale, 1.0)
 
-    def test_changing_the_orientation_rotates_the_current_mode(self):
+    def test_changing_the_scale_without_remembering_keeps_no_choice(self):
         window = self.window()
         window.remember.set_active(False)
-        window.rotation_row.set_selected(2)
+        window.scale_row.set_selected(4)
 
-        self.assertEqual(choice.size_settings(2560, 1080), {"rotation": "right"})
-        self.assertEqual(self.backend.changes[-1].rotation, "right")
+        self.assertEqual(choice.size_settings(2560, 1080), {"scale": 1.75})
+        self.assertEqual(self.backend.changes[-1].scale, 1.75)
         self.assertIsNone(choice.load())
 
     def test_setting_applies_to_the_mode_switched_by_another_app(self):
@@ -299,24 +297,24 @@ class CurrentModeTest(WindowTestCase):
                 mode("2560x1080@59.98", 2560, 1080, 59.98),
             ]
         }
-        window.rotation_row.set_selected(1)
+        window.scale_row.set_selected(2)
 
-        self.assertEqual(choice.size_settings(3440, 1440), {"rotation": "left"})
+        self.assertEqual(choice.size_settings(3440, 1440), {"scale": 1.25})
         self.assertEqual(choice.size_settings(2560, 1080), {})
-        self.assertEqual(self.backend.changes[-1], displays.ModeChange("HDMI-1", "3440x1440@59.24", 1.0, "left"))
+        self.assertEqual(self.backend.changes[-1], displays.ModeChange("HDMI-1", "3440x1440@59.24", 1.25))
 
     def test_setting_keeps_the_known_mode_when_none_is_current_now(self):
         window = self.window()
         self.backend._outputs = {"HDMI-1": [mode("2560x1080@59.98", 2560, 1080, 59.98)]}
-        window.rotation_row.set_selected(1)
+        window.scale_row.set_selected(2)
 
-        self.assertEqual(choice.size_settings(2560, 1080), {"rotation": "left"})
+        self.assertEqual(choice.size_settings(2560, 1080), {"scale": 1.25})
         self.assertEqual(self.backend.changes[-1].mode_id, "2560x1080@59.98")
 
     def test_failed_setting_change_keeps_the_choice_unsaved(self):
         window = self.window()
         self.backend.error = RuntimeError("refused")
-        window.rotation_row.set_selected(1)
+        window.scale_row.set_selected(2)
 
         self.assertEqual(window.toasts.toasts[-1].init_props["title"], "Failed: refused")
         self.assertIsNone(choice.load())
@@ -330,12 +328,12 @@ class CurrentModeTest(WindowTestCase):
         self.assertEqual(self.backend.applied, [])
 
     def test_refresh_after_a_switch_shows_the_new_mode_settings(self):
-        choice.save_setting(3440, 1440, "rotation", "left")
+        choice.save_setting(3440, 1440, "scale", 1.5)
         window = self.window()
         self.backend._outputs = {"HDMI-1": [mode("3440x1440@59.24", 3440, 1440, 59.24, current=True)]}
         window.refresh()
 
-        self.assertEqual(window.rotation_row.selected, 1)
+        self.assertEqual(window.scale_row.selected, 3)
         self.assertEqual(self.backend.applied, [])
 
 
@@ -491,10 +489,6 @@ class HelpersTest(unittest.TestCase):
     def test_choice_index(self):
         self.assertEqual(window_module.choice_index(window_module.SCALES, 1.5), 3)
         self.assertEqual(window_module.choice_index(window_module.SCALES, 1.1), 0)
-        self.assertEqual(window_module.choice_index(window_module.ROTATIONS, "right"), 2)
-
-    def test_every_rotation_choice_is_known(self):
-        self.assertEqual([value for _label, value in window_module.ROTATIONS], list(displays.ROTATIONS))
 
 
 class InstallTest(WindowTestCase):

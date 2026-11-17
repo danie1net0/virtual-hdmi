@@ -2,7 +2,7 @@
 Remembered resolution: applies a mode and, when the environment does not keep it
 by itself (everything but GNOME), saves the choice and creates an autostart entry that reapplies it at login.
 
-Each mode size also keeps its own desktop scale and rotation (settings.json), used every time
+Each mode size also keeps its own desktop scale (settings.json), used every time
 that size is applied. Without a saved scale, the size gets displays.auto_scale.
 """
 
@@ -70,7 +70,7 @@ def size_key(width, height):
 
 
 def load_settings():
-    """Saved settings of every mode size, {"2360x1640": {"scale": 1.25, "rotation": "left"}}; {} if broken."""
+    """Saved settings of every mode size, {"2360x1640": {"scale": 1.25}}; {} if broken."""
     try:
         settings = json.loads(settings_file().read_text())
     except (OSError, ValueError):
@@ -92,7 +92,7 @@ def size_settings(width, height):
 
 
 def save_setting(width, height, name, value):
-    """Saves a setting ("scale" or "rotation") of a mode size; None goes back to the default."""
+    """Saves a setting ("scale") of a mode size; None goes back to the default."""
     settings = load_settings()
     key = size_key(width, height)
     entry = dict(size_settings(width, height))
@@ -118,23 +118,15 @@ def saved_scale(settings, width, height):
     return float(scale)
 
 
-def saved_rotation(settings):
-    rotation = settings.get("rotation")
-    if rotation not in displays.ROTATIONS:
-        return "normal"
-
-    return rotation
-
-
 def change_for(backend, connector, mode_id):
-    """The ModeChange that applies mode_id with the scale and rotation saved for its size."""
+    """The ModeChange that applies mode_id with the scale saved for its size."""
     mode = backend.find_mode(connector, mode_id)
     if mode is None:
         return displays.ModeChange(connector, mode_id)
 
     settings = size_settings(mode.width, mode.height)
     scale = saved_scale(settings, mode.width, mode.height)
-    return displays.ModeChange(connector, mode_id, scale, saved_rotation(settings))
+    return displays.ModeChange(connector, mode_id, scale)
 
 
 def apply_mode(backend, connector, mode_id, persistent):

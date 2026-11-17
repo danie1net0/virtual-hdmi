@@ -225,27 +225,13 @@ class AutoScaleTest(unittest.TestCase):
 
 
 class ModeChangeTest(unittest.TestCase):
-    def test_defaults_to_1x_without_rotation(self):
-        change = displays.ModeChange("HDMI-1", "m")
-        self.assertEqual((change.scale, change.rotation), (1.0, "normal"))
-
-    def test_accepts_every_rotation(self):
-        for rotation in displays.ROTATIONS:
-            with self.subTest(rotation=rotation):
-                self.assertEqual(displays.ModeChange("HDMI-1", "m", 1.5, rotation).rotation, rotation)
-
-    def test_refuses_unknown_rotation(self):
-        with self.assertRaisesRegex(ValueError, "Unknown rotation: inverted"):
-            displays.ModeChange("HDMI-1", "m", 1.0, "inverted")
+    def test_defaults_to_1x(self):
+        self.assertEqual(displays.ModeChange("HDMI-1", "m").scale, 1.0)
 
     def test_refuses_scale_that_is_not_positive(self):
         for scale in (0, -1.5):
             with self.subTest(scale=scale), self.assertRaisesRegex(ValueError, "scale must be positive"):
                 displays.ModeChange("HDMI-1", "m", scale)
-
-    def test_every_rotation_has_a_transform(self):
-        self.assertEqual(set(displays.WLR_TRANSFORMS), set(displays.ROTATIONS))
-        self.assertEqual(set(displays.MUTTER_TRANSFORMS), set(displays.ROTATIONS))
 
 
 class SetXfceDpiTest(unittest.TestCase):
@@ -260,8 +246,8 @@ class SetXfceDpiTest(unittest.TestCase):
         run.assert_not_called()
 
 
-def change(connector, mode_id, scale=1.0, rotation="normal"):
-    return displays.ModeChange(connector, mode_id, scale, rotation)
+def change(connector, mode_id, scale=1.0):
+    return displays.ModeChange(connector, mode_id, scale)
 
 
 class MutterScaleTest(unittest.TestCase):
@@ -277,19 +263,20 @@ class MutterScaleTest(unittest.TestCase):
         self.assertEqual(displays.mutter_scale(monitors, change("HDMI-1", "other", 1.5)), 1.0)
         self.assertEqual(displays.mutter_scale(monitors, change("DP-1", "big", 1.5)), 1.0)
 
-    def test_layout_scales_and_rotates_only_the_target_connector(self):
+    def test_layout_scales_only_the_target_connector_and_keeps_every_rotation(self):
         monitors = [sized_mutter_monitor("HDMI-1", 2360, 1640, [1.0, 1.5]), mutter_monitor("DP-1", ("c", True, False))]
+        hdmi_logical = (0, 0, 1.0, 1, True, [("HDMI-1", "VHD", "Virtual", "0")], {})
         dp_logical = (2360, 0, 2.0, 2, False, [("DP-1", "VHD", "Virtual", "0")], {})
-        layout = displays.mutter_layout(monitors, [logical(0, True, "HDMI-1"), dp_logical], change("HDMI-1", "big", 1.5, "left"))
+        layout = displays.mutter_layout(monitors, [hdmi_logical, dp_logical], change("HDMI-1", "big", 1.5))
         self.assertEqual(
             layout,
             [(0, 0, 1.5, 1, True, [("HDMI-1", "big", {})]), (2360, 0, 2.0, 2, False, [("DP-1", "c", {})])],
         )
 
-    def test_layout_adds_missing_connector_with_its_scale_and_rotation(self):
+    def test_layout_adds_missing_connector_with_its_scale_and_no_rotation(self):
         monitors = [sized_mutter_monitor("HDMI-1", 2360, 1640, [1.0, 1.5])]
-        layout = displays.mutter_layout(monitors, [], change("HDMI-1", "big", 1.5, "right"))
-        self.assertEqual(layout, [(0, 0, 1.5, 3, True, [("HDMI-1", "big", {})])])
+        layout = displays.mutter_layout(monitors, [], change("HDMI-1", "big", 1.5))
+        self.assertEqual(layout, [(0, 0, 1.5, 0, True, [("HDMI-1", "big", {})])])
 
 
 class MutterLayoutTest(unittest.TestCase):
@@ -368,7 +355,7 @@ class CommandBackendsTest(unittest.TestCase):
         with mock.patch.object(displays, "run", return_value=COSMIC) as run:
             self.assertEqual(backend.connectors(), ["HDMI-A-1", "DP-2"])
             run.assert_called_with(["cosmic-randr", "list", "--kdl"])
-            backend.apply(change("HDMI-A-1", "2360x1640@60.010", 1.5, "left"), True)
+            backend.apply(change("HDMI-A-1", "2360x1640@60.010", 1.5), True)
             run.assert_called_with(
                 [
                     "cosmic-randr",
@@ -380,14 +367,8 @@ class CommandBackendsTest(unittest.TestCase):
                     "60.010",
                     "--scale",
                     "1.5",
-                    "--transform",
-                    "rotate90",
                 ]
             )
-
-    def test_cosmic_transforms(self):
-        self.assertEqual(set(displays.COSMIC_TRANSFORMS), set(displays.ROTATIONS))
-        self.assertEqual(displays.COSMIC_TRANSFORMS["right"], "rotate270")
 
     def test_kscreen_does_not_need_the_kde_desktop_name(self):
         with mock.patch.dict("os.environ", {"XDG_CURRENT_DESKTOP": "XFCE"}), mock.patch("shutil.which", return_value="/x"):
@@ -415,7 +396,7 @@ class CommandBackendsTest(unittest.TestCase):
             run.assert_called_with(["xrandr", "--query"])
             backend.apply(change("HDMI-1", "2560x1080@59.98"), True)
             run.assert_called_with(
-                ["xrandr", "--output", "HDMI-1", "--mode", "2560x1080", "--rate", "59.98", "--rotate", "normal"]
+                ["xrandr", "--output", "HDMI-1", "--mode", "2560x1080", "--rate", "59.98"]
             )
 
     def test_wlr(self):
@@ -425,7 +406,7 @@ class CommandBackendsTest(unittest.TestCase):
             run.assert_called_with(["wlr-randr", "--json"])
             backend.apply(change("HDMI-A-1", "1920x1080@60.000"), False)
             run.assert_called_with(
-                ["wlr-randr", "--output", "HDMI-A-1", "--mode", "1920x1080@60.000Hz", "--scale", "1", "--transform", "normal"]
+                ["wlr-randr", "--output", "HDMI-A-1", "--mode", "1920x1080@60.000Hz", "--scale", "1"]
             )
 
     def test_kscreen(self):
@@ -435,29 +416,28 @@ class CommandBackendsTest(unittest.TestCase):
             run.assert_called_with(["kscreen-doctor", "-j"])
             backend.apply(change("HDMI-A-1", "2"), False)
             run.assert_called_with(
-                ["kscreen-doctor", "output.HDMI-A-1.mode.2", "output.HDMI-A-1.scale.1", "output.HDMI-A-1.rotation.normal"]
+                ["kscreen-doctor", "output.HDMI-A-1.mode.2", "output.HDMI-A-1.scale.1"]
             )
 
-    def test_xrandr_rotates_and_sets_xfce_dpi_after_the_mode(self):
+    def test_xrandr_sets_xfce_dpi_after_the_mode(self):
         with mock.patch.object(displays, "run") as run, mock.patch("shutil.which", return_value="/usr/bin/xfconf-query"):
-            displays.XrandrBackend().apply(change("HDMI-1", "2360x1640@60.01", 1.5, "left"), True)
+            displays.XrandrBackend().apply(change("HDMI-1", "2360x1640@60.01", 1.5), True)
 
         self.assertEqual(
             run.call_args_list[0].args[0],
-            ["xrandr", "--output", "HDMI-1", "--mode", "2360x1640", "--rate", "60.01", "--rotate", "left"],
+            ["xrandr", "--output", "HDMI-1", "--mode", "2360x1640", "--rate", "60.01"],
         )
         self.assertEqual(run.call_args_list[1].args[0][-1], "144")
 
-    def test_wlr_passes_fractional_scale_and_transform(self):
-        for rotation, transform in (("left", "90"), ("right", "270")):
-            with self.subTest(rotation=rotation), mock.patch.object(displays, "run") as run:
-                displays.WlrBackend().apply(change("HDMI-A-1", "2360x1640@60.000", 1.25, rotation), False)
-                self.assertEqual(run.call_args.args[0][-4:], ["--scale", "1.25", "--transform", transform])
-
-    def test_kscreen_passes_fractional_scale_and_rotation(self):
+    def test_wlr_passes_fractional_scale(self):
         with mock.patch.object(displays, "run") as run:
-            displays.KScreenBackend().apply(change("HDMI-A-1", "2", 1.5, "right"), False)
-        self.assertEqual(run.call_args.args[0][-2:], ["output.HDMI-A-1.scale.1.5", "output.HDMI-A-1.rotation.right"])
+            displays.WlrBackend().apply(change("HDMI-A-1", "2360x1640@60.000", 1.25), False)
+        self.assertEqual(run.call_args.args[0][-2:], ["--scale", "1.25"])
+
+    def test_kscreen_passes_fractional_scale(self):
+        with mock.patch.object(displays, "run") as run:
+            displays.KScreenBackend().apply(change("HDMI-A-1", "2", 1.5), False)
+        self.assertEqual(run.call_args.args[0][-1], "output.HDMI-A-1.scale.1.5")
 
     def test_modes_of_unknown_connector_is_empty(self):
         self.assertEqual(FakeBackend({"HDMI-1": []}).modes("DP-9"), [])

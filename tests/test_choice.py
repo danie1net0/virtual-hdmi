@@ -113,41 +113,40 @@ class SettingsTest(SaveLoadTest):
 
     def test_save_setting_keeps_each_size_apart(self):
         choice.save_setting(2360, 1640, "scale", 1.25)
-        choice.save_setting(2360, 1640, "rotation", "left")
+        choice.save_setting(2360, 1640, "other", "kept")
         choice.save_setting(3440, 1440, "scale", 1.0)
 
         self.assertEqual(
             json.loads(self.settings_path().read_text()),
-            {"2360x1640": {"rotation": "left", "scale": 1.25}, "3440x1440": {"scale": 1.0}},
+            {"2360x1640": {"other": "kept", "scale": 1.25}, "3440x1440": {"scale": 1.0}},
         )
 
     def test_none_removes_the_setting_and_then_the_size(self):
         choice.save_setting(2360, 1640, "scale", 1.25)
-        choice.save_setting(2360, 1640, "rotation", "left")
+        choice.save_setting(2360, 1640, "other", "kept")
         choice.save_setting(2360, 1640, "scale", None)
-        self.assertEqual(choice.size_settings(2360, 1640), {"rotation": "left"})
+        self.assertEqual(choice.size_settings(2360, 1640), {"other": "kept"})
 
-        choice.save_setting(2360, 1640, "rotation", None)
+        choice.save_setting(2360, 1640, "other", None)
         self.assertEqual(choice.load_settings(), {})
 
     def test_change_uses_auto_scale_without_settings(self):
         change = choice.change_for(Backend(), "HDMI-1", "ipad")
-        self.assertEqual(change, displays.ModeChange("HDMI-1", "ipad", 1.5, "normal"))
+        self.assertEqual(change, displays.ModeChange("HDMI-1", "ipad", 1.5))
         self.assertEqual(choice.change_for(Backend(), "HDMI-1", "wide").scale, 1.0)
 
-    def test_change_uses_saved_scale_and_rotation(self):
+    def test_change_uses_saved_scale_and_ignores_an_old_rotation(self):
         choice.save_setting(2360, 1640, "scale", 2)
         choice.save_setting(2360, 1640, "rotation", "right")
 
         change = choice.change_for(Backend(), "HDMI-1", "ipad")
-        self.assertEqual(change, displays.ModeChange("HDMI-1", "ipad", 2.0, "right"))
+        self.assertEqual(change, displays.ModeChange("HDMI-1", "ipad", 2.0))
         self.assertIsInstance(change.scale, float)
 
     def test_change_ignores_invalid_saved_values(self):
-        for scale, rotation in (("big", "upside"), (0, None), (-1, 3), (True, "")):
-            with self.subTest(scale=scale, rotation=rotation):
+        for scale in ("big", 0, -1, True):
+            with self.subTest(scale=scale):
                 choice.save_setting(2360, 1640, "scale", scale)
-                choice.save_setting(2360, 1640, "rotation", rotation)
                 self.assertEqual(choice.change_for(Backend(), "HDMI-1", "ipad"), displays.ModeChange("HDMI-1", "ipad", 1.5))
 
     def test_change_of_unknown_mode_has_the_defaults(self):
@@ -182,11 +181,11 @@ class ApplyRestoreTest(SaveLoadTest):
         self.assertIsNone(choice.load())
 
     def test_apply_passes_the_saved_settings(self):
-        choice.save_setting(2360, 1640, "rotation", "left")
+        choice.save_setting(2360, 1640, "scale", 1.25)
         backend = Backend()
         choice.apply_mode(backend, "HDMI-1", "ipad", False)
 
-        self.assertEqual(backend.last_change, displays.ModeChange("HDMI-1", "ipad", 1.5, "left"))
+        self.assertEqual(backend.last_change, displays.ModeChange("HDMI-1", "ipad", 1.25))
 
     def test_commit_saves_the_choice(self):
         backend = Backend()
