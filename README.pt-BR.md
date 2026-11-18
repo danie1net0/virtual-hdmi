@@ -65,8 +65,9 @@ pede o sudo para colocá-lo no boot. A janela faz o mesmo pelo botão **Install*
 EDID**, onde dá para mudar os modos. Acrescente `--output DP-1` para escolher a saída, ou
 `--modes '2560x1440 1920x1080'` para outras resoluções.
 
-A instalação edita a configuração de boot que encontrar (GRUB, kernelstub no Pop!_OS ou o
-`armbianEnv.txt` do Armbian) e guarda uma cópia `*.before-edid`; o cabeçalho do
+A instalação edita a configuração de boot que encontrar (GRUB, kernelstub no Pop!_OS,
+systemd-boot, o `extlinux.conf` do U-Boot, o `cmdline.txt` do Raspberry Pi ou o `armbianEnv.txt`
+do Armbian) e guarda uma cópia `*.before-edid`; o cabeçalho do
 [scripts/install-edid.sh](scripts/install-edid.sh) diz como desfazer. Na NVIDIA, precisa dos
 módulos de kernel abertos (os únicos da RTX 50) com `nvidia-drm.modeset=1`. Se o driver ignorar o
 EDID, um dummy plug HDMI faz o mesmo papel no hardware.

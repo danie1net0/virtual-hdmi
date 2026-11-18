@@ -267,8 +267,8 @@ class InstalledPathTest(unittest.TestCase):
         script = (ROOT / "scripts" / "install-edid.sh").read_text()
 
         self.assertEqual(edid.INSTALLED, Path("/usr/lib/firmware/edid/virtual-monitor.bin"))
-        self.assertIn('EDID_REL="edid/virtual-monitor.bin"', script)
-        self.assertIn('EDID_DST="$ROOT/usr/lib/firmware/$EDID_REL"', script)
+        self.assertIn('EDID_RELATIVE="edid/virtual-monitor.bin"', script)
+        self.assertIn('EDID_TARGET="$ROOT/usr/lib/firmware/$EDID_RELATIVE"', script)
 
 
 class IsInstalledTest(unittest.TestCase):

@@ -4,15 +4,15 @@ source "$(dirname "$0")/lib.sh"
 
 SCRIPT="$PROJECT/scripts/install-edid.sh"
 EDID="$PROJECT/edid/virtual-monitor.bin"
-PARAMS="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
-KVER="6.1.0-test"
+PARAMETERS="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+KERNEL_VERSION="6.1.0-test"
 
 # Armbian kernel and tools (initramfs-tools); the EDID shows up in the image
 armbian() {
     new_case
     mkdir -p "$ROOT/boot" "$ROOT/etc/initramfs-tools/hooks"
     printf 'verbosity=1\n%s\nrootdev=UUID=abc\n' "$1" > "$ROOT/boot/armbianEnv.txt"
-    stub uname "echo $KVER"
+    stub uname "echo $KERNEL_VERSION"
     stub update-initramfs
     stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
 }
@@ -22,7 +22,7 @@ grub() {
     new_case
     mkdir -p "$ROOT/etc/default" "$ROOT/etc/dracut.conf.d"
     printf 'GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX_DEFAULT="%s"\n' "$1" > "$ROOT/etc/default/grub"
-    stub uname "echo $KVER"
+    stub uname "echo $KERNEL_VERSION"
     stub dracut
     stub lsinitrd 'echo usr/lib/firmware/edid/virtual-monitor.bin'
     stub update-grub
@@ -33,10 +33,48 @@ pop() {
     new_case
     mkdir -p "$ROOT/etc/kernelstub" "$ROOT/etc/initramfs-tools/hooks"
     printf '{"user": {"kernel_options": ["quiet", "splash"%s]}}\n' "$1" > "$ROOT/etc/kernelstub/configuration"
-    stub uname "echo $KVER"
+    stub uname "echo $KERNEL_VERSION"
     stub update-initramfs
     stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
     stub kernelstub
+}
+
+# Fedora: GRUB_CMDLINE_LINUX only, dracut, and grubby for the boot entries; grubby lists ARGS
+fedora() {
+    new_case
+    mkdir -p "$ROOT/etc/default"
+    printf 'GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX="rhgb quiet"\n' > "$ROOT/etc/default/grub"
+    stub uname "echo $KERNEL_VERSION"
+    stub dracut
+    stub lsinitrd 'echo usr/lib/firmware/edid/virtual-monitor.bin'
+    stub grubby "[[ \"\$1\" == --info=ALL ]] && echo 'args=\"$1\"'; exit 0"
+}
+
+# Arch: mkinitcpio, its images named after the preset
+arch() {
+    new_case
+    mkdir -p "$ROOT/boot"
+    : > "$ROOT/boot/initramfs-linux.img"
+    : > "$ROOT/boot/initramfs-linux-fallback.img"
+    stub uname "echo $KERNEL_VERSION"
+    stub mkinitcpio
+    stub lsinitcpio '[[ "$1" == *-fallback.img ]] && exit 0; echo usr/lib/firmware/edid/virtual-monitor.bin'
+}
+
+# Raspberry Pi OS: one line in cmdline.txt (FILE TEXT) and initramfs-tools
+raspberry() {
+    new_case
+    mkdir -p "$(dirname "$ROOT/$1")"
+    printf '%s\n' "$2" > "$ROOT/$1"
+    stub uname "echo $KERNEL_VERSION"
+    stub update-initramfs
+    stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
+}
+
+# A machine with no boot image tool; the boot setup comes after
+no_boot_image() {
+    new_case
+    stub uname "echo $KERNEL_VERSION"
 }
 
 line() {
@@ -70,9 +108,9 @@ check "copies the EDID" cmp "$EDID" "$ROOT/usr/lib/firmware/edid/virtual-monitor
 check "initramfs hook is executable" test -x "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor"
 contains "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor" 'cp /usr/lib/firmware/edid/virtual-monitor.bin "${DESTDIR}/usr/lib/firmware/edid/"' "hook copies the EDID into the image"
 check "without dracut, creates no dracut config" test ! -e "$ROOT/etc/dracut.conf.d"
-called "update-initramfs -u -k $KVER"
-called "lsinitramfs $ROOT/boot/initrd.img-$KVER"
-check "appends the parameters to extraargs" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=cma=256M $PARAMS"
+called "update-initramfs -u -k $KERNEL_VERSION"
+called "lsinitramfs $ROOT/boot/initrd.img-$KERNEL_VERSION"
+check "appends the parameters to extraargs" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=cma=256M $PARAMETERS"
 check "keeps the other lines" grep -qx 'rootdev=UUID=abc' "$ROOT/boot/armbianEnv.txt"
 check "keeps the original" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt.before-edid")" = "extraargs=cma=256M"
 contains "$OUT" "ok (lsinitramfs)" "checks the image with lsinitramfs"
@@ -81,17 +119,17 @@ not_called update-grub
 
 run_script "$SCRIPT" "$EDID"
 status_is 0 "reinstalls on Armbian"
-check "does not duplicate the parameters" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=cma=256M $PARAMS"
+check "does not duplicate the parameters" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=cma=256M $PARAMETERS"
 check "does not overwrite the saved original" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt.before-edid")" = "extraargs=cma=256M"
 
 armbian "extraargs=drm.edid_firmware=HDMI-A-1:edid/velho.bin video=HDMI-A-1:D"
 run_script "$SCRIPT" "$EDID"
-check "replaces old parameters leaving no leading space" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=$PARAMS"
+check "replaces old parameters leaving no leading space" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=$PARAMETERS"
 
 armbian "# no extraargs"
 run_script "$SCRIPT" "$EDID"
 status_is 0 "installs without an extraargs line"
-check "creates the extraargs line" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=$PARAMS"
+check "creates the extraargs line" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=$PARAMETERS"
 check "creates the line only once" test "$(grep -c '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = 1
 
 echo "# GRUB"
@@ -100,34 +138,34 @@ run_script "$SCRIPT" "$EDID"
 status_is 0 "installs with GRUB and dracut"
 contains "$ROOT/etc/dracut.conf.d/90-edid-virtual-monitor.conf" 'install_items+=" /usr/lib/firmware/edid/virtual-monitor.bin "' "adds the EDID to dracut"
 check "without update-initramfs, creates no hook" test ! -e "$ROOT/etc/initramfs-tools"
-called "dracut -f --kver $KVER"
-called "lsinitrd --kver $KVER"
+called "dracut -f --kver $KERNEL_VERSION"
+called "lsinitrd --kver $KERNEL_VERSION"
 called "update-grub"
 contains "$OUT" "ok (lsinitrd)" "checks the image with lsinitrd"
-check "appends the parameters to GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMS\""
+check "appends the parameters to GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMETERS\""
 check "keeps the original GRUB" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' "$ROOT/etc/default/grub.before-edid"
 check "keeps the other GRUB lines" grep -qx 'GRUB_TIMEOUT=5' "$ROOT/etc/default/grub"
 
 run_script "$SCRIPT" "$EDID"
-check "does not duplicate the parameters in GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMS\""
+check "does not duplicate the parameters in GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMETERS\""
 check "does not overwrite the saved GRUB" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' "$ROOT/etc/default/grub.before-edid"
 
 grub ""
 run_script "$SCRIPT" "$EDID"
-check "empty GRUB has no leading space" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"$PARAMS\""
+check "empty GRUB has no leading space" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"$PARAMETERS\""
 
 grub "quiet video=HDMI-A-1:D drm.edid_firmware=HDMI-A-1:edid/velho.bin splash"
 run_script "$SCRIPT" "$EDID"
-check "replaces old parameters in GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMS\""
+check "replaces old parameters in GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMETERS\""
 
 echo "# kernelstub (Pop!_OS)"
 pop ""
 run_script "$SCRIPT" "$EDID"
 status_is 0 "installs with kernelstub"
-called "kernelstub -a $PARAMS"
+called "kernelstub -a $PARAMETERS"
 not_called "kernelstub -d"
 check "keeps the original kernelstub configuration" cmp "$ROOT/etc/kernelstub/configuration" "$ROOT/etc/kernelstub/configuration.before-edid"
-called "update-initramfs -u -k $KVER"
+called "update-initramfs -u -k $KERNEL_VERSION"
 contains "$OUT" "Adjusting the kernel parameters with kernelstub" "says it uses kernelstub"
 not_called update-grub
 
@@ -136,7 +174,7 @@ echo '{"user": {"kernel_options": ["quiet"]}}' > "$ROOT/etc/kernelstub/configura
 run_script "$SCRIPT" "$EDID"
 status_is 0 "reinstalls with kernelstub"
 called "kernelstub -d drm.edid_firmware=HDMI-A-1:edid/velho.bin video=HDMI-A-1:D"
-called "kernelstub -a $PARAMS"
+called "kernelstub -a $PARAMETERS"
 check "does not overwrite the saved kernelstub configuration" grep -q '\["quiet"\]' "$ROOT/etc/kernelstub/configuration.before-edid"
 
 pop ""
@@ -194,11 +232,12 @@ check "copies nothing with an invalid connector" test ! -e "$ROOT/usr"
 
 echo "# boot image"
 grub "quiet"
-rm "$STUBS/dracut"
+rm "$STUBS/dracut" "$STUBS/lsinitrd"
 run_script "$SCRIPT" "$EDID"
-status_is 1 "fails without update-initramfs and dracut"
-contains "$ERRS" "Neither update-initramfs nor dracut" "explains the missing tool"
-not_called update-grub
+status_is 0 "installs without a boot image tool"
+contains "$OUT" "the kernel reads the EDID from /usr/lib/firmware" "says there is no boot image to build"
+not_contains "$OUT" "Checking that the EDID is in the image" "checks no image"
+called "update-grub"
 
 armbian "extraargs=cma=256M"
 stub lsinitramfs 'echo usr/lib/modules'
@@ -232,14 +271,165 @@ rm "$STUBS/lsinitramfs"
 run_script "$SCRIPT" "$EDID"
 status_is 1 "fails without lsinitrd and lsinitramfs"
 
+echo "# GRUB on Fedora, openSUSE and Arch"
+fedora "rhgb quiet"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs on Fedora"
+check "adds GRUB_CMDLINE_LINUX_DEFAULT when only GRUB_CMDLINE_LINUX exists" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"$PARAMETERS\""
+check "keeps GRUB_CMDLINE_LINUX" grep -qx 'GRUB_CMDLINE_LINUX="rhgb quiet"' "$ROOT/etc/default/grub"
+called "grubby --update-kernel=ALL --args=$PARAMETERS"
+not_called "grubby --update-kernel=ALL --remove-args"
+
+fedora "rhgb quiet drm.edid_firmware=HDMI-A-1:edid/velho.bin video=HDMI-A-1:D video=DP-2:e"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "reinstalls on Fedora"
+called "grubby --update-kernel=ALL --remove-args=drm.edid_firmware=HDMI-A-1:edid/velho.bin video=HDMI-A-1:D"
+called "grubby --update-kernel=ALL --args=$PARAMETERS"
+
+grub "quiet"
+rm "$STUBS/update-grub"
+stub grub2-mkconfig
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with grub2-mkconfig (openSUSE)"
+called "grub2-mkconfig -o $ROOT/boot/grub2/grub.cfg"
+
+grub "quiet"
+rm "$STUBS/update-grub"
+stub grub-mkconfig
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with grub-mkconfig (Arch)"
+called "grub-mkconfig -o $ROOT/boot/grub/grub.cfg"
+
+grub "quiet"
+rm "$STUBS/update-grub"
+run_script "$SCRIPT" "$EDID"
+status_is 1 "fails with no tool to apply GRUB"
+contains "$ERRS" "Neither update-grub, grubby, grub2-mkconfig nor grub-mkconfig" "names the missing tools"
+
+echo "# mkinitcpio (Arch)"
+arch
+mkdir -p "$ROOT/boot/loader/entries"
+printf 'title Arch Linux\nlinux /vmlinuz-linux\noptions root=UUID=abc rw\n' > "$ROOT/boot/loader/entries/arch.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs on Arch"
+contains "$ROOT/etc/mkinitcpio.conf.d/virtual-monitor.conf" "FILES+=(/usr/lib/firmware/edid/virtual-monitor.bin)" "adds the EDID to mkinitcpio"
+called "mkinitcpio -P"
+called "lsinitcpio $ROOT/boot/initramfs-linux.img"
+not_called "lsinitcpio $ROOT/boot/initramfs-linux-fallback.img"
+contains "$OUT" "ok (lsinitcpio)" "checks the image with lsinitcpio"
+
+arch
+stub lsinitcpio 'echo usr/lib/modules'
+mkdir -p "$ROOT/boot/loader/entries"
+printf 'options root=UUID=abc\n' > "$ROOT/boot/loader/entries/arch.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 1 "mkinitcpio image without the EDID fails"
+check "leaves the entry alone" grep -qx 'options root=UUID=abc' "$ROOT/boot/loader/entries/arch.conf"
+
+echo "# systemd-boot"
+arch
+mkdir -p "$ROOT/boot/loader/entries" "$ROOT/efi/loader/entries" "$ROOT/etc/kernel"
+printf 'title Arch Linux\nlinux /vmlinuz-linux\noptions root=UUID=abc rw video=HDMI-A-1:D\n' > "$ROOT/boot/loader/entries/arch.conf"
+printf 'title Fallback\nlinux /vmlinuz-linux\n' > "$ROOT/efi/loader/entries/fallback.conf"
+echo "root=UUID=abc rw" > "$ROOT/etc/kernel/cmdline"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with systemd-boot"
+check "replaces the parameters in the entry" grep -qx "options root=UUID=abc rw $PARAMETERS" "$ROOT/boot/loader/entries/arch.conf"
+check "keeps the other lines of the entry" grep -qx 'linux /vmlinuz-linux' "$ROOT/boot/loader/entries/arch.conf"
+check "adds an options line to an entry without one" grep -qx "options $PARAMETERS" "$ROOT/efi/loader/entries/fallback.conf"
+check "keeps the original entry" grep -qx 'options root=UUID=abc rw video=HDMI-A-1:D' "$ROOT/boot/loader/entries/arch.conf.before-edid"
+check "adds the parameters to /etc/kernel/cmdline" grep -qx "root=UUID=abc rw $PARAMETERS" "$ROOT/etc/kernel/cmdline"
+
+run_script "$SCRIPT" "$EDID"
+check "does not duplicate the parameters in the entry" grep -qx "options root=UUID=abc rw $PARAMETERS" "$ROOT/boot/loader/entries/arch.conf"
+check "does not overwrite the saved entry" grep -qx 'options root=UUID=abc rw video=HDMI-A-1:D' "$ROOT/boot/loader/entries/arch.conf.before-edid"
+
+arch
+mkdir -p "$ROOT/boot/efi/loader/entries"
+printf 'options quiet\n' > "$ROOT/boot/efi/loader/entries/opensuse.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with entries in /boot/efi and no /etc/kernel/cmdline"
+check "changes the entry in /boot/efi" grep -qx "options quiet $PARAMETERS" "$ROOT/boot/efi/loader/entries/opensuse.conf"
+check "creates no /etc/kernel/cmdline" test ! -e "$ROOT/etc/kernel/cmdline"
+
+echo "# Raspberry Pi"
+raspberry boot/firmware/cmdline.txt "console=serial0,115200 root=PARTUUID=abc rootwait drm.edid_firmware=HDMI-A-1:edid/velho.bin"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs on Raspberry Pi OS"
+check "replaces the parameters in cmdline.txt" test "$(cat "$ROOT/boot/firmware/cmdline.txt")" = "console=serial0,115200 root=PARTUUID=abc rootwait $PARAMETERS"
+check "keeps the original cmdline.txt" grep -q 'edid/velho.bin' "$ROOT/boot/firmware/cmdline.txt.before-edid"
+
+run_script "$SCRIPT" "$EDID"
+check "keeps cmdline.txt on one line" test "$(wc -l < "$ROOT/boot/firmware/cmdline.txt" | tr -d ' ')" = 1
+check "does not duplicate the parameters in cmdline.txt" test "$(cat "$ROOT/boot/firmware/cmdline.txt")" = "console=serial0,115200 root=PARTUUID=abc rootwait $PARAMETERS"
+
+raspberry boot/cmdline.txt "root=/dev/mmcblk0p2 rootwait"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with the older /boot/cmdline.txt"
+check "changes /boot/cmdline.txt" test "$(cat "$ROOT/boot/cmdline.txt")" = "root=/dev/mmcblk0p2 rootwait $PARAMETERS"
+
+raspberry boot/firmware/cmdline.txt "root=/dev/mmcblk0p2"
+rm "$STUBS/update-initramfs" "$STUBS/lsinitramfs"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs on a Raspberry Pi with no initramfs"
+check "still sets cmdline.txt" test "$(cat "$ROOT/boot/firmware/cmdline.txt")" = "root=/dev/mmcblk0p2 $PARAMETERS"
+
+echo "# U-Boot"
+no_boot_image
+mkdir -p "$ROOT/etc/default"
+printf '# U_BOOT_PARAMETERS="ro quiet"\nU_BOOT_PARAMETERS="ro quiet video=HDMI-A-1:D"\n' > "$ROOT/etc/default/u-boot"
+stub u-boot-update
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with u-boot-menu"
+check "sets U_BOOT_PARAMETERS" grep -qx "U_BOOT_PARAMETERS=\"ro quiet $PARAMETERS\"" "$ROOT/etc/default/u-boot"
+check "leaves the comment alone" grep -qx '# U_BOOT_PARAMETERS="ro quiet"' "$ROOT/etc/default/u-boot"
+called "u-boot-update"
+
+no_boot_image
+mkdir -p "$ROOT/etc/default" "$ROOT/boot/extlinux"
+echo 'U_BOOT_MENU_LABEL="Debian"' > "$ROOT/etc/default/u-boot"
+echo "  append root=/dev/sda1" > "$ROOT/boot/extlinux/extlinux.conf"
+stub u-boot-update
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with u-boot-menu and no U_BOOT_PARAMETERS"
+check "starts from the u-boot-update default" grep -qx "U_BOOT_PARAMETERS=\"ro quiet $PARAMETERS\"" "$ROOT/etc/default/u-boot"
+check "leaves extlinux.conf to u-boot-update" grep -qx "  append root=/dev/sda1" "$ROOT/boot/extlinux/extlinux.conf"
+
+no_boot_image
+mkdir -p "$ROOT/etc/default" "$ROOT/boot/extlinux"
+echo 'U_BOOT_PARAMETERS="ro"' > "$ROOT/etc/default/u-boot"
+echo "append root=/dev/sda1" > "$ROOT/boot/extlinux/extlinux.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "without u-boot-update, edits extlinux.conf"
+check "leaves /etc/default/u-boot alone" grep -qx 'U_BOOT_PARAMETERS="ro"' "$ROOT/etc/default/u-boot"
+check "changes extlinux.conf" grep -qx "append root=/dev/sda1 $PARAMETERS" "$ROOT/boot/extlinux/extlinux.conf"
+
+no_boot_image
+mkdir -p "$ROOT/boot/extlinux"
+printf 'label linux\n  kernel /Image\n  APPEND root=/dev/mmcblk0p2 video=HDMI-A-1:D\nlabel rescue\n  append root=/dev/mmcblk0p2 single\n' > "$ROOT/boot/extlinux/extlinux.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with extlinux.conf"
+check "changes every append line" test "$(grep -ci "append.*$PARAMETERS" "$ROOT/boot/extlinux/extlinux.conf")" = 2
+check "keeps the case and indentation" grep -qx "  APPEND root=/dev/mmcblk0p2 $PARAMETERS" "$ROOT/boot/extlinux/extlinux.conf"
+check "keeps the original extlinux.conf" grep -q 'video=HDMI-A-1:D' "$ROOT/boot/extlinux/extlinux.conf.before-edid"
+
+no_boot_image
+mkdir -p "$ROOT/boot/extlinux"
+printf 'label linux\n  kernel /Image\n' > "$ROOT/boot/extlinux/extlinux.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 1 "fails with an extlinux.conf without append"
+contains "$ERRS" "has no append line" "says there is no append line"
+check "keeps no backup of extlinux.conf" test ! -e "$ROOT/boot/extlinux/extlinux.conf.before-edid"
+
 echo "# boot loader"
 new_case
-stub uname "echo $KVER"
+stub uname "echo $KERNEL_VERSION"
 stub update-initramfs
 stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
 run_script "$SCRIPT" "$EDID"
-status_is 1 "fails without armbianEnv, kernelstub and GRUB"
-contains "$ERRS" "Add to the kernel command line: $PARAMS" "shows the parameters to set by hand"
+status_is 1 "fails without a known boot setup"
+contains "$ERRS" "No boot setup found" "says no boot setup was found"
+contains "$ERRS" "Add to the kernel command line: $PARAMETERS" "shows the parameters to set by hand"
 
 echo "# EDID path"
 armbian "extraargs=cma=256M"
