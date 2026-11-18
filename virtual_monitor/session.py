@@ -30,10 +30,10 @@ def is_socket(path):
         return False
 
 
-def runtime_folder(environ, uid, root=RUNTIME_ROOT):
+def runtime_folder(environment, uid, root=RUNTIME_ROOT):
     """XDG_RUNTIME_DIR, or /run/user/<uid> when it exists; None without either."""
-    if environ.get("XDG_RUNTIME_DIR"):
-        return Path(environ["XDG_RUNTIME_DIR"])
+    if environment.get("XDG_RUNTIME_DIR"):
+        return Path(environment["XDG_RUNTIME_DIR"])
 
     folder = root / str(uid)
     if not folder.is_dir():
@@ -82,17 +82,17 @@ def xauthority(runtime, home):
     return next((str(candidate) for candidate in candidates if candidate.is_file()), None)
 
 
-def add_runtime_variables(found, environ, runtime):
-    if not environ.get("DBUS_SESSION_BUS_ADDRESS") and is_socket(runtime / "bus"):
+def add_runtime_variables(found, environment, runtime):
+    if not environment.get("DBUS_SESSION_BUS_ADDRESS") and is_socket(runtime / "bus"):
         found["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={runtime / 'bus'}"
 
     wayland = lowest_socket(runtime, "wayland-")
-    if not environ.get("WAYLAND_DISPLAY") and wayland:
+    if not environment.get("WAYLAND_DISPLAY") and wayland:
         found["WAYLAND_DISPLAY"] = wayland
 
 
-def add_x11_variables(found, environ, runtime, home, x11_sockets, uid):
-    if environ.get("DISPLAY"):
+def add_x11_variables(found, environment, runtime, home, x11_sockets, uid):
+    if environment.get("DISPLAY"):
         return
 
     socket = lowest_socket(x11_sockets, "X", uid)
@@ -101,27 +101,27 @@ def add_x11_variables(found, environ, runtime, home, x11_sockets, uid):
 
     found["DISPLAY"] = f":{socket[1:]}"
     cookie = xauthority(runtime, home)
-    if not environ.get("XAUTHORITY") and cookie:
+    if not environment.get("XAUTHORITY") and cookie:
         found["XAUTHORITY"] = cookie
 
 
-def missing_variables(environ, uid, home, runtime_root=RUNTIME_ROOT, x11_sockets=X11_SOCKETS):
+def missing_variables(environment, uid, home, runtime_root=RUNTIME_ROOT, x11_sockets=X11_SOCKETS):
     """The session variables environ lacks and this user's session provides."""
     found = {}
-    runtime = runtime_folder(environ, uid, runtime_root)
+    runtime = runtime_folder(environment, uid, runtime_root)
     if runtime is None:
         return found
 
-    if not environ.get("XDG_RUNTIME_DIR"):
+    if not environment.get("XDG_RUNTIME_DIR"):
         found["XDG_RUNTIME_DIR"] = str(runtime)
 
-    add_runtime_variables(found, environ, runtime)
-    add_x11_variables(found, environ, runtime, home, x11_sockets, uid)
+    add_runtime_variables(found, environment, runtime)
+    add_x11_variables(found, environment, runtime, home, x11_sockets, uid)
     return found
 
 
-def has_display(environ):
-    return bool(environ.get("WAYLAND_DISPLAY") or environ.get("DISPLAY"))
+def has_display(environment):
+    return bool(environment.get("WAYLAND_DISPLAY") or environment.get("DISPLAY"))
 
 
 def attach():

@@ -38,7 +38,7 @@ def scale_argument(text):
     return scale
 
 
-def parse_arguments(argv):
+def parse_arguments(command_line_arguments):
     parser = argparse.ArgumentParser(prog="virtual-monitor", description="With no options, opens the window.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     action = parser.add_mutually_exclusive_group()
@@ -74,7 +74,7 @@ def parse_arguments(argv):
         help="desktop scale (1.25, 1.5...) or auto, saved for the size of the mode; alone, rescales the current mode",
     )
 
-    return parser.parse_args(argv)
+    return parser.parse_args(command_line_arguments)
 
 
 def flag(on, mark):
@@ -216,9 +216,9 @@ def auto_login(state):
     return subprocess.call([*elevate(), "bash", str(AUTO_LOGIN_SCRIPT), login_user(), state])
 
 
-def main(argv, standard_output=None, error_output=None):
+def main(command_line_arguments, standard_output=None, error_output=None):
     standard_output, error_output = standard_output or sys.stdout, error_output or sys.stderr
-    arguments = parse_arguments(argv)
+    arguments = parse_arguments(command_line_arguments)
     if arguments.install_edid:
         return install_edid(arguments, standard_output, error_output)
 
@@ -231,6 +231,7 @@ def main(argv, standard_output=None, error_output=None):
         reasons = displays.diagnose()
         for name, reason in reasons:
             print(f"  {name}: {reason}", file=error_output)
+
         print_session_hint(error_output)
         print_edid_hint(reasons, error_output)
         return 1

@@ -27,7 +27,7 @@ python_coverage() {
 }
 
 shell_coverage() {
-    if [[ ${BASH_VERSINFO[0]} -lt 4 || "$(id -u)" -eq 0 ]]; then
+    if [[ ${BASH_VERSINFO[0]} -lt 4 || ( ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -lt 1 ) || "$(id -u)" -eq 0 ]]; then
         echo "Needs bash 4.1+ and a regular user (bash ignores PS4 from the environment as root); see the header."
         failures=$((failures + 1))
         return

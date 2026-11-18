@@ -25,8 +25,8 @@ list_sessions() {
     local id
     for id in $(loginctl list-sessions --no-legend | awk '{print $1}'); do
         loginctl show-session "$id" -p Class -p Name -p Type -p Seat -p Active | awk -F= -v id="$id" '
-            { prop[$1] = substr($0, length($1) + 2) }
-            END { printf "%s\t%s\t%s\t%s\t%s\t%s\n", id, prop["Class"], prop["Name"], prop["Type"], prop["Seat"], prop["Active"] }'
+            { property[$1] = substr($0, length($1) + 2) }
+            END { printf "%s\t%s\t%s\t%s\t%s\t%s\n", id, property["Class"], property["Name"], property["Type"], property["Seat"], property["Active"] }'
     done
 }
 
@@ -44,7 +44,7 @@ check() {
 user_name="$(sed -n 's/^AutomaticLogin *= *//p' "$ROOT/etc/gdm3/custom.conf" 2>/dev/null | tail -1 || true)"
 [[ -n "$user_name" ]] || { echo "Auto-login not configured in GDM; nothing to do."; exit 0; }
 
-for ((i = 0; i < WINDOW_SECONDS / INTERVAL; i++)); do
+for ((attempt = 0; attempt < WINDOW_SECONDS / INTERVAL; attempt++)); do
     check "$user_name"
     sleep "$INTERVAL"
 done

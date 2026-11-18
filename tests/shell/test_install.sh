@@ -13,7 +13,7 @@ user() {
     mkdir -p "$HOME"
     unset XDG_DATA_HOME XDG_CONFIG_HOME
     DATA="$HOME/.local/share"
-    CONFIG="$HOME/.config"
+    CONFIGURATION_FOLDER="$HOME/.config"
     stub id 'echo 1000'
     stub python3
     stub pkexec
@@ -21,26 +21,26 @@ user() {
     stub update-desktop-database
 }
 
-app() { echo "$DATA/$NAME"; }
+application_folder() { echo "$DATA/$NAME"; }
 icon() { echo "$DATA/icons/hicolor/512x512/apps/$NAME.png"; }
 launcher() { echo "$DATA/applications/br.app.VirtualMonitor.desktop"; }
 named_launcher() { echo "$DATA/applications/$NAME.desktop"; }
-autostart() { echo "$CONFIG/autostart/$NAME-restore.desktop"; }
+autostart() { echo "$CONFIGURATION_FOLDER/autostart/$NAME-restore.desktop"; }
 command_file() { echo "$HOME/.local/bin/$NAME"; }
-mode_file() { echo "$CONFIG/$NAME/mode.json"; }
-legacy_app() { echo "$DATA/$LEGACY"; }
+mode_file() { echo "$CONFIGURATION_FOLDER/$NAME/mode.json"; }
+legacy_application_folder() { echo "$DATA/$LEGACY"; }
 legacy_icon() { echo "$DATA/icons/hicolor/512x512/apps/$LEGACY.png"; }
 legacy_launcher() { echo "$DATA/applications/$LEGACY.desktop"; }
-legacy_autostart() { echo "$CONFIG/autostart/monitor-virtual-restaurar.desktop"; }
-legacy_mode_file() { echo "$CONFIG/$LEGACY/modo.json"; }
+legacy_autostart() { echo "$CONFIGURATION_FOLDER/autostart/monitor-virtual-restaurar.desktop"; }
+legacy_mode_file() { echo "$CONFIGURATION_FOLDER/$LEGACY/modo.json"; }
 
 # Leaves an old Portuguese-named install behind
 make_legacy() {
-    mkdir -p "$(legacy_app)" "$(dirname "$(legacy_icon)")" "$(dirname "$(legacy_launcher)")" "$CONFIG/autostart"
-    echo old > "$(legacy_app)/monitor-virtual.py"
+    mkdir -p "$(legacy_application_folder)" "$(dirname "$(legacy_icon)")" "$(dirname "$(legacy_launcher)")" "$CONFIGURATION_FOLDER/autostart"
+    echo old > "$(legacy_application_folder)/monitor-virtual.py"
     echo old > "$(legacy_icon)"
     echo old > "$(legacy_launcher)"
-    printf '[Desktop Entry]\nType=Application\nExec=python3 "%s/monitor-virtual.py" --restore\n' "$(legacy_app)" > "$(legacy_autostart)"
+    printf '[Desktop Entry]\nType=Application\nExec=python3 "%s/monitor-virtual.py" --restore\n' "$(legacy_application_folder)" > "$(legacy_autostart)"
 }
 
 echo "# options"
@@ -64,7 +64,7 @@ stub id 'echo 0'
 run_script "$SCRIPT"
 status_is 1 "fails as root"
 contains "$ERRORS" "Run without sudo" "asks to run without sudo"
-check "as root installs nothing" test ! -e "$(app)"
+check "as root installs nothing" test ! -e "$(application_folder)"
 
 echo "# user install"
 user
@@ -72,17 +72,17 @@ mkdir -p "$DATA/applications"
 echo old > "$(named_launcher)"
 run_script "$SCRIPT"
 status_is 0 "installs into ~/.local/share"
-check "copies the executable launcher" test -x "$(app)/$NAME.py"
-check "copies the executable EDID installer" test -x "$(app)/scripts/install-edid.sh"
-check "copies the executable auto-login script" test -x "$(app)/scripts/auto-login.sh"
+check "copies the executable launcher" test -x "$(application_folder)/$NAME.py"
+check "copies the executable EDID installer" test -x "$(application_folder)/scripts/install-edid.sh"
+check "copies the executable auto-login script" test -x "$(application_folder)/scripts/auto-login.sh"
 for module in "$PROJECT"/virtual_monitor/*.py; do
-    check "copies virtual_monitor/$(basename "$module")" cmp "$module" "$(app)/virtual_monitor/$(basename "$module")"
+    check "copies virtual_monitor/$(basename "$module")" cmp "$module" "$(application_folder)/virtual_monitor/$(basename "$module")"
 done
-check "does not copy tests nor EDIDs" test ! -e "$(app)/tests" -a ! -e "$(app)/edid"
-check "does not copy Python caches" test ! -e "$(app)/virtual_monitor/__pycache__"
-check "modules are not executable" test ! -x "$(app)/virtual_monitor/displays.py"
+check "does not copy tests nor EDIDs" test ! -e "$(application_folder)/tests" -a ! -e "$(application_folder)/edid"
+check "does not copy Python caches" test ! -e "$(application_folder)/virtual_monitor/__pycache__"
+check "modules are not executable" test ! -x "$(application_folder)/virtual_monitor/displays.py"
 check "installs the icon" cmp "$PROJECT/assets/$NAME.png" "$(icon)"
-check "launcher points to the app" grep -qx "Exec=python3 \"$(app)/$NAME.py\"" "$(launcher)"
+check "launcher points to the app" grep -qx "Exec=python3 \"$(application_folder)/$NAME.py\"" "$(launcher)"
 check "launcher points to the icon" grep -qx "Icon=$(icon)" "$(launcher)"
 check "launcher keeps the name" grep -qx "Name=Virtual monitor" "$(launcher)"
 check "removes the launcher named after the command" test ! -e "$(named_launcher)"
@@ -97,18 +97,18 @@ contains "$OUTPUT" "Command installed: $(command_file)" "says where the command 
 contains "$OUTPUT" "$HOME/.local/bin is not in PATH yet" "warns when ~/.local/bin is not in PATH"
 stub python3 'exit 7'
 : > "$CALLS"
-PATH="$STUBS:$BIN" "$(command_file)" --list "two words" > /dev/null 2>&1
+PATH="$STUBS:$TOOLS_FOLDER" "$(command_file)" --list "two words" > /dev/null 2>&1
 check "command passes its exit status" test $? -eq 7
-called "python3 $(app)/$NAME.py --list two words"
+called "python3 $(application_folder)/$NAME.py --list two words"
 stub python3
 if PATH=/usr/bin:/bin command -v python3 > /dev/null; then
-    check "installed app works outside the project" env -i PATH=/usr/bin:/bin python3 "$(app)/$NAME.py" --help
+    check "installed app works outside the project" env -i PATH=/usr/bin:/bin python3 "$(application_folder)/$NAME.py" --help
 fi
 
-echo 'old' > "$(app)/leftover.py"
+echo 'old' > "$(application_folder)/leftover.py"
 run_script "$SCRIPT"
 status_is 0 "reinstalls over the previous one"
-check "reinstall cleans old files" test ! -e "$(app)/leftover.py"
+check "reinstall cleans old files" test ! -e "$(application_folder)/leftover.py"
 
 user
 EXTRA_PATH="$HOME/.local/bin"
@@ -122,7 +122,7 @@ export XDG_DATA_HOME="$CASE/data" XDG_CONFIG_HOME="$CASE/config"
 DATA="$XDG_DATA_HOME"
 run_script "$SCRIPT"
 status_is 0 "respects XDG_DATA_HOME"
-check "installs into XDG_DATA_HOME" test -f "$(app)/$NAME.py"
+check "installs into XDG_DATA_HOME" test -f "$(application_folder)/$NAME.py"
 
 user
 export XDG_DATA_HOME="relative"
@@ -148,13 +148,13 @@ mkdir -p "$(dirname "$(legacy_mode_file)")"
 echo '{"connector": "HDMI-A-1", "mode": "old"}' > "$(legacy_mode_file)"
 run_script "$SCRIPT"
 status_is 0 "installs over an old install"
-check "removes the old app folder" test ! -e "$(legacy_app)"
+check "removes the old app folder" test ! -e "$(legacy_application_folder)"
 check "removes the old icon" test ! -e "$(legacy_icon)"
 check "removes the old launcher" test ! -e "$(legacy_launcher)"
 check "removes the old autostart" test ! -e "$(legacy_autostart)"
 check "copies the remembered resolution to mode.json" cmp "$(legacy_mode_file)" "$(mode_file)"
 check "keeps the old modo.json" test -f "$(legacy_mode_file)"
-check "creates the new autostart with --restore" grep -qx "Exec=python3 \"$(app)/$NAME.py\" --restore" "$(autostart)"
+check "creates the new autostart with --restore" grep -qx "Exec=python3 \"$(application_folder)/$NAME.py\" --restore" "$(autostart)"
 check "new autostart is hidden from menus" grep -qx "NoDisplay=true" "$(autostart)"
 contains "$OUTPUT" "Autostart migrated" "says it migrated the autostart"
 contains "$OUTPUT" "Migrated: " "says it migrated the resolution"
@@ -188,7 +188,7 @@ stub python3 'exit 1'
 run_script "$SCRIPT"
 status_is 1 "fails without GTK 4"
 contains "$ERRORS" "sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1" "shows the apt install"
-check "without GTK installs nothing" test ! -e "$(app)"
+check "without GTK installs nothing" test ! -e "$(application_folder)"
 
 user
 rm "$STUBS/python3"
@@ -216,14 +216,14 @@ echo "Exec=existing" > "$(autostart)"
 DATA="$CASE/destination"
 run_script "$SCRIPT" --skip-check --dest-dir "$CASE/destination"
 status_is 0 "installs into --dest-dir"
-check "uses --dest-dir" test -x "$(app)/$NAME.py"
-check "--dest-dir points the launcher there" grep -qx "Exec=python3 \"$(app)/$NAME.py\"" "$(launcher)"
+check "uses --dest-dir" test -x "$(application_folder)/$NAME.py"
+check "--dest-dir points the launcher there" grep -qx "Exec=python3 \"$(application_folder)/$NAME.py\"" "$(launcher)"
 not_called gtk-update-icon-cache
 not_called update-desktop-database
 check "--dest-dir leaves the autostart alone" grep -qx "Exec=existing" "$(autostart)"
 check "--dest-dir installs no command" test ! -e "$(command_file)"
 check "--dest-dir does not migrate modo.json" test ! -e "$(mode_file)"
-check "--dest-dir leaves the old autostart" test -f "$CONFIG/autostart/monitor-virtual-restaurar.desktop"
+check "--dest-dir leaves the old autostart" test -f "$CONFIGURATION_FOLDER/autostart/monitor-virtual-restaurar.desktop"
 check "--dest-dir leaves the old app of the user" test -d "$HOME/.local/share/$LEGACY"
 
 cd "$CASE" || exit 1
@@ -236,9 +236,9 @@ user
 DATA="$CASE/dev"
 run_script "$SCRIPT" --skip-check --dev --dest-dir "$DATA"
 status_is 0 "installs in dev mode"
-check "dev links the launcher" test -L "$(app)/$NAME.py"
-check "dev links the modules" test -L "$(app)/virtual_monitor/displays.py"
-check "dev points to the project" test "$(readlink "$(app)/virtual_monitor/displays.py" 2>/dev/null || ls -l "$(app)/virtual_monitor/displays.py" | sed 's/.* -> //')" = "$PROJECT/virtual_monitor/displays.py"
+check "dev links the launcher" test -L "$(application_folder)/$NAME.py"
+check "dev links the modules" test -L "$(application_folder)/virtual_monitor/displays.py"
+check "dev points to the project" test "$(readlink "$(application_folder)/virtual_monitor/displays.py" 2>/dev/null || ls -l "$(application_folder)/virtual_monitor/displays.py" | sed 's/.* -> //')" = "$PROJECT/virtual_monitor/displays.py"
 
 copy_project() {
     mkdir -p "$1"
@@ -271,7 +271,7 @@ contains "$ERRORS" "Missing file: assets/$NAME.png" "says which file is missing"
 echo "# uninstall"
 user
 run_script "$SCRIPT"
-mkdir -p "$CONFIG/autostart" "$CONFIG/$NAME"
+mkdir -p "$CONFIGURATION_FOLDER/autostart" "$CONFIGURATION_FOLDER/$NAME"
 echo "x" > "$(autostart)"
 echo "{}" > "$(mode_file)"
 make_legacy
@@ -279,32 +279,32 @@ echo old > "$(named_launcher)"
 : > "$CALLS"
 run_script "$SCRIPT" --uninstall
 status_is 0 "removes everything"
-check "app removed" test ! -e "$(app)"
+check "app removed" test ! -e "$(application_folder)"
 check "icon removed" test ! -e "$(icon)"
 check "launcher removed" test ! -e "$(launcher)"
 check "launcher named after the command removed" test ! -e "$(named_launcher)"
 check "autostart removed" test ! -e "$(autostart)"
 check "command removed" test ! -e "$(command_file)"
 contains "$OUTPUT" "Removed: $(command_file)" "says the command was removed"
-check "old app removed" test ! -e "$(legacy_app)"
+check "old app removed" test ! -e "$(legacy_application_folder)"
 check "old icon removed" test ! -e "$(legacy_icon)"
 check "old launcher removed" test ! -e "$(legacy_launcher)"
 check "old autostart removed" test ! -e "$(legacy_autostart)"
 check "remembered choice stays" test -f "$(mode_file)"
 called "update-desktop-database $DATA/applications"
-contains "$OUTPUT" "The remembered resolution stays in $CONFIG/$NAME" "says where the choice stayed"
+contains "$OUTPUT" "The remembered resolution stays in $CONFIGURATION_FOLDER/$NAME" "says where the choice stayed"
 
 run_script "$SCRIPT" --uninstall
 status_is 0 "uninstalling again does not fail"
 
 user
-mkdir -p "$CONFIG/autostart"
+mkdir -p "$CONFIGURATION_FOLDER/autostart"
 echo "x" > "$(autostart)"
 DATA="$CASE/destination"
 run_script "$SCRIPT" --skip-check --dest-dir "$DATA"
 run_script "$SCRIPT" --uninstall --dest-dir "$DATA"
 status_is 0 "removes from --dest-dir"
-check "removes the app from --dest-dir" test ! -e "$(app)"
+check "removes the app from --dest-dir" test ! -e "$(application_folder)"
 check "--dest-dir does not remove the user autostart" test -f "$(autostart)"
 not_contains "$OUTPUT" "Removed: $(command_file)" "--dest-dir does not mention the command"
 

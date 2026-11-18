@@ -338,9 +338,9 @@ class CommandBackendsTest(unittest.TestCase):
         if variable:
             cases.append(({}, f"/usr/bin/{tool}", f"{variable} is not set"))
 
-        for environ, which, expected in cases:
-            with self.subTest(backend_class=backend_class.name, environment=environ, which=which):
-                with mock.patch.dict("os.environ", environ, clear=True), mock.patch("shutil.which", return_value=which):
+        for environment, which, expected in cases:
+            with self.subTest(backend_class=backend_class.name, environment=environment, which=which):
+                with mock.patch.dict("os.environ", environment, clear=True), mock.patch("shutil.which", return_value=which):
                     self.assertEqual(backend_class.requirement(), expected)
                     self.assertIs(backend_class.available(), not expected)
 
@@ -480,7 +480,7 @@ class MutterBackendTest(unittest.TestCase):
         fake_gi.DBusProxy.next = RuntimeError("no bus")
         self.assertEqual(displays.MutterBackend.requirement(), "no session bus (no bus)")
 
-    def test_init_auto_starts(self):
+    def test_constructor_starts_the_proxy(self):
         backend = displays.MutterBackend()
         self.assertIs(backend.proxy, self.proxy)
         self.assertEqual(fake_gi.DBusProxy.calls[-1][1], "none")
@@ -563,13 +563,13 @@ class DetectTest(unittest.TestCase):
             )
 
     def test_probe_catches_a_failing_constructor(self):
-        class FailingInit(ProbeBackend):
+        class FailingConstructor(ProbeBackend):
             name = "FailingInit"
 
             def __init__(self):
                 raise RuntimeError("DBus refused")
 
-        self.assertEqual(displays.probe(FailingInit), (None, "DBus refused"))
+        self.assertEqual(displays.probe(FailingConstructor), (None, "DBus refused"))
 
     def test_backend_order_prefers_native_tools(self):
         self.assertEqual(
@@ -585,7 +585,7 @@ class DetectTest(unittest.TestCase):
 
 
 class ConnectorTest(unittest.TestCase):
-    def cmdline(self, text):
+    def command_line(self, text):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         path = Path(temporary.name) / "cmdline"
@@ -595,33 +595,33 @@ class ConnectorTest(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_reads_connector_from_cmdline(self):
-        self.cmdline("root=/dev/mmcblk0p1 drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin video=HDMI-A-1:e\n")
+    def test_reads_connector_from_the_command_line(self):
+        self.command_line("root=/dev/mmcblk0p1 drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin video=HDMI-A-1:e\n")
         self.assertEqual(displays.command_line_connector(), "HDMI-A-1")
 
-    def test_cmdline_without_edid(self):
-        self.cmdline("root=/dev/sda1 quiet")
+    def test_command_line_without_edid(self):
+        self.command_line("root=/dev/sda1 quiet")
         self.assertIsNone(displays.command_line_connector())
 
-    def test_unreadable_cmdline(self):
-        self.cmdline(None)
+    def test_unreadable_command_line(self):
+        self.command_line(None)
         self.assertIsNone(displays.command_line_connector())
 
     def test_picks_edid_connector_by_normalized_name(self):
-        self.cmdline("drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin")
+        self.command_line("drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin")
         backend = FakeBackend({"DP-1": [], "HDMI-1": []})
         self.assertEqual(displays.pick_connector(backend), "HDMI-1")
 
     def test_falls_back_to_first_when_edid_connector_absent(self):
-        self.cmdline("drm.edid_firmware=HDMI-A-2:edid/ultrawide.bin")
+        self.command_line("drm.edid_firmware=HDMI-A-2:edid/ultrawide.bin")
         self.assertEqual(displays.pick_connector(FakeBackend({"DP-1": [], "HDMI-1": []})), "DP-1")
 
     def test_first_connector_without_edid(self):
-        self.cmdline("quiet")
+        self.command_line("quiet")
         self.assertEqual(displays.pick_connector(FakeBackend({"DP-1": [], "HDMI-1": []})), "DP-1")
 
     def test_no_connectors(self):
-        self.cmdline("drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin")
+        self.command_line("drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin")
         self.assertIsNone(displays.pick_connector(FakeBackend({})))
 
 

@@ -42,7 +42,7 @@ class Backend(displays.Backend):
 
 
 def titles(widgets):
-    return [widget.init_properties.get("title") for widget in widgets]
+    return [widget.constructor_properties.get("title") for widget in widgets]
 
 
 class WindowTestCase(unittest.TestCase):
@@ -59,21 +59,21 @@ class WindowTestCase(unittest.TestCase):
                 ]
             }
         )
-        self.cmdline = "HDMI-A-1"
+        self.command_line = "HDMI-A-1"
         self.output = "HDMI-A-1"
         self.installed = self.temporary / "installed.bin"
         patches = [
             mock.patch.object(edid, "INSTALLED", self.installed),
             mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.temporary / "config")}),
             mock.patch.object(displays, "detect", side_effect=lambda: self.backend),
-            mock.patch.object(displays, "command_line_connector", side_effect=lambda: self.cmdline),
+            mock.patch.object(displays, "command_line_connector", side_effect=lambda: self.command_line),
             mock.patch.object(edid_setup, "target_output", side_effect=lambda: self.output),
             mock.patch("tempfile.mkdtemp", side_effect=self.mkdtemp),
         ]
         for patcher in patches:
             patcher.start()
             self.addCleanup(patcher.stop)
-        self.app = fake_gi.Adw.Application("test")
+        self.application = fake_gi.Adw.Application("test")
 
     def mkdtemp(self, prefix):
         path = self.temporary / f"{prefix}x"
@@ -81,15 +81,15 @@ class WindowTestCase(unittest.TestCase):
         return str(path)
 
     def window(self):
-        return window_module.Window(self.app)
+        return window_module.Window(self.application)
 
 
 class ModuleTest(unittest.TestCase):
     def test_the_launcher_is_named_after_the_application_id(self):
         # Wayland docks match the window to its launcher by this name; a mismatch shows a generic icon
         install = (Path(__file__).parent.parent / "install.sh").read_text()
-        self.assertIn(f'APP_ID="{window_module.APP_ID}"', install)
-        self.assertIn('LAUNCHER="$DATA/applications/$APP_ID.desktop"', install)
+        self.assertIn(f'APPLICATION_ID="{window_module.APPLICATION_ID}"', install)
+        self.assertIn('LAUNCHER="$DATA/applications/$APPLICATION_ID.desktop"', install)
 
     def test_requires_gtk4_and_libadwaita(self):
         fake_gi.install()
@@ -99,26 +99,26 @@ class ModuleTest(unittest.TestCase):
         self.assertEqual(fake_gi.gi.versions, {"Gtk": "4.0", "Adw": "1"})
 
     def test_install_script_ships_with_the_app(self):
-        self.assertEqual(window_module.INSTALL_SCRIPT, ROOT / "scripts" / "install-edid.sh")
-        self.assertTrue(window_module.INSTALL_SCRIPT.is_file())
+        self.assertEqual(edid_setup.INSTALL_SCRIPT, ROOT / "scripts" / "install-edid.sh")
+        self.assertTrue(edid_setup.INSTALL_SCRIPT.is_file())
 
 
 class LayoutTest(WindowTestCase):
     def test_window_properties(self):
         window = self.window()
-        properties = window.init_properties
+        properties = window.constructor_properties
 
-        self.assertIs(properties["application"], self.app)
+        self.assertIs(properties["application"], self.application)
         self.assertEqual((properties["title"], properties["default_width"], properties["default_height"]), ("Virtual monitor", 520, 840))
 
     def test_main_page_has_status_and_resolution(self):
         window = self.window()
         main, edid_page = window.navigation.children
-        view = main.init_properties["child"]
+        view = main.constructor_properties["child"]
 
         self.assertIs(window.content, window.toasts)
         self.assertIs(window.toasts.child, window.navigation)
-        self.assertEqual((main.init_properties["title"], main.init_properties["tag"]), ("Virtual monitor", "main"))
+        self.assertEqual((main.constructor_properties["title"], main.constructor_properties["tag"]), ("Virtual monitor", "main"))
         self.assertEqual(len(view.top_bars), 1)
         self.assertEqual(titles(view.content.children), ["Status", "Current mode", "Resolution"])
         self.assertIs(edid_page, window.edid_page)
@@ -126,12 +126,12 @@ class LayoutTest(WindowTestCase):
 
     def test_edid_page_has_its_own_header(self):
         window = self.window()
-        view = window.edid_page.init_properties["child"]
+        view = window.edid_page.constructor_properties["child"]
         (group,) = view.content.children
 
-        self.assertEqual((window.edid_page.init_properties["title"], window.edid_page.init_properties["tag"]), ("Virtual EDID", "edid"))
+        self.assertEqual((window.edid_page.constructor_properties["title"], window.edid_page.constructor_properties["tag"]), ("Virtual EDID", "edid"))
         self.assertEqual(len(view.top_bars), 1)
-        self.assertEqual(group.init_properties, {"description": window_module.EDID_HELP})
+        self.assertEqual(group.constructor_properties, {"description": window_module.EDID_HELP})
         self.assertEqual(group.children[0], window.modes_entry)
         self.assertIs(group.children[1], window.timings_row)
         self.assertEqual(group.children[2].suffixes, [window.install_button])
@@ -141,12 +141,12 @@ class LayoutTest(WindowTestCase):
         window.edid_row.emit("activated")
 
         self.assertTrue(window.edid_row.activatable)
-        self.assertEqual([suffix.init_properties.get("icon_name") for suffix in window.edid_row.suffixes], ["go-next-symbolic"])
+        self.assertEqual([suffix.constructor_properties.get("icon_name") for suffix in window.edid_row.suffixes], ["go-next-symbolic"])
         self.assertEqual(window.navigation.pushed, [window.edid_page])
 
     def test_status_rows(self):
         window = self.window()
-        display, edid_row = window.display_row.init_properties, window.edid_row.init_properties
+        display, edid_row = window.display_row.constructor_properties, window.edid_row.constructor_properties
 
         self.assertEqual((display["title"], edid_row["title"]), ("Display", "Virtual EDID"))
         self.assertEqual(window.display_row.subtitle, "X11 (xrandr) · HDMI-1")
@@ -154,7 +154,7 @@ class LayoutTest(WindowTestCase):
 
     def test_status_without_session_or_edid(self):
         self.backend = None
-        self.cmdline = None
+        self.command_line = None
         window = self.window()
 
         self.assertIsNone(window.connector)
@@ -173,11 +173,11 @@ class LayoutTest(WindowTestCase):
         window = self.window()
         preferred, current = window.mode_rows
 
-        self.assertEqual((preferred.init_properties["title"], preferred.init_properties["subtitle"]), ("3440×1440", "59.24 Hz"))
+        self.assertEqual((preferred.constructor_properties["title"], preferred.constructor_properties["subtitle"]), ("3440×1440", "59.24 Hz"))
         self.assertTrue(preferred.activatable)
-        self.assertEqual([suffix.init_properties.get("label") for suffix in preferred.suffixes], ["default of the EDID"])
+        self.assertEqual([suffix.constructor_properties.get("label") for suffix in preferred.suffixes], ["default of the EDID"])
         self.assertEqual(preferred.suffixes[0].css_classes, ["dim-label"])
-        self.assertEqual([suffix.init_properties.get("icon_name") for suffix in current.suffixes], ["object-select-symbolic"])
+        self.assertEqual([suffix.constructor_properties.get("icon_name") for suffix in current.suffixes], ["object-select-symbolic"])
         self.assertEqual(window.modes_group.children, [window.remember, preferred, current])
 
     def test_remember_is_on_by_default(self):
@@ -208,7 +208,7 @@ class LayoutTest(WindowTestCase):
 
     def test_timings_preview_follows_the_modes(self):
         window = self.window()
-        self.assertEqual(window.timings_row.init_properties["title"], "Timings")
+        self.assertEqual(window.timings_row.constructor_properties["title"], "Timings")
         self.assertIn("property", window.timings_row.css_classes)
         self.assertEqual(
             window.timings_row.subtitle,
@@ -240,8 +240,8 @@ class CurrentModeTest(WindowTestCase):
         window = self.window()
 
         self.assertEqual(window.current.id, "2560x1080@59.98")
-        self.assertEqual(window.scale_row.init_properties["title"], "Scale")
-        self.assertEqual(window.scale_row.init_properties["model"].strings, [label for label, _value in window_module.SCALES])
+        self.assertEqual(window.scale_row.constructor_properties["title"], "Scale")
+        self.assertEqual(window.scale_row.constructor_properties["model"].strings, [label for label, _value in window_module.SCALES])
         self.assertEqual(window.scale_row.selected, 0)
         self.assertFalse(hasattr(window, "rotation_row"))
         self.assertEqual(window.scale_row.subtitle, "100% at 2560×1080")
@@ -316,7 +316,7 @@ class CurrentModeTest(WindowTestCase):
         self.backend.error = RuntimeError("refused")
         window.scale_row.set_selected(2)
 
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "Failed: refused")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Failed: refused")
         self.assertIsNone(choice.load())
 
     def test_setting_without_current_mode_does_nothing(self):
@@ -347,8 +347,8 @@ class ModeTest(WindowTestCase):
         dialog = self.switch(window)
 
         self.assertEqual(self.backend.applied, [("HDMI-1", "3440x1440@59.24", False)])
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "3440×1440 applied")
-        self.assertEqual(dialog.init_properties, {"heading": "Keep this resolution?", "body": window_module.countdown_text(15)})
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "3440×1440 applied")
+        self.assertEqual(dialog.constructor_properties, {"heading": "Keep this resolution?", "body": window_module.countdown_text(15)})
         self.assertEqual(dialog.responses, [("revert", "Go back"), ("keep", "Keep")])
         self.assertEqual(dialog.appearances, {"keep": "suggested"})
         self.assertEqual(dialog.close_response, "revert")
@@ -385,14 +385,14 @@ class ModeTest(WindowTestCase):
         self.backend.error = RuntimeError("monitors.xml")
         dialog.emit("response", "keep")
 
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "Failed: monitors.xml")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Failed: monitors.xml")
 
     def test_go_back_restores_the_previous_mode(self):
         window = self.window()
         self.switch(window).emit("response", "revert")
 
         self.assertEqual(self.backend.applied[-1], ("HDMI-1", "2560x1080@59.98", False))
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "Previous resolution restored")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Previous resolution restored")
         self.assertIsNone(choice.load())
 
     def test_failed_go_back_shows_toast(self):
@@ -401,7 +401,7 @@ class ModeTest(WindowTestCase):
         self.backend.error = RuntimeError("no output")
         dialog.emit("response", "revert")
 
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "Failed: no output")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Failed: no output")
 
     def test_countdown_goes_back_when_nobody_answers(self):
         window = self.window()
@@ -479,7 +479,7 @@ class ModeTest(WindowTestCase):
         self.backend.error = RuntimeError("xrandr: Configure crtc 0 failed")
         window.mode_rows[0].emit("activated")
 
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "Failed: xrandr: Configure crtc 0 failed")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Failed: xrandr: Configure crtc 0 failed")
         self.assertEqual(fake_gi.GLib.timeouts, [])
         self.assertEqual(fake_gi.AlertDialog.created, [])
         self.assertIsNone(choice.load())
@@ -501,10 +501,10 @@ class InstallTest(WindowTestCase):
         window = self.window()
         self.click_install(window)
         (process,) = fake_gi.Subprocess.created
-        written = Path(process.argv[-2])
+        written = Path(process.command[-2])
 
-        self.assertEqual(process.argv[:3], ["pkexec", "bash", str(window_module.INSTALL_SCRIPT)])
-        self.assertEqual(process.argv[-1], "HDMI-A-1")
+        self.assertEqual(process.command[:3], ["pkexec", "bash", str(edid_setup.INSTALL_SCRIPT)])
+        self.assertEqual(process.command[-1], "HDMI-A-1")
         self.assertEqual(written.name, "virtual-monitor.bin")
         self.assertTrue(written.parent.name.startswith("edid-"))
         self.assertEqual(written.read_bytes(), edid.generate(list(edid.DEFAULT_MODES))[1])
@@ -514,14 +514,14 @@ class InstallTest(WindowTestCase):
     def test_uses_modes_typed_by_the_user(self):
         window = self.window()
         self.click_install(window, "  1920x1080@148.5   1280x720@74.25 ")
-        written = Path(fake_gi.Subprocess.created[0].argv[-2])
+        written = Path(fake_gi.Subprocess.created[0].command[-2])
 
         self.assertEqual(written.read_bytes(), edid.generate(["1920x1080@148.5", "1280x720@74.25"])[1])
 
     def test_modes_without_clock_install_on_safe_clocks(self):
         window = self.window()
         self.click_install(window, "2360x1640 1920x1200")
-        written = Path(fake_gi.Subprocess.created[0].argv[-2])
+        written = Path(fake_gi.Subprocess.created[0].command[-2])
 
         self.assertEqual(written.read_bytes(), edid.generate(["2360x1640@297", "1920x1200@200"])[1])
 
@@ -530,8 +530,8 @@ class InstallTest(WindowTestCase):
             with self.subTest(text=text):
                 window = self.window()
                 self.click_install(window, text)
-                self.assertIn(message, window.toasts.toasts[-1].init_properties["title"])
-                self.assertTrue(window.toasts.toasts[-1].init_properties["title"].startswith("Invalid EDID: "))
+                self.assertIn(message, window.toasts.toasts[-1].constructor_properties["title"])
+                self.assertTrue(window.toasts.toasts[-1].constructor_properties["title"].startswith("Invalid EDID: "))
                 self.assertEqual(fake_gi.Subprocess.created, [])
                 self.assertTrue(window.install_button.sensitive)
 
@@ -540,16 +540,16 @@ class InstallTest(WindowTestCase):
         window = self.window()
         self.click_install(window)
 
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], window_module.NO_FREE_OUTPUT)
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], window_module.NO_FREE_OUTPUT)
         self.assertEqual(fake_gi.Subprocess.created, [])
 
     def test_install_row_names_the_output(self):
         self.assertEqual(window_module.install_subtitle("DP-1"), "On DP-1. Asks for the administrator password.")
         self.assertEqual(window_module.install_subtitle(None), "No free video output found.")
         window = self.window()
-        view = window.edid_page.init_properties["child"]
+        view = window.edid_page.constructor_properties["child"]
         (group,) = view.content.children
-        self.assertEqual(group.children[2].init_properties["subtitle"], "On HDMI-A-1. Asks for the administrator password.")
+        self.assertEqual(group.children[2].constructor_properties["subtitle"], "On HDMI-A-1. Asks for the administrator password.")
 
     def test_cancelled_or_failed_install(self):
         window = self.window()
@@ -557,21 +557,21 @@ class InstallTest(WindowTestCase):
         fake_gi.Subprocess.created[0].finish(status=126)
 
         self.assertTrue(window.install_button.sensitive)
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "Install cancelled or failed")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Install cancelled or failed")
 
     def test_subprocess_error_counts_as_failure(self):
         window = self.window()
         self.click_install(window)
         fake_gi.Subprocess.created[0].finish(error="pkexec not found")
 
-        self.assertEqual(window.toasts.toasts[-1].init_properties["title"], "Install cancelled or failed")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Install cancelled or failed")
 
     def successful_install(self):
         window = self.window()
         self.click_install(window)
-        fake_gi.Subprocess.created[0].finish(status=0, stdout="Done\n")
+        fake_gi.Subprocess.created[0].finish(status=0, output="Done\n")
         (dialog,) = fake_gi.AlertDialog.created
-        return window, dialog.init_properties, dialog
+        return window, dialog.constructor_properties, dialog
 
     def test_success_asks_to_reboot(self):
         window, properties, dialog = self.successful_install()
@@ -585,8 +585,8 @@ class InstallTest(WindowTestCase):
     def test_success_marks_the_new_edid_as_installed(self):
         window = self.window()
         self.click_install(window)
-        self.installed.write_bytes(Path(fake_gi.Subprocess.created[0].argv[-2]).read_bytes())
-        fake_gi.Subprocess.created[0].finish(status=0, stdout="Done\n")
+        self.installed.write_bytes(Path(fake_gi.Subprocess.created[0].command[-2]).read_bytes())
+        fake_gi.Subprocess.created[0].finish(status=0, output="Done\n")
 
         self.assertEqual(window.install_button.label, "Installed")
         self.assertFalse(window.install_button.sensitive)
@@ -595,7 +595,7 @@ class InstallTest(WindowTestCase):
         _window, _properties, dialog = self.successful_install()
         dialog.emit("response", "reboot")
 
-        self.assertEqual(fake_gi.Subprocess.created[-1].argv, ["systemctl", "reboot"])
+        self.assertEqual(fake_gi.Subprocess.created[-1].command, ["systemctl", "reboot"])
         self.assertEqual(fake_gi.Subprocess.created[-1].flags, 0)
 
     def test_later_response_does_nothing(self):
@@ -614,15 +614,15 @@ class RunAsyncTest(unittest.TestCase):
         return fake_gi.Subprocess.created[-1]
 
     def test_success_passes_output(self):
-        self.start().finish(status=0, stdout="pronto")
+        self.start().finish(status=0, output="pronto")
         self.assertEqual(self.results, [(True, "pronto")])
 
     def test_failure_status(self):
-        self.start().finish(status=1, stdout="error")
+        self.start().finish(status=1, output="error")
         self.assertEqual(self.results, [(False, "error")])
 
     def test_missing_output_becomes_empty_text(self):
-        self.start().finish(status=0, stdout=None)
+        self.start().finish(status=0, output=None)
         self.assertEqual(self.results, [(True, "")])
 
     def test_glib_error(self):
@@ -632,36 +632,36 @@ class RunAsyncTest(unittest.TestCase):
 
 class AppTest(WindowTestCase):
     def test_activate_creates_and_presents_window_once(self):
-        app = window_module.App()
+        application = window_module.VirtualMonitorApplication()
 
-        self.assertEqual(app.application_id, "br.app.VirtualMonitor")
-        app.do_activate()
-        window = app.props.active_window
+        self.assertEqual(application.application_id, "br.app.VirtualMonitor")
+        application.do_activate()
+        window = application.props.active_window
         self.assertIsInstance(window, window_module.Window)
-        app.do_activate()
-        self.assertIs(app.props.active_window, window)
+        application.do_activate()
+        self.assertIs(application.props.active_window, window)
         self.assertEqual(window.presented_on, [None, None])
 
     def test_run_without_display_explains_and_fails(self):
         fake_gi.Gtk.displays[0] = False
-        apps_before = len(fake_gi.Application.created)
+        applications_before = len(fake_gi.Application.created)
         error_output = io.StringIO()
         with contextlib.redirect_stderr(error_output):
             self.assertEqual(window_module.run(), 1)
 
         self.assertEqual(error_output.getvalue(), window_module.NO_DISPLAY + "\n")
-        self.assertEqual(len(fake_gi.Application.created), apps_before)
+        self.assertEqual(len(fake_gi.Application.created), applications_before)
         self.assertEqual(fake_gi.GLib.prgnames, [])
 
     def test_run(self):
         self.assertEqual(window_module.run(), 0)
-        app = fake_gi.Application.created[-1]
+        application = fake_gi.Application.created[-1]
 
-        self.assertIsInstance(app, window_module.App)
-        self.assertEqual(app.run_arguments, [])
+        self.assertIsInstance(application, window_module.VirtualMonitorApplication)
+        self.assertEqual(application.run_arguments, [])
         self.assertEqual(fake_gi.GLib.prgnames, ["virtual-monitor"])
         self.assertEqual(fake_gi.Gtk.Window.default_icons, ["virtual-monitor"])
-        self.assertIsInstance(app.props.active_window, window_module.Window)
+        self.assertIsInstance(application.props.active_window, window_module.Window)
 
 
 if __name__ == "__main__":

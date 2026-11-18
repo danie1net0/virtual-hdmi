@@ -19,7 +19,8 @@
 #   UKI                 /etc/kernel/cmdline, then the UKI is built again with mkinitcpio -P or
 #                       kernel-install add; a UKI the machine did not build (a distribution's
 #                       ready kernel) holds its own command line, and the script stops untouched
-# With no boot image tool, it only copies the EDID: the kernel then reads it from /usr/lib/firmware.
+# With no boot image tool, it copies the EDID and sets the kernel parameters: the kernel then
+# reads the EDID from /usr/lib/firmware.
 # On NVIDIA it needs the open kernel modules (the only ones for RTX 50) with nvidia-drm.modeset=1.
 #
 # Usage (from the project folder):
@@ -58,7 +59,7 @@ ARMBIAN_ENVIRONMENT="$ROOT/boot/armbianEnv.txt"
 GRUB="$ROOT/etc/default/grub"
 GRUB_DROP_IN_FOLDER="$ROOT/etc/default/grub.d"
 GRUB_DROP_IN="$GRUB_DROP_IN_FOLDER/99-virtual-monitor.cfg"
-KERNELSTUB_CONFIG="$ROOT/etc/kernelstub/configuration"
+KERNELSTUB_CONFIGURATION="$ROOT/etc/kernelstub/configuration"
 UBOOT_DEFAULTS="$ROOT/etc/default/u-boot"
 EXTLINUX="$ROOT/boot/extlinux/extlinux.conf"
 KERNEL_COMMAND_LINE="$ROOT/etc/kernel/cmdline"
@@ -153,6 +154,7 @@ initcpio_has_edid() {
 
 check_boot_image() {
     [[ -z "$NO_BOOT_IMAGE" ]] || return 0
+
     echo "==> Checking that the EDID is in the image"
     if command -v lsinitrd >/dev/null 2>&1 && image_has_edid lsinitrd --kver "$KERNEL_VERSION"; then
         echo "    ok (lsinitrd)"
@@ -347,13 +349,13 @@ set_loader_parameters() {
 
 # Parameters of an earlier run, as kernelstub keeps them in its JSON configuration
 old_kernelstub_parameters() {
-    grep -oE "\"(drm\.edid_firmware=[^\"]*|video=${CONNECTOR}:[^\"]*)\"" "$KERNELSTUB_CONFIG" | tr -d '"' | sort -u | tr '\n' ' ' || true
+    grep -oE "\"(drm\.edid_firmware=[^\"]*|video=${CONNECTOR}:[^\"]*)\"" "$KERNELSTUB_CONFIGURATION" | tr -d '"' | sort -u | tr '\n' ' ' || true
 }
 
 set_kernelstub_parameters() {
     local old_parameters
     echo "==> Adjusting the kernel parameters with kernelstub"
-    keep_original "$KERNELSTUB_CONFIG"
+    keep_original "$KERNELSTUB_CONFIGURATION"
 
     # Remove earlier parameters of this setup and add the new ones
     old_parameters="$(old_kernelstub_parameters)"
@@ -362,7 +364,7 @@ set_kernelstub_parameters() {
 }
 
 uses_kernelstub() {
-    [[ -f "$KERNELSTUB_CONFIG" ]] && command -v kernelstub >/dev/null 2>&1
+    [[ -f "$KERNELSTUB_CONFIGURATION" ]] && command -v kernelstub >/dev/null 2>&1
 }
 
 set_kernel_parameters() {

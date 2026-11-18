@@ -30,8 +30,8 @@ from pathlib import Path
 KERNEL_COMMAND_LINE = Path("/proc/cmdline")
 MUTTER = ("org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig")
 TABLET_SCALE = 1.5
-TABLET_MIN_HEIGHT = 1500
-TABLET_MAX_ASPECT = 1.6
+TABLET_MINIMUM_HEIGHT = 1500
+TABLET_MAXIMUM_ASPECT = 1.6
 XFT_DPI_AT_1X = 96
 
 
@@ -60,7 +60,7 @@ class ModeChange:
 
 def auto_scale(width, height):
     """Desktop scale for a mode: TABLET_SCALE when it is tall and at most 16:10, as on a tablet; 1 otherwise."""
-    if height < TABLET_MIN_HEIGHT or width > height * TABLET_MAX_ASPECT:
+    if height < TABLET_MINIMUM_HEIGHT or width > height * TABLET_MAXIMUM_ASPECT:
         return 1.0
 
     return TABLET_SCALE
@@ -79,13 +79,13 @@ def command_message(error):
     return lines[0]
 
 
-def run(argv):
+def run(command):
     try:
-        return subprocess.run(argv, capture_output=True, text=True, check=True).stdout
+        return subprocess.run(command, capture_output=True, text=True, check=True).stdout
     except FileNotFoundError:
-        raise DisplayError(f"{argv[0]} is not installed") from None
+        raise DisplayError(f"{command[0]} is not installed") from None
     except subprocess.CalledProcessError as error:
-        raise DisplayError(f"{' '.join(argv[:2])}: {command_message(error)}") from None
+        raise DisplayError(f"{' '.join(command[:2])}: {command_message(error)}") from None
 
 
 def missing_variable(name):
@@ -267,6 +267,7 @@ def mutter_layout(monitors, logical, change):
     mode_of = {}
     for monitor in monitors:
         mode_of[monitor[0][0]] = next((mode[0] for mode in monitor[1] if mode[6].get("is-current")), None)
+
     mode_of[change.connector] = change.mode_id
     scale = mutter_scale(monitors, change)
 
@@ -505,11 +506,11 @@ def diagnose():
 def command_line_connector():
     """Connector of drm.edid_firmware at the current boot, or None."""
     try:
-        cmdline = KERNEL_COMMAND_LINE.read_text()
+        command_line = KERNEL_COMMAND_LINE.read_text()
     except OSError:
         return None
 
-    found = re.search(r"drm\.edid_firmware=([^:\s]+):", cmdline)
+    found = re.search(r"drm\.edid_firmware=([^:\s]+):", command_line)
     if not found:
         return None
 

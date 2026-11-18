@@ -3,20 +3,21 @@
 # install.sh
 # Installs the Virtual monitor for the current user: app, icon, menu launcher and the
 # virtual-monitor command in ~/.local/bin.
-# Run without sudo. Only the EDID install (inside the app) asks for a password.
+# Run without sudo. Only the EDID install and the automatic login ask for a password.
 #
 # Usage:
-#   bash install.sh [--dev] [--dest-dir DIR] [--skip-check] [--uninstall] [--help]
+#   bash install.sh [--dev] [--dest-dir FOLDER] [--skip-check] [--uninstall] [--help]
 
 set -euo pipefail
 
 NAME="virtual-monitor"
 PROJECT_FOLDER="$(cd "$(dirname "$0")" && pwd)"
 
-# Names used by the old Portuguese-named version, cleaned up on user installs
 # The launcher is named after the application id: Wayland docks find the icon of a window by its
-# app id, which GTK takes from the application id (APP_ID in virtual_monitor/window.py).
-APP_ID="br.app.VirtualMonitor"
+# application id, which GTK takes from the application id (APPLICATION_ID in virtual_monitor/window.py).
+APPLICATION_ID="br.app.VirtualMonitor"
+
+# Names used by the old Portuguese-named version, cleaned up on user installs
 LEGACY_NAME="monitor-virtual"
 LEGACY_AUTOSTART_NAME="monitor-virtual-restaurar"
 LEGACY_MODE_FILE="modo.json"
@@ -26,7 +27,7 @@ HELP="Virtual monitor installer
 Usage: bash install.sh [options]
 
   --dev             Link to this folder (development).
-  --dest-dir DIR    Install into another data folder, without updating caches or the autostart.
+  --dest-dir FOLDER Install into another data folder, without updating caches or the autostart.
   --skip-check      Do not check the app dependencies.
   --uninstall       Remove the app, icon, launcher, command and the resolution autostart.
   --help, -h        Show this help.
@@ -80,22 +81,22 @@ data_folder() {
 }
 
 DATA="$(data_folder)"
-CONFIG="$(xdg "${XDG_CONFIG_HOME:-}" "$HOME/.config")"
+CONFIGURATION_FOLDER="$(xdg "${XDG_CONFIG_HOME:-}" "$HOME/.config")"
 
-APP="$DATA/$NAME"
+APPLICATION_FOLDER="$DATA/$NAME"
 ICON="$DATA/icons/hicolor/512x512/apps/$NAME.png"
-LAUNCHER="$DATA/applications/$APP_ID.desktop"
+LAUNCHER="$DATA/applications/$APPLICATION_ID.desktop"
 # Name of the launcher up to v0.5.1, which Wayland docks did not match to the window
 OLD_LAUNCHER="$DATA/applications/$NAME.desktop"
-AUTOSTART="$CONFIG/autostart/$NAME-restore.desktop"
+AUTOSTART="$CONFIGURATION_FOLDER/autostart/$NAME-restore.desktop"
 COMMAND="$HOME/.local/bin/$NAME"
 
-LEGACY_APP="$DATA/$LEGACY_NAME"
+LEGACY_APPLICATION_FOLDER="$DATA/$LEGACY_NAME"
 LEGACY_ICON="$DATA/icons/hicolor/512x512/apps/$LEGACY_NAME.png"
 LEGACY_LAUNCHER="$DATA/applications/$LEGACY_NAME.desktop"
-LEGACY_AUTOSTART="$CONFIG/autostart/$LEGACY_AUTOSTART_NAME.desktop"
-LEGACY_MODE="$CONFIG/$LEGACY_NAME/$LEGACY_MODE_FILE"
-MODE="$CONFIG/$NAME/mode.json"
+LEGACY_AUTOSTART="$CONFIGURATION_FOLDER/autostart/$LEGACY_AUTOSTART_NAME.desktop"
+LEGACY_MODE="$CONFIGURATION_FOLDER/$LEGACY_NAME/$LEGACY_MODE_FILE"
+MODE="$CONFIGURATION_FOLDER/$NAME/mode.json"
 
 # With --dest-dir the install is standalone: it leaves the user's caches and autostart alone
 is_user_install() {
@@ -104,9 +105,11 @@ is_user_install() {
 
 update_caches() {
     is_user_install || return 0
+
     if command -v gtk-update-icon-cache >/dev/null 2>&1; then
         gtk-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || true
     fi
+
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$DATA/applications" 2>/dev/null || true
     fi
@@ -115,7 +118,7 @@ update_caches() {
 # Removes the files of the old Portuguese-named install (user installs only)
 remove_legacy() {
     is_user_install || return 0
-    rm -rf "$LEGACY_APP"
+    rm -rf "$LEGACY_APPLICATION_FOLDER"
     rm -f "$LEGACY_ICON" "$LEGACY_LAUNCHER" "$LEGACY_AUTOSTART"
 }
 
@@ -133,7 +136,7 @@ remove_command() {
 install_command() {
     is_user_install || return 0
     mkdir -p "$(dirname "$COMMAND")"
-    printf '#!/bin/sh\nexec python3 "%s/%s.py" "$@"\n' "$APP" "$NAME" > "$COMMAND"
+    printf '#!/bin/sh\nexec python3 "%s/%s.py" "$@"\n' "$APPLICATION_FOLDER" "$NAME" > "$COMMAND"
     chmod 755 "$COMMAND"
     echo "Command installed: $COMMAND"
     warn_path
@@ -146,16 +149,16 @@ warn_path() {
 }
 
 uninstall() {
-    rm -rf "$APP"
+    rm -rf "$APPLICATION_FOLDER"
     rm -f "$ICON" "$LAUNCHER" "$OLD_LAUNCHER"
     remove_command
     remove_autostart
     remove_legacy
     update_caches
 
-    echo "Removed: $APP, $ICON, $LAUNCHER"
+    echo "Removed: $APPLICATION_FOLDER, $ICON, $LAUNCHER"
     is_user_install && echo "Removed: $COMMAND"
-    echo "The remembered resolution stays in $CONFIG/$NAME; delete it if you no longer want it."
+    echo "The remembered resolution stays in $CONFIGURATION_FOLDER/$NAME; delete it if you no longer want it."
     exit 0
 }
 
@@ -175,13 +178,13 @@ check_dependencies() {
 # Copies one app file into the staging folder; --dev links it to this checkout instead
 stage_file() {
     local file="$1"
-    mkdir -p "$(dirname "$STAGING/app/$file")"
+    mkdir -p "$(dirname "$STAGING/application/$file")"
     if [[ $DEVELOPMENT -eq 1 ]]; then
-        ln -s "$PROJECT_FOLDER/$file" "$STAGING/app/$file"
+        ln -s "$PROJECT_FOLDER/$file" "$STAGING/application/$file"
         return
     fi
 
-    install -m 644 "$PROJECT_FOLDER/$file" "$STAGING/app/$file"
+    install -m 644 "$PROJECT_FOLDER/$file" "$STAGING/application/$file"
 }
 
 # Migrates the old Portuguese-named install: remembered resolution and autostart
@@ -199,7 +202,7 @@ migrate_legacy() {
 [Desktop Entry]
 Type=Application
 Name=Virtual monitor (restore resolution)
-Exec=python3 "$APP/$NAME.py" --restore
+Exec=python3 "$APPLICATION_FOLDER/$NAME.py" --restore
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 EOF
@@ -220,8 +223,8 @@ for file in "${FILES[@]}" "assets/$NAME.png" "data/$NAME.desktop"; do
 done
 
 # The destination cannot be inside this folder nor contain it
-case "$APP/" in "$PROJECT_FOLDER"/*) echo "Destination cannot be inside the project folder." >&2; exit 1 ;; esac
-case "$PROJECT_FOLDER/" in "$APP"/*) echo "Destination cannot contain the project folder." >&2; exit 1 ;; esac
+case "$APPLICATION_FOLDER/" in "$PROJECT_FOLDER"/*) echo "Destination cannot be inside the project folder." >&2; exit 1 ;; esac
+case "$PROJECT_FOLDER/" in "$APPLICATION_FOLDER"/*) echo "Destination cannot contain the project folder." >&2; exit 1 ;; esac
 
 check_dependencies
 
@@ -232,17 +235,18 @@ trap 'rm -rf "$STAGING"' EXIT
 for file in "${FILES[@]}"; do
     stage_file "$file"
 done
-[[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/app/$NAME.py" "$STAGING/app/scripts/install-edid.sh" "$STAGING/app/scripts/auto-login.sh"
+
+[[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/application/$NAME.py" "$STAGING/application/scripts/install-edid.sh" "$STAGING/application/scripts/auto-login.sh"
 
 install -m 644 "$PROJECT_FOLDER/assets/$NAME.png" "$STAGING/icon.png"
 
-sed -E "s#^Exec=.*#Exec=python3 \"$APP/$NAME.py\"#; s#^Icon=.*#Icon=$ICON#" \
+sed -E "s#^Exec=.*#Exec=python3 \"$APPLICATION_FOLDER/$NAME.py\"#; s#^Icon=.*#Icon=$ICON#" \
     "$PROJECT_FOLDER/data/$NAME.desktop" > "$STAGING/launcher.desktop"
 chmod 644 "$STAGING/launcher.desktop"
 
 mkdir -p "$(dirname "$ICON")" "$(dirname "$LAUNCHER")"
-rm -rf "$APP"
-mv "$STAGING/app" "$APP"
+rm -rf "$APPLICATION_FOLDER"
+mv "$STAGING/application" "$APPLICATION_FOLDER"
 mv -f "$STAGING/icon.png" "$ICON"
 mv -f "$STAGING/launcher.desktop" "$LAUNCHER"
 rm -f "$OLD_LAUNCHER"
@@ -253,7 +257,7 @@ install_command
 
 update_caches
 
-echo "App installed: $APP"
+echo "App installed: $APPLICATION_FOLDER"
 echo "Icon installed: $ICON"
 echo "Launcher installed: $LAUNCHER"
 echo "Open it from the menu (Virtual monitor), or run $NAME --help in a terminal."

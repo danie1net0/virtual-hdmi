@@ -24,7 +24,7 @@ class Backend(displays.Backend):
         self.last_change = change
 
 
-class ConfigTest(unittest.TestCase):
+class ConfigurationFolderTest(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -35,12 +35,12 @@ class ConfigTest(unittest.TestCase):
 
     def test_uses_absolute_xdg_config_home(self):
         with mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": "/xdg"}):
-            self.assertEqual(choice.config_folder(), Path("/xdg"))
+            self.assertEqual(choice.configuration_folder(), Path("/xdg"))
 
     def test_ignores_relative_or_missing_xdg(self):
         for environment in ({"XDG_CONFIG_HOME": "rel"}, {}):
             with self.subTest(environment=environment), mock.patch.dict("os.environ", environment, clear=True):
-                self.assertEqual(choice.config_folder(), self.home / ".config")
+                self.assertEqual(choice.configuration_folder(), self.home / ".config")
 
     def test_files(self):
         with mock.patch.dict("os.environ", {}, clear=True):
@@ -53,8 +53,8 @@ class SaveLoadTest(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.config = Path(temporary.name) / "config"
-        patcher = mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.config)})
+        self.configuration_folder = Path(temporary.name) / "config"
+        patcher = mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.configuration_folder)})
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -66,10 +66,10 @@ class SaveLoadTest(unittest.TestCase):
         choice.save("HDMI-1", "2560x1080@59.98")
 
         self.assertEqual(
-            json.loads((self.config / "virtual-monitor/mode.json").read_text()),
+            json.loads((self.configuration_folder / "virtual-monitor/mode.json").read_text()),
             {"connector": "HDMI-1", "mode": "2560x1080@59.98"},
         )
-        entry = (self.config / "autostart/virtual-monitor-restore.desktop").read_text()
+        entry = (self.configuration_folder / "autostart/virtual-monitor-restore.desktop").read_text()
         self.assertIn(f'Exec=python3 "{choice.LAUNCHER}" --restore\n', entry)
         self.assertTrue(entry.startswith("[Desktop Entry]\nType=Application\n"))
         self.assertIn("NoDisplay=true\n", entry)
@@ -83,7 +83,7 @@ class SaveLoadTest(unittest.TestCase):
         self.assertIsNone(choice.load())
 
     def test_load_broken_files(self):
-        path = self.config / "virtual-monitor/mode.json"
+        path = self.configuration_folder / "virtual-monitor/mode.json"
         path.parent.mkdir(parents=True)
         for text in ("{", "[]", '{"connector": "HDMI-1"}', "null"):
             with self.subTest(text=text):
@@ -93,7 +93,7 @@ class SaveLoadTest(unittest.TestCase):
 
 class SettingsTest(SaveLoadTest):
     def settings_path(self):
-        return self.config / "virtual-monitor/settings.json"
+        return self.configuration_folder / "virtual-monitor/settings.json"
 
     def test_without_file_there_are_no_settings(self):
         self.assertEqual(choice.load_settings(), {})

@@ -201,6 +201,7 @@ configure_greetd() {
     content="$(awk '/^\[initial_session\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$file")"
     rewrite "$file" "$content"
     echo "    $file"
+
     service="$(greetd_setting "$file" service greetd)"
     # greetd runs [initial_session] once per boot: restarting it opens the session only without the runfile
     REOPEN="sudo rm -f $(greetd_setting "$file" runfile /run/greetd.run) && $REOPEN"

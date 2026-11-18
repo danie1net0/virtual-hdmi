@@ -28,8 +28,8 @@ class SessionTestCase(unittest.TestCase):
         server.bind(str(path))
         return path
 
-    def missing(self, environ=None):
-        return session.missing_variables(environ or {}, 1000, self.home, self.runtime_root, self.x11)
+    def missing(self, environment=None):
+        return session.missing_variables(environment or {}, 1000, self.home, self.runtime_root, self.x11)
 
 
 class MissingVariablesTest(SessionTestCase):
@@ -58,14 +58,14 @@ class MissingVariablesTest(SessionTestCase):
         self.make_socket(self.runtime / "wayland-0")
         self.make_socket(self.x11 / "X0")
         (self.home / ".Xauthority").write_text("cookie")
-        environ = {
+        environment = {
             "XDG_RUNTIME_DIR": str(self.runtime),
             "DBUS_SESSION_BUS_ADDRESS": "unix:path=/elsewhere",
             "WAYLAND_DISPLAY": "wayland-9",
             "DISPLAY": ":5",
         }
 
-        self.assertEqual(self.missing(environ), {})
+        self.assertEqual(self.missing(environment), {})
 
     def test_keeps_a_set_xauthority(self):
         self.make_socket(self.x11 / "X0")
@@ -164,9 +164,9 @@ class AttachTest(SessionTestCase):
             self.assertTrue(session.attach())
             self.assertEqual(os.environ["WAYLAND_DISPLAY"], "wayland-0")
 
-        environ, uid, home = missing.call_args.args
+        environment, uid, home = missing.call_args.args
         self.assertEqual((uid, home), (os.getuid(), Path.home()))
-        self.assertIs(environ, os.environ)
+        self.assertIs(environment, os.environ)
 
     def test_without_a_session_reports_no_display(self):
         with mock.patch.dict("os.environ", {}, clear=True), mock.patch.object(session, "missing_variables", return_value={}):

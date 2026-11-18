@@ -23,23 +23,23 @@ CASE_PATTERN = re.compile(r"^\s*[^\s()]+\)\s*$")
 def quote_state(line, state):
     """Quote state (None, "'" or '"') at the end of the line, starting from state."""
     escaped = False
-    for char in line:
+    for character in line:
         if escaped:
             escaped = False
             continue
 
-        if char == "\\" and state != "'":
+        if character == "\\" and state != "'":
             escaped = True
             continue
 
-        if state is None and char == "#":
+        if state is None and character == "#":
             break
 
-        if state is None and char in "'\"":
-            state = char
+        if state is None and character in "'\"":
+            state = character
             continue
 
-        if char == state:
+        if character == state:
             state = None
     return state
 
@@ -106,8 +106,8 @@ def hits(trace_file):
     return found
 
 
-def main(argv):
-    trace, scripts = argv[0], [Path(script).resolve() for script in argv[1:]]
+def main(command_line_arguments):
+    trace, scripts = command_line_arguments[0], [Path(script).resolve() for script in command_line_arguments[1:]]
     executed = hits(trace)
     total = covered = 0
     for script in scripts:

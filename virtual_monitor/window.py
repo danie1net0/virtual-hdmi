@@ -22,9 +22,8 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from virtual_monitor import choice, displays, edid, edid_setup  # noqa: E402
 
-APP_ID = "br.app.VirtualMonitor"
+APPLICATION_ID = "br.app.VirtualMonitor"
 ICON_NAME = "virtual-monitor"
-INSTALL_SCRIPT = edid_setup.INSTALL_SCRIPT
 EDID_HELP = (
     "The virtual monitor makes a video output work with no monitor plugged in, with these modes: "
     "WIDTHxHEIGHT or WIDTHxHEIGHT@MHz, separated by spaces. Without MHz, the mode takes the standard "
@@ -45,18 +44,18 @@ class PendingMode:
     remaining: int = REVERT_SECONDS
 
 
-def run_async(argv, done):
+def run_async(command, done):
     """Runs argv without freezing the window and calls done(succeeded, output) at the end."""
-    process = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE)
+    process = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE)
 
     def finished(source, result):
         try:
-            _succeeded, stdout, _stderr = source.communicate_utf8_finish(result)
+            _succeeded, output, _errors = source.communicate_utf8_finish(result)
         except GLib.Error as error:
             done(False, error.message)
             return
 
-        done(source.get_exit_status() == 0, stdout or "")
+        done(source.get_exit_status() == 0, output or "")
 
     process.communicate_utf8_async(None, None, finished)
 
@@ -115,12 +114,13 @@ def install_label(installed):
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, app):
-        super().__init__(application=app, title="Virtual monitor", default_width=520, default_height=840)
+    def __init__(self, application):
+        super().__init__(application=application, title="Virtual monitor", default_width=520, default_height=840)
         self.backend = displays.detect()
         self.connector = None
         if self.backend:
             self.connector = displays.pick_connector(self.backend)
+
         self.mode_rows = []
         self.current = None
         self.pending = None
@@ -211,8 +211,10 @@ class Window(Adw.ApplicationWindow):
 
         for row in self.mode_rows:
             self.modes_group.remove(row)
+
         self.mode_rows = []
         self.current = None
+
         if self.connector:
             self.add_mode_rows()
 
@@ -230,7 +232,7 @@ class Window(Adw.ApplicationWindow):
             self.current = mode
 
     def sync_current(self):
-        """Shows the scale of the current mode, without applying them again."""
+        """Shows the scale of the current mode, without applying it again."""
         self.scale_row.set_sensitive(self.current is not None)
         if self.current is None:
             self.scale_row.set_subtitle("no current mode")
@@ -338,7 +340,7 @@ class Window(Adw.ApplicationWindow):
         if self.apply(pending.previous_id, False):
             self.toast("Previous resolution restored")
 
-    def on_scale(self, row, _pspec):
+    def on_scale(self, row, _property_specification):
         self.save_current_setting("scale", SCALES[row.get_selected()][1])
 
     def save_current_setting(self, name, value):
@@ -397,9 +399,9 @@ class Window(Adw.ApplicationWindow):
         Gio.Subprocess.new(["systemctl", "reboot"], Gio.SubprocessFlags.NONE)
 
 
-class App(Adw.Application):
+class VirtualMonitorApplication(Adw.Application):
     def __init__(self):
-        super().__init__(application_id=APP_ID)
+        super().__init__(application_id=APPLICATION_ID)
 
     def do_activate(self):
         (self.props.active_window or Window(self)).present()
@@ -419,4 +421,4 @@ def run():
     # The panel matches the window to the launcher by its class and icon name.
     GLib.set_prgname(ICON_NAME)
     Gtk.Window.set_default_icon_name(ICON_NAME)
-    return App().run([])
+    return VirtualMonitorApplication().run([])

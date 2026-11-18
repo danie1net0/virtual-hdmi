@@ -18,9 +18,9 @@ def decode_dtd(dtd):
     return {
         "clock_khz": (dtd[0] | dtd[1] << 8) * 10,
         "width": dtd[2] | (dtd[4] >> 4) << 8,
-        "hblank": dtd[3] | (dtd[4] & 0xF) << 8,
+        "horizontal_blanking": dtd[3] | (dtd[4] & 0xF) << 8,
         "height": dtd[5] | (dtd[7] >> 4) << 8,
-        "vblank": dtd[6] | (dtd[7] & 0xF) << 8,
+        "vertical_blanking": dtd[6] | (dtd[7] & 0xF) << 8,
     }
 
 
@@ -31,21 +31,21 @@ class BuildTimingTest(unittest.TestCase):
             (2560, 1080, 216): (2720, 1324, 59.98),
             (3008, 1260, 241.5): (3168, 1283, 59.42),
         }
-        for (width, height, clock), (htotal, vtotal, hz) in cases.items():
+        for (width, height, clock), (horizontal_total, vertical_total, hz) in cases.items():
             with self.subTest(mode=f"{width}x{height}@{clock}"):
                 timing = edid.build_timing(width, height, clock)
-                self.assertEqual((timing.htotal, timing.vtotal), (htotal, vtotal))
+                self.assertEqual((timing.horizontal_total, timing.vertical_total), (horizontal_total, vertical_total))
                 self.assertAlmostEqual(timing.refresh, hz, places=2)
                 self.assertEqual(timing.clock_khz, round(clock * 1000))
 
     def test_low_clock_keeps_minimum_blanking(self):
         timing = edid.build_timing(1920, 1080, 10)
-        self.assertEqual(timing.htotal, 1920 + edid.H_BLANK_MIN)
-        self.assertEqual(timing.vtotal, 1080 + edid.V_BLANK_MIN)
+        self.assertEqual(timing.horizontal_total, 1920 + edid.MINIMUM_HORIZONTAL_BLANKING)
+        self.assertEqual(timing.vertical_total, 1080 + edid.MINIMUM_VERTICAL_BLANKING)
 
     def test_spare_clock_goes_to_vertical_blanking(self):
         timing = edid.build_timing(1280, 720, 148.5, 30)
-        self.assertGreater(timing.vtotal, 720 + edid.V_BLANK_MIN)
+        self.assertGreater(timing.vertical_total, 720 + edid.MINIMUM_VERTICAL_BLANKING)
         self.assertAlmostEqual(timing.refresh, 30, delta=0.1)
 
     def test_label(self):
@@ -79,7 +79,7 @@ class BuildTimingTest(unittest.TestCase):
         for clock, hz in ((74.25, 24), (312, 60), (10, 120), (148.5, 30)):
             with self.subTest(clock=clock, hz=hz):
                 timing = edid.build_timing(1920, 1080, clock, hz)
-                self.assertLessEqual(timing.htotal - 1920, edid.H_BLANK_MIN + 1)
+                self.assertLessEqual(timing.horizontal_total - 1920, edid.MINIMUM_HORIZONTAL_BLANKING + 1)
 
 
 class ParseModeTest(unittest.TestCase):
@@ -147,10 +147,10 @@ class BytesTest(unittest.TestCase):
         self.assertEqual(len(dtd), 18)
         self.assertEqual(
             decode_dtd(dtd),
-            {"clock_khz": 312000, "width": 3440, "hblank": 160, "height": 1440, "vblank": 23},
+            {"clock_khz": 312000, "width": 3440, "horizontal_blanking": 160, "height": 1440, "vertical_blanking": 23},
         )
-        self.assertEqual((dtd[8], dtd[9]), (edid.H_FRONT, edid.H_SYNC))
-        self.assertEqual(dtd[10], (edid.V_FRONT << 4) | edid.V_SYNC)
+        self.assertEqual((dtd[8], dtd[9]), (edid.HORIZONTAL_FRONT_PORCH, edid.HORIZONTAL_SYNC_WIDTH))
+        self.assertEqual(dtd[10], (edid.VERTICAL_FRONT_PORCH << 4) | edid.VERTICAL_SYNC_WIDTH)
         self.assertEqual(dtd[12] | (dtd[14] >> 4) << 8, edid.WIDTH_MM)
         self.assertEqual(dtd[13] | (dtd[14] & 0xF) << 8, edid.HEIGHT_MM)
         self.assertEqual(dtd[17], 0x1E)
@@ -301,10 +301,10 @@ class IsInstalledTest(unittest.TestCase):
 
 
 class MainTest(unittest.TestCase):
-    def run_main(self, argv):
+    def run_main(self, command_line_arguments):
         standard_output, error_output = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(standard_output), contextlib.redirect_stderr(error_output):
-            code = edid.main(argv)
+            code = edid.main(command_line_arguments)
         return code, standard_output.getvalue(), error_output.getvalue()
 
     def test_writes_file_and_lists_modes(self):
@@ -339,8 +339,8 @@ class MainTest(unittest.TestCase):
 
     def test_runs_as_module(self):
         with tempfile.TemporaryDirectory() as temporary:
-            argv = ["edid", str(Path(temporary) / "x.bin"), "1920x1080@148.5"]
-            with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
+            command_line_arguments = ["edid", str(Path(temporary) / "x.bin"), "1920x1080@148.5"]
+            with mock.patch.object(sys, "argv", command_line_arguments), contextlib.redirect_stdout(io.StringIO()):
                 with self.assertRaises(SystemExit) as raised:
                     runpy.run_path(edid.__file__, run_name="__main__")
         self.assertEqual(raised.exception.code, 0)

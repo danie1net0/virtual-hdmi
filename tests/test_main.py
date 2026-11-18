@@ -43,8 +43,8 @@ class MainTest(unittest.TestCase):
             entry.main()
         cli_main.assert_called_once_with(["--restore"])
 
-    def run_script(self, path, argv):
-        with mock.patch.object(sys, "argv", argv), mock.patch("virtual_monitor.cli.main", return_value=5) as cli_main:
+    def run_script(self, path, command_line_arguments):
+        with mock.patch.object(sys, "argv", command_line_arguments), mock.patch("virtual_monitor.cli.main", return_value=5) as cli_main:
             with self.assertRaises(SystemExit) as raised:
                 runpy.run_path(str(path), run_name="__main__")
         return raised.exception.code, cli_main

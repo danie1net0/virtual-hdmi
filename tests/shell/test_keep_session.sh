@@ -83,8 +83,8 @@ cases=(
     "only the login screen|c1 greeter gdm wayland seat0 yes"
     "no sessions|"
 )
-for case_def in "${cases[@]}"; do
-    IFS='|' read -r description first second <<< "$case_def"
+for case_definition in "${cases[@]}"; do
+    IFS='|' read -r description first second <<< "$case_definition"
     machine daniel
     for definition in "$first" "${second:-}"; do
         [[ -n "$definition" ]] || continue
@@ -100,7 +100,7 @@ done
 machine daniel
 session c1 greeter gdm wayland seat0 yes
 session 2 user daniel wayland seat0 no
-stub loginctl 'case "$1" in list-sessions) echo "c1 120 gdm seat0 tty1"; echo "2 1000 daniel seat0 tty2" ;; show-session) [[ "$2" == c1 ]] && printf "Active=yes\nSeat=seat0\nName=gdm\nType=wayland\nClass=greeter\n" || printf "Name=daniel\nClass=user\nActive=no\nType=wayland\nSeat=seat0\n" ;; activate) exit 1 ;; esac'
+stub loginctl 'case "$1" in list-sessions) echo "c1 120 gdm seat0 tty1"; echo "2 1000 daniel seat0 tty2" ;; show-session) case "$2" in c1) printf "Active=yes\nSeat=seat0\nName=gdm\nType=wayland\nClass=greeter\n" ;; *) printf "Name=daniel\nClass=user\nActive=no\nType=wayland\nSeat=seat0\n" ;; esac ;; activate) exit 1 ;; esac'
 once
 status_is 1 "reads properties out of order and fails if activate fails"
 called "loginctl activate 2"

@@ -10,8 +10,8 @@ modules) are notes, not defaults.
 ## Layout
 
 - `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`,
-  `--next`, `--restore`, `--install-edid [--output NAME] [--modes ...]` and `--auto-login [on|off]`
-  run in the terminal.
+  `--next`, `--restore`, `--scale N|auto`, `--install-edid [--output NAME] [--modes ...]` and
+  `--auto-login [on|off]` run in the terminal.
 - `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, cosmic-randr, wlr-randr, xrandr backends; `detect`
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
   `ModeChange` with the mode and desktop scale),

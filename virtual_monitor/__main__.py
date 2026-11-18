@@ -8,16 +8,16 @@ import sys
 from virtual_monitor import session
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv[1:]
+def main(command_line_arguments=None):
+    if command_line_arguments is None:
+        command_line_arguments = sys.argv[1:]
 
     session.attach()
 
-    if argv:
+    if command_line_arguments:
         from virtual_monitor import cli
 
-        return cli.main(argv)
+        return cli.main(command_line_arguments)
 
     from virtual_monitor import window
 

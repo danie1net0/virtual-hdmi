@@ -48,13 +48,13 @@ class CliTest(unittest.TestCase):
             {"HDMI-1": [mode("3440x1440@59.24", preferred=True), mode("2560x1080@59.98", current=True), mode("1920x1080@60.00")]}
         )
 
-    def run_cli(self, argv, backend="default"):
+    def run_cli(self, command_line_arguments, backend="default"):
         if backend == "default":
             backend = self.backend
 
         standard_output, error_output = io.StringIO(), io.StringIO()
         with mock.patch.object(displays, "detect", return_value=backend):
-            code = cli.main(argv, standard_output, error_output)
+            code = cli.main(command_line_arguments, standard_output, error_output)
         return code, standard_output.getvalue(), error_output.getvalue()
 
     def test_list(self):
@@ -72,9 +72,9 @@ class CliTest(unittest.TestCase):
         )
 
     def test_no_session_without_display_says_to_log_in(self):
-        environ = {key: value for key, value in os.environ.items() if key not in ("DISPLAY", "WAYLAND_DISPLAY")}
-        with mock.patch.object(displays, "diagnose", return_value=[]), mock.patch.dict("os.environ", environ, clear=True):
-            code, _out, error_output = self.run_cli(["--list"], backend=None)
+        environment = {key: value for key, value in os.environ.items() if key not in ("DISPLAY", "WAYLAND_DISPLAY")}
+        with mock.patch.object(displays, "diagnose", return_value=[]), mock.patch.dict("os.environ", environment, clear=True):
+            code, _standard_output, error_output = self.run_cli(["--list"], backend=None)
 
         self.assertEqual(code, 1)
         self.assertEqual(error_output.splitlines()[-1], cli.SESSION_HINT)
@@ -82,31 +82,31 @@ class CliTest(unittest.TestCase):
     def test_no_connected_output_suggests_the_virtual_edid(self):
         reasons = [("COSMIC (cosmic-randr)", "no connected output"), ("X11 (xrandr)", "DISPLAY is not set")]
         with mock.patch.object(displays, "diagnose", return_value=reasons), mock.patch.dict("os.environ", {"WAYLAND_DISPLAY": "wayland-1"}):
-            code, _out, error_output = self.run_cli(["--list"], backend=None)
+            code, _standard_output, error_output = self.run_cli(["--list"], backend=None)
 
         self.assertEqual(code, 1)
         self.assertEqual(error_output.splitlines()[-1], cli.EDID_HINT)
 
-    def run_auto_login(self, argv, environ, euid=1000):
+    def run_auto_login(self, command_line_arguments, environment, euid=1000):
         with mock.patch.object(cli.subprocess, "call", return_value=4) as call, mock.patch(
             "os.geteuid", return_value=euid
-        ), mock.patch.dict("os.environ", environ), mock.patch("getpass.getuser", return_value="daniel"), mock.patch.object(
+        ), mock.patch.dict("os.environ", environment), mock.patch("getpass.getuser", return_value="daniel"), mock.patch.object(
             displays, "detect"
         ) as detect:
-            code = cli.main(argv, io.StringIO(), io.StringIO())
+            code = cli.main(command_line_arguments, io.StringIO(), io.StringIO())
 
         detect.assert_not_called()
         return code, call.call_args.args[0]
 
     def test_auto_login_turns_it_on_for_the_user_with_sudo(self):
-        code, argv = self.run_auto_login(["--auto-login"], {"SUDO_USER": ""})
+        code, command_line_arguments = self.run_auto_login(["--auto-login"], {"SUDO_USER": ""})
 
         self.assertEqual(code, 4)
-        self.assertEqual(argv, ["sudo", "bash", str(cli.AUTO_LOGIN_SCRIPT), "daniel", "on"])
+        self.assertEqual(command_line_arguments, ["sudo", "bash", str(cli.AUTO_LOGIN_SCRIPT), "daniel", "on"])
 
     def test_auto_login_off_under_sudo_keeps_the_real_user(self):
-        _code, argv = self.run_auto_login(["--auto-login", "off"], {"SUDO_USER": "maria"}, euid=0)
-        self.assertEqual(argv, ["bash", str(cli.AUTO_LOGIN_SCRIPT), "maria", "off"])
+        _code, command_line_arguments = self.run_auto_login(["--auto-login", "off"], {"SUDO_USER": "maria"}, euid=0)
+        self.assertEqual(command_line_arguments, ["bash", str(cli.AUTO_LOGIN_SCRIPT), "maria", "off"])
 
     def test_auto_login_script_ships_with_the_app(self):
         self.assertTrue(cli.AUTO_LOGIN_SCRIPT.is_file())
@@ -115,12 +115,12 @@ class CliTest(unittest.TestCase):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             cli.parse_arguments(["--auto-login", "maybe"])
 
-    def run_install(self, argv, target="HDMI-A-1", code=0):
+    def run_install(self, command_line_arguments, target="HDMI-A-1", code=0):
         standard_output, error_output = io.StringIO(), io.StringIO()
         with mock.patch.object(cli.edid_setup, "target_output", return_value=target), mock.patch.object(
             cli.subprocess, "call", return_value=code
         ) as call, mock.patch.object(displays, "detect") as detect:
-            result = cli.main(argv, standard_output, error_output)
+            result = cli.main(command_line_arguments, standard_output, error_output)
 
         detect.assert_not_called()
         return result, standard_output.getvalue(), error_output.getvalue(), call
@@ -130,33 +130,33 @@ class CliTest(unittest.TestCase):
             code, standard_output, error_output, call = self.run_install(["--install-edid"])
 
         self.assertEqual((code, standard_output, error_output), (0, "Installing the virtual monitor on HDMI-A-1\n", ""))
-        argv = call.call_args.args[0]
-        self.assertEqual(argv[:3], ["sudo", "bash", str(cli.edid_setup.INSTALL_SCRIPT)])
-        self.assertEqual(argv[-1], "HDMI-A-1")
-        self.addCleanup(Path(argv[-2]).parent.rmdir)
-        self.addCleanup(Path(argv[-2]).unlink)
-        self.assertEqual(Path(argv[-2]).read_bytes(), cli.edid.generate(list(cli.edid.DEFAULT_MODES))[1])
+        command_line_arguments = call.call_args.args[0]
+        self.assertEqual(command_line_arguments[:3], ["sudo", "bash", str(cli.edid_setup.INSTALL_SCRIPT)])
+        self.assertEqual(command_line_arguments[-1], "HDMI-A-1")
+        self.addCleanup(Path(command_line_arguments[-2]).parent.rmdir)
+        self.addCleanup(Path(command_line_arguments[-2]).unlink)
+        self.assertEqual(Path(command_line_arguments[-2]).read_bytes(), cli.edid.generate(list(cli.edid.DEFAULT_MODES))[1])
 
     def test_install_edid_as_root_skips_sudo_and_passes_the_exit_status(self):
         with mock.patch("os.geteuid", return_value=0):
-            code, _out, _error_output, call = self.run_install(["--install-edid", "--output", "DP-1", "--modes", "1920x1080"], code=3)
+            code, _standard_output, _error_output, call = self.run_install(["--install-edid", "--output", "DP-1", "--modes", "1920x1080"], code=3)
 
-        argv = call.call_args.args[0]
-        self.addCleanup(Path(argv[-2]).parent.rmdir)
-        self.addCleanup(Path(argv[-2]).unlink)
+        command_line_arguments = call.call_args.args[0]
+        self.addCleanup(Path(command_line_arguments[-2]).parent.rmdir)
+        self.addCleanup(Path(command_line_arguments[-2]).unlink)
         self.assertEqual(code, 3)
-        self.assertEqual(argv[0], "bash")
-        self.assertEqual(argv[-1], "DP-1")
-        self.assertEqual(Path(argv[-2]).read_bytes(), cli.edid.generate(["1920x1080"])[1])
+        self.assertEqual(command_line_arguments[0], "bash")
+        self.assertEqual(command_line_arguments[-1], "DP-1")
+        self.assertEqual(Path(command_line_arguments[-2]).read_bytes(), cli.edid.generate(["1920x1080"])[1])
 
     def test_install_edid_without_free_output(self):
-        code, _out, error_output, call = self.run_install(["--install-edid"], target=None)
+        code, _standard_output, error_output, call = self.run_install(["--install-edid"], target=None)
 
         self.assertEqual((code, error_output), (1, cli.NO_FREE_OUTPUT + "\n"))
         call.assert_not_called()
 
     def test_install_edid_with_invalid_modes(self):
-        code, _out, error_output, call = self.run_install(["--install-edid", "--modes", "100x100"])
+        code, _standard_output, error_output, call = self.run_install(["--install-edid", "--modes", "100x100"])
 
         self.assertEqual(code, 1)
         self.assertEqual(error_output, "Invalid EDID: No safe clock fits 100x100 at 60 Hz\n")

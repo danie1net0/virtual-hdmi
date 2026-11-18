@@ -23,15 +23,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # Minimum blanking, CVT reduced blanking style
-H_FRONT, H_SYNC, H_BLANK_MIN = 48, 32, 160
-V_FRONT, V_SYNC, V_BLANK_MIN = 3, 10, 23
+HORIZONTAL_FRONT_PORCH, HORIZONTAL_SYNC_WIDTH, MINIMUM_HORIZONTAL_BLANKING = 48, 32, 160
+VERTICAL_FRONT_PORCH, VERTICAL_SYNC_WIDTH, MINIMUM_VERTICAL_BLANKING = 3, 10, 23
 
 # Physical size of a 34" ultrawide in mm
 WIDTH_MM, HEIGHT_MM = 800, 335
 
 # Timing descriptor limits: 12 bits per measure, clock in 16 bits of 10 kHz
-MAX_PIXELS = 4095
-MAX_CLOCK_KHZ = 0xFFFF * 10
+MAXIMUM_PIXELS = 4095
+MAXIMUM_CLOCK_KHZ = 0xFFFF * 10
 
 # Clocks every HDMI transmitter generates exactly, the RK3566 PLL included; a mode without a clock
 # gets one of these
@@ -55,12 +55,12 @@ class Timing:
     width: int
     height: int
     clock_khz: int
-    htotal: int
-    vtotal: int
+    horizontal_total: int
+    vertical_total: int
 
     @property
     def refresh(self) -> float:
-        return self.clock_khz * 1000 / (self.htotal * self.vtotal)
+        return self.clock_khz * 1000 / (self.horizontal_total * self.vertical_total)
 
     def label(self) -> str:
         return f"{self.width}x{self.height} @ {self.clock_khz / 1000:g} MHz = {self.refresh:.2f} Hz"
@@ -71,26 +71,27 @@ def _positive(value: float) -> bool:
 
 
 def build_timing(width: int, height: int, clock_mhz: float, target_hz: float = 60.0) -> Timing:
-    """Picks htotal/vtotal to get close to target_hz with the fixed clock."""
-    if not (0 < width <= MAX_PIXELS and 0 < height <= MAX_PIXELS):
-        raise EdidError(f"Resolution beyond the {MAX_PIXELS} pixel limit: {width}x{height}")
+    """Picks the horizontal and vertical totals to get close to target_hz with the fixed clock."""
+    if not (0 < width <= MAXIMUM_PIXELS and 0 < height <= MAXIMUM_PIXELS):
+        raise EdidError(f"Resolution beyond the {MAXIMUM_PIXELS} pixel limit: {width}x{height}")
 
     if not (_positive(clock_mhz) and _positive(target_hz)):
         raise EdidError(f"Clock and rate must be positive: {clock_mhz} MHz, {target_hz} Hz")
 
     clock_khz = round(clock_mhz * 1000)
-    if clock_khz > MAX_CLOCK_KHZ:
-        raise EdidError(f"Clock above {MAX_CLOCK_KHZ / 1000:g} MHz: {clock_mhz:g}")
+    if clock_khz > MAXIMUM_CLOCK_KHZ:
+        raise EdidError(f"Clock above {MAXIMUM_CLOCK_KHZ / 1000:g} MHz: {clock_mhz:g}")
 
     clock_hz = clock_mhz * 1_000_000
-    htotal = width + H_BLANK_MIN
-    vtotal = max(height + V_BLANK_MIN, round(clock_hz / (htotal * target_hz)))
-    if vtotal - height > MAX_PIXELS:
+    horizontal_total = width + MINIMUM_HORIZONTAL_BLANKING
+    vertical_total = max(height + MINIMUM_VERTICAL_BLANKING, round(clock_hz / (horizontal_total * target_hz)))
+    if vertical_total - height > MAXIMUM_PIXELS:
         raise EdidError(f"Clock too high for {width}x{height} at {target_hz:g} Hz")
 
-    # Fine line adjustment; vtotal already absorbed the clock, so hblank stays at the minimum (+1 from rounding)
-    htotal = max(width + H_BLANK_MIN, round(clock_hz / (vtotal * target_hz)))
-    return Timing(width, height, clock_khz, htotal, vtotal)
+    # Fine line adjustment; the vertical total already absorbed the clock, so the horizontal blanking
+    # stays at the minimum (+1 from rounding)
+    horizontal_total = max(width + MINIMUM_HORIZONTAL_BLANKING, round(clock_hz / (vertical_total * target_hz)))
+    return Timing(width, height, clock_khz, horizontal_total, vertical_total)
 
 
 def best_safe_timing(width: int, height: int, target_hz: float = 60.0) -> Timing:
@@ -145,18 +146,18 @@ def parse_mode(text: str) -> Timing:
 
 
 def detailed_timing(timing: Timing) -> bytes:
-    hblank = timing.htotal - timing.width
-    vblank = timing.vtotal - timing.height
+    horizontal_blanking = timing.horizontal_total - timing.width
+    vertical_blanking = timing.vertical_total - timing.height
     clock = timing.clock_khz // 10
 
     dtd = bytearray(18)
     dtd[0], dtd[1] = clock & 0xFF, clock >> 8
-    dtd[2], dtd[3] = timing.width & 0xFF, hblank & 0xFF
-    dtd[4] = (timing.width >> 8) << 4 | hblank >> 8
-    dtd[5], dtd[6] = timing.height & 0xFF, vblank & 0xFF
-    dtd[7] = (timing.height >> 8) << 4 | vblank >> 8
-    dtd[8], dtd[9] = H_FRONT, H_SYNC
-    dtd[10] = (V_FRONT & 0xF) << 4 | (V_SYNC & 0xF)
+    dtd[2], dtd[3] = timing.width & 0xFF, horizontal_blanking & 0xFF
+    dtd[4] = (timing.width >> 8) << 4 | horizontal_blanking >> 8
+    dtd[5], dtd[6] = timing.height & 0xFF, vertical_blanking & 0xFF
+    dtd[7] = (timing.height >> 8) << 4 | vertical_blanking >> 8
+    dtd[8], dtd[9] = HORIZONTAL_FRONT_PORCH, HORIZONTAL_SYNC_WIDTH
+    dtd[10] = (VERTICAL_FRONT_PORCH & 0xF) << 4 | (VERTICAL_SYNC_WIDTH & 0xF)
     dtd[11] = 0
     dtd[12], dtd[13] = WIDTH_MM & 0xFF, HEIGHT_MM & 0xFF
     dtd[14] = (WIDTH_MM >> 8) << 4 | HEIGHT_MM >> 8
@@ -223,6 +224,7 @@ def cta_block(vics: list[int], dtds: list[bytes]) -> bytearray:
     for dtd in dtds:
         if offset + 18 > 127:
             raise EdidError("Too many modes to fit in the EDID")
+
         block[offset : offset + 18] = dtd
         offset += 18
 
@@ -255,7 +257,7 @@ def is_installed(texts: list[str]) -> bool:
         return False
 
 
-def main(argv=None) -> int:
+def main(command_line_arguments=None) -> int:
     parser = argparse.ArgumentParser(
         prog="python3 -m virtual_monitor.edid", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -263,7 +265,7 @@ def main(argv=None) -> int:
     parser.add_argument("modes", nargs="+", help="WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ]")
     parser.add_argument("--vic", type=int, action="append", default=[], help="standard CEA mode (VIC)")
     parser.add_argument("--name", default=DEFAULT_NAME)
-    arguments = parser.parse_args(argv)
+    arguments = parser.parse_args(command_line_arguments)
 
     try:
         timings, data = generate(arguments.modes, arguments.vic, arguments.name)

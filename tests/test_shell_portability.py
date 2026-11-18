@@ -17,6 +17,10 @@ FORBIDDEN = (
     (re.compile(r"\b(declare|local|typeset)\s+-\w*A"), "associative array (bash 4)"),
     (re.compile(r"\b(mapfile|readarray)\b"), "mapfile/readarray (bash 4)"),
     (re.compile(r"\$\{\w+(,,|\^\^)"), "case conversion (bash 4)"),
+    (re.compile(r"\|&|&>>"), "|& or &>> (bash 4)"),
+    (re.compile(r";;&|;&"), "case fall-through ;& or ;;& (bash 4)"),
+    (re.compile(r"\b(declare|local|typeset)\s+-\w*n\b"), "name reference (bash 4.3)"),
+    (re.compile(r"\$\{\w+@\w\}"), "${name@...} transformation (bash 4.4)"),
 )
 
 
@@ -46,6 +50,10 @@ class ShellPortabilityTest(unittest.TestCase):
             "local -rA map\n"
             "mapfile -t lines < file\n"
             'echo "${name,,} ${name^^}"\n'
+            "make |& tee log; make &>> log\n"
+            "case $a in a) ;& b) ;;& esac\n"
+            "local -n reference=name\n"
+            'echo "${name@Q}"\n'
             "# sed -i in a comment\n"
             "sed -n 's/a/b/p' file; install -m 644 a b; declare -a list\n"
         )
@@ -60,6 +68,10 @@ class ShellPortabilityTest(unittest.TestCase):
                 "5: associative array (bash 4)",
                 "6: mapfile/readarray (bash 4)",
                 "7: case conversion (bash 4)",
+                "8: |& or &>> (bash 4)",
+                "9: case fall-through ;& or ;;& (bash 4)",
+                "10: name reference (bash 4.3)",
+                "11: ${name@...} transformation (bash 4.4)",
             ],
         )
 

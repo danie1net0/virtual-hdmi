@@ -11,7 +11,7 @@ import types
 
 class Widget:
     def __init__(self, **properties):
-        self.init_properties = properties
+        self.constructor_properties = properties
         self.children = []
         self.suffixes = []
         self.css_classes = []
@@ -121,7 +121,7 @@ class Widget:
 class ApplicationWindow(Widget):
     def present(self, parent=None):
         super().present(parent)
-        self.init_properties["application"].props.active_window = self
+        self.constructor_properties["application"].props.active_window = self
 
 
 class NavigationView(Widget):
@@ -150,8 +150,8 @@ class Application:
         self.props = types.SimpleNamespace(active_window=None)
         self.run_arguments = None
 
-    def run(self, argv):
-        self.run_arguments = argv
+    def run(self, command):
+        self.run_arguments = command
         self.do_activate()
         return 0
 
@@ -180,17 +180,17 @@ class GError(Exception):
 class Subprocess:
     created = []
 
-    def __init__(self, argv, flags):
-        self.argv = argv
+    def __init__(self, command, flags):
+        self.command = command
         self.flags = flags
         self.callback = None
         self.status = 0
-        self.stdout = ""
+        self.output = ""
         self.error = None
 
     @classmethod
-    def new(cls, argv, flags):
-        process = cls(argv, flags)
+    def new(cls, command, flags):
+        process = cls(command, flags)
         cls.created.append(process)
         return process
 
@@ -200,14 +200,14 @@ class Subprocess:
     def communicate_utf8_finish(self, result):
         if self.error:
             raise GError(self.error)
-        return True, self.stdout, None
+        return True, self.output, None
 
     def get_exit_status(self):
         return self.status
 
-    def finish(self, status=0, stdout="", error=None):
+    def finish(self, status=0, output="", error=None):
         """Simulates the end of the process and calls the communicate_utf8_async callback."""
-        self.status, self.stdout, self.error = status, stdout, error
+        self.status, self.output, self.error = status, output, error
         self.callback(self, "resultado")
 
 
