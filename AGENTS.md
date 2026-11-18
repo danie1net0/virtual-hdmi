@@ -57,3 +57,8 @@ coverage on 3.13, for every push and MR. Every job runs on the Docker runner (ta
 non-root user), so none spends GitLab CI minutes; no job runs on macOS, so
 `tests/test_shell_portability.py` checks for GNU-only options and bash 4 features.
 A `vX.Y.Z` tag also runs the `release` job (Docker runner), which creates the GitLab release.
+
+`bash tests/boot/run.sh IMAGE [aarch64|x86_64]` is the real boot test, by hand on macOS with QEMU:
+it runs `install-edid.sh` in a distribution's cloud image, reboots and checks the EDID the kernel
+read. Run it after changing how `install-edid.sh` sets the kernel parameters or builds the boot
+image; the header lists the images it passed on (Fedora, Debian, Ubuntu, openSUSE, Arch).
