@@ -64,9 +64,9 @@ asks for sudo to add it to the boot. The window does the same with the **Install
 **Virtual EDID** page, where you can also change the modes. Add `--output DP-1` to pick the
 output, or `--modes '2560x1440 1920x1080'` for other resolutions.
 
-The install edits the boot setup it finds (GRUB, kernelstub on Pop!_OS, systemd-boot, U-Boot's
-`extlinux.conf`, the Raspberry Pi's `cmdline.txt` or Armbian's `armbianEnv.txt`) and keeps a
-`*.before-edid` backup; the header of
+The install edits the boot setup it finds (GRUB, kernelstub on Pop!_OS, systemd-boot, a UKI that
+mkinitcpio or kernel-install builds, U-Boot's `extlinux.conf`, the Raspberry Pi's `cmdline.txt` or
+Armbian's `armbianEnv.txt`) and keeps a `*.before-edid` backup; the header of
 [scripts/install-edid.sh](scripts/install-edid.sh) says how to undo it. On NVIDIA it needs the
 open kernel modules (the only ones for RTX 50) with `nvidia-drm.modeset=1`. If the driver ignores
 the EDID, an HDMI dummy plug does the same job in hardware.

@@ -47,6 +47,15 @@ grub_command_line() {
     )
 }
 
+# Booted from a UKI: systemd-stub left StubInfo; the boot loader added BOOT_IMAGE= and initrd=
+uki() {
+    new_case
+    mkdir -p "$ROOT/sys/firmware/efi/efivars" "$ROOT/proc"
+    : > "$ROOT/sys/firmware/efi/efivars/StubInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f"
+    echo "BOOT_IMAGE=/vmlinuz root=UUID=abc rw initrd=\\initramfs.img quiet" > "$ROOT/proc/cmdline"
+    stub uname "echo $KERNEL_VERSION"
+}
+
 # Pop!_OS: kernelstub (systemd-boot) and initramfs-tools; the configuration keeps the options in JSON
 pop() {
     new_case
@@ -472,6 +481,63 @@ run_script "$SCRIPT" "$EDID"
 status_is 1 "fails with an extlinux.conf without append"
 contains "$ERRORS" "has no append line" "says there is no append line"
 check "keeps no backup of extlinux.conf" test ! -e "$ROOT/boot/extlinux/extlinux.conf.before-edid"
+
+echo "# UKI"
+uki
+stub dracut
+stub kernel-install
+mkdir -p "$ROOT/usr/lib/kernel"
+printf '#layout=bls|other|...\n' > "$ROOT/usr/lib/kernel/install.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 1 "stops on a UKI the machine did not build"
+contains "$ERRORS" "boots a UKI that it did not build" "says why it stops"
+contains "$ERRORS" "Nothing was changed." "says nothing was changed"
+check "copies no EDID" test ! -e "$ROOT/usr/lib/firmware"
+check "writes no dracut hook" test ! -e "$ROOT/etc/dracut.conf.d"
+not_called dracut
+not_called kernel-install
+
+uki
+stub mkinitcpio
+mkdir -p "$ROOT/etc/mkinitcpio.d"
+printf 'PRESETS=(default)\n#default_uki="/efi/EFI/Linux/arch-linux.efi"\n' > "$ROOT/etc/mkinitcpio.d/linux.preset"
+run_script "$SCRIPT" "$EDID"
+status_is 1 "stops when the presets build no UKI"
+not_called "mkinitcpio -P"
+
+uki
+stub mkinitcpio
+mkdir -p "$ROOT/etc/mkinitcpio.d"
+printf 'PRESETS=(default)\ndefault_uki="/efi/EFI/Linux/arch-linux.efi"\n' > "$ROOT/etc/mkinitcpio.d/linux.preset"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs in a UKI that mkinitcpio builds"
+check "writes the command line from the running one" test "$(cat "$ROOT/etc/kernel/cmdline")" = "root=UUID=abc rw quiet $PARAMETERS"
+check "keeps the command line from before" test "$(cat "$ROOT/etc/kernel/cmdline.before-edid")" = "root=UUID=abc rw quiet"
+contains "$ROOT/etc/mkinitcpio.conf.d/virtual-monitor.conf" "FILES+=(/usr/lib/firmware/edid/virtual-monitor.bin)" "adds the EDID to the UKI initrd"
+contains "$OUTPUT" "Building the UKI" "says it builds the UKI"
+called "mkinitcpio -P"
+not_contains "$OUTPUT" "Checking that the EDID is in the image" "does not look for an initramfs image"
+
+uki
+stub dracut
+stub kernel-install
+mkdir -p "$ROOT/etc/kernel"
+printf 'layout=uki\n' > "$ROOT/etc/kernel/install.conf"
+printf 'root=UUID=abc rw video=HDMI-A-1:D\n' > "$ROOT/etc/kernel/cmdline"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs in a UKI that kernel-install builds"
+check "replaces the parameters in /etc/kernel/cmdline" test "$(cat "$ROOT/etc/kernel/cmdline")" = "root=UUID=abc rw $PARAMETERS"
+contains "$ROOT/etc/dracut.conf.d/90-edid-virtual-monitor.conf" "virtual-monitor.bin" "adds the EDID to dracut"
+called "kernel-install add $KERNEL_VERSION $ROOT/usr/lib/modules/$KERNEL_VERSION/vmlinuz"
+not_called "dracut -f"
+
+uki
+stub kernel-install
+mkdir -p "$ROOT/usr/lib/kernel"
+printf 'layout=uki\n' > "$ROOT/usr/lib/kernel/install.conf"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "reads layout=uki from /usr/lib/kernel/install.conf"
+called "kernel-install add $KERNEL_VERSION $ROOT/usr/lib/modules/$KERNEL_VERSION/vmlinuz"
 
 echo "# boot loader"
 new_case

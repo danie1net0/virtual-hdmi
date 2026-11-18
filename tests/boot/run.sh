@@ -5,11 +5,14 @@
 #
 # Usage (macOS with QEMU, `brew install qemu`; not run in CI):
 #   bash tests/boot/run.sh IMAGE [aarch64|x86_64]
+#   UKI=1 bash tests/boot/run.sh Arch-Linux-x86_64-cloudimg.qcow2 x86_64
+# UKI=1 (Arch only) first makes mkinitcpio build a UKI that the firmware boots, then installs.
 #
 # IMAGE is a cloud image with cloud-init; it is not changed (the VM writes to an overlay). Tested
 # images: Fedora Cloud Base Generic, Debian generic (not genericcloud, whose kernel has no DRM),
 # Ubuntu server cloudimg, openSUSE Tumbleweed Minimal-VM Cloud (aarch64) and Arch cloudimg
-# (x86_64, emulated: several minutes).
+# (x86_64, emulated: several minutes), also with UKI=1. Fedora Cloud Base UEFI-UKI boots a UKI it
+# did not build: install-edid.sh must stop there, so that run ends in install-failed.
 #
 # Prints what the VM reported and exits with 0 only when the EDID after the reboot is the
 # project's. WORK_FOLDER (default ~/Library/Caches/virtual-monitor-boot-tests/<image name>) keeps
@@ -31,51 +34,95 @@ write_user_data() {
     cat <<'USERDATA'
 #cloud-config
 write_files:
-  - path: /usr/local/bin/virtual-monitor-setup
+  - path: /usr/local/bin/virtual-monitor-step
     permissions: "0755"
     content: |
       #!/bin/bash
+      # Runs at every boot: unpacks the project, makes the machine boot a UKI when asked,
+      # installs the EDID, and after the reboot checks it
       exec >> /dev/virtio-ports/report 2>&1
-      mkdir -p /root/project /mnt/seed
-      mount -o ro "$(blkid -L cidata || blkid -L CIDATA)" /mnt/seed
-      tar -C /root/project -xzf "$(find /mnt/seed -maxdepth 1 -iname 'project*' | head -n 1)"
-      echo "VM-BEFORE modes: $(cat /sys/class/drm/card*-Virtual-1/modes | tr '\n' ' ')"
-      systemctl enable virtual-monitor-check.service
-      if ! bash /root/project/scripts/install-edid.sh /root/project/edid/virtual-monitor.bin Virtual-1; then
-          echo "VM-RESULT install-failed"
+      stub_info=/sys/firmware/efi/efivars/StubInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
+
+      # systemd-stub, the start of every UKI, leaves StubInfo at boot
+      boot_kind() {
+          [[ -f "$stub_info" ]] || { echo "boot image and kernel"; return; }
+          echo "UKI"
+      }
+
+      unpack() {
+          [[ -d /root/project ]] && return
+          mkdir -p /root/project /mnt/seed
+          mount -o ro "$(blkid -L cidata || blkid -L CIDATA)" /mnt/seed
+          tar -C /root/project -xzf "$(find /mnt/seed -maxdepth 1 -iname 'project*' | head -n 1)"
+          find /mnt/seed -maxdepth 1 -iname 'uki*' | grep -q . && touch /root/want-uki
+          systemctl enable virtual-monitor-step.service
+          echo "VM-BEFORE modes: $(cat /sys/class/drm/card*-Virtual-1/modes | tr '\n' ' ')"
+      }
+
+      # mkinitcpio writes the UKI where the firmware looks when it has no boot entries
+      boot_from_uki() {
+          [[ -f /root/want-uki ]] || return 0
+          [[ -f /root/uki-ready ]] && return 0
+          local esp
+          esp="$(findmnt -n -o TARGET -t vfat | head -n 1)"
+          [[ -n "$esp" ]] || { mkdir -p /efi; mount "$(blkid -t TYPE=vfat -o device | head -n 1)" /efi; esp=/efi; }
+          echo "VM-UKI esp: $esp"
+
+          awk '{ for (position = 1; position <= NF; position++) { if ($position !~ /^(BOOT_IMAGE|initrd)=/) { line = line separator $position; separator = " " } } print line }' /proc/cmdline > /etc/kernel/cmdline
+          mkdir -p "$esp/EFI/BOOT"
+          printf 'ALL_kver="/boot/vmlinuz-linux"\nPRESETS=(default)\ndefault_uki="%s/EFI/BOOT/BOOTX64.EFI"\n' "$esp" > /etc/mkinitcpio.d/linux.preset
+          command -v objcopy >/dev/null || pacman -Sy --noconfirm binutils
+          mkinitcpio -P
+
+          touch /root/uki-ready
+          systemctl reboot
+          exit 0
+      }
+
+      install() {
+          echo "VM-INSTALL booted from: $(boot_kind)"
+          if ! bash /root/project/scripts/install-edid.sh /root/project/edid/virtual-monitor.bin Virtual-1; then
+              echo "VM-RESULT install-failed"
+              systemctl poweroff
+              exit 1
+          fi
+          touch /root/virtual-monitor-installed
+          systemctl reboot
+          exit 0
+      }
+
+      check() {
+          echo "VM-CHECK booted from: $(boot_kind)"
+          echo "VM-CHECK cmdline: $(cat /proc/cmdline)"
+
+          expected="$(sha256sum < /root/project/edid/virtual-monitor.bin)"
+          result=fail
+          for connector in /sys/class/drm/card*-Virtual-1; do
+              echo "VM-CHECK $connector status: $(cat "$connector/status")"
+              echo "VM-CHECK $connector modes: $(tr '\n' ' ' < "$connector/modes")"
+              [[ "$(sha256sum < "$connector/edid")" == "$expected" ]] && result=ok
+          done
+          echo "VM-RESULT $result"
           systemctl poweroff
-          exit 1
-      fi
-      touch /root/virtual-monitor-installed
-      systemctl reboot
-  - path: /usr/local/bin/virtual-monitor-check
-    permissions: "0755"
-    content: |
-      #!/bin/bash
-      exec >> /dev/virtio-ports/report 2>&1
-      echo "VM-CHECK cmdline: $(cat /proc/cmdline)"
-      expected="$(sha256sum < /root/project/edid/virtual-monitor.bin)"
-      result=fail
-      for connector in /sys/class/drm/card*-Virtual-1; do
-          echo "VM-CHECK $connector status: $(cat "$connector/status")"
-          echo "VM-CHECK $connector modes: $(tr '\n' ' ' < "$connector/modes")"
-          [[ "$(sha256sum < "$connector/edid")" == "$expected" ]] && result=ok
-      done
-      echo "VM-RESULT $result"
-      systemctl poweroff
-  - path: /etc/systemd/system/virtual-monitor-check.service
+      }
+
+      [[ -f /root/virtual-monitor-installed ]] && { check; exit 0; }
+      unpack
+      boot_from_uki
+      install
+  - path: /etc/systemd/system/virtual-monitor-step.service
     content: |
       [Unit]
-      Description=Check the virtual monitor EDID
-      ConditionPathExists=/root/virtual-monitor-installed
+      Description=Virtual monitor boot test step
+      ConditionPathExists=/root/project
       After=multi-user.target
       [Service]
       Type=oneshot
-      ExecStart=/usr/local/bin/virtual-monitor-check
+      ExecStart=/usr/local/bin/virtual-monitor-step
       [Install]
       WantedBy=multi-user.target
 runcmd:
-  - [bash, /usr/local/bin/virtual-monitor-setup]
+  - [bash, /usr/local/bin/virtual-monitor-step]
 USERDATA
 }
 
@@ -86,6 +133,7 @@ prepare() {
     COPYFILE_DISABLE=1 tar --no-xattrs -C "$PROJECT_FOLDER" -czf "$WORK_FOLDER/seed/project.tar.gz" scripts edid
     echo "instance-id: virtual-monitor-boot-test" > "$WORK_FOLDER/seed/meta-data"
     write_user_data > "$WORK_FOLDER/seed/user-data"
+    [[ -z "${UKI:-}" ]] || echo "mkinitcpio" > "$WORK_FOLDER/seed/uki"
     hdiutil makehybrid -quiet -iso -joliet -default-volume-name cidata -o "$WORK_FOLDER/seed.iso" "$WORK_FOLDER/seed"
 }
 

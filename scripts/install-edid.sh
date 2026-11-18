@@ -16,6 +16,9 @@
 #                       grub-mkconfig (Arch)
 #   U-Boot              /etc/default/u-boot with u-boot-update, else /boot/extlinux/extlinux.conf
 #   systemd-boot        the loader entries in /boot, /efi or /boot/efi, and /etc/kernel/cmdline
+#   UKI                 /etc/kernel/cmdline, then the UKI is built again with mkinitcpio -P or
+#                       kernel-install add; a UKI the machine did not build (a distribution's
+#                       ready kernel) holds its own command line, and the script stops untouched
 # With no boot image tool, it only copies the EDID: the kernel then reads it from /usr/lib/firmware.
 # On NVIDIA it needs the open kernel modules (the only ones for RTX 50) with nvidia-drm.modeset=1.
 #
@@ -34,6 +37,8 @@
 #               grub2-mkconfig -o /boot/grub2/grub.cfg or grub-mkconfig -o /boot/grub/grub.cfg
 #   U-Boot:     sudo cp /etc/default/u-boot.before-edid /etc/default/u-boot && sudo u-boot-update
 #   kernelstub: sudo kernelstub -d "drm.edid_firmware=OUTPUT:edid/virtual-monitor.bin video=OUTPUT:e"
+#   UKI:        sudo cp /etc/kernel/cmdline.before-edid /etc/kernel/cmdline, then
+#               sudo mkinitcpio -P or sudo kernel-install add "$(uname -r)" /usr/lib/modules/"$(uname -r)"/vmlinuz
 #   the others: sudo cp FILE.before-edid FILE (armbianEnv.txt, cmdline.txt, extlinux.conf, the
 #               systemd-boot entries and /etc/kernel/cmdline)
 
@@ -58,6 +63,8 @@ UBOOT_DEFAULTS="$ROOT/etc/default/u-boot"
 EXTLINUX="$ROOT/boot/extlinux/extlinux.conf"
 KERNEL_COMMAND_LINE="$ROOT/etc/kernel/cmdline"
 LOADER_FOLDERS=("$ROOT/boot/loader/entries" "$ROOT/efi/loader/entries" "$ROOT/boot/efi/loader/entries")
+# systemd-stub, the start of every UKI, leaves this EFI variable at boot
+STUB_INFO="$ROOT/sys/firmware/efi/efivars/StubInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f"
 # Set when no tool builds a boot image here, so there is no image to check
 NO_BOOT_IMAGE=""
 
@@ -198,7 +205,9 @@ set_grub_drop_in_parameters() {
     printf '%s\n' "# Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub." \
         "GRUB_CMDLINE_LINUX_DEFAULT=\"\$GRUB_CMDLINE_LINUX_DEFAULT $PARAMETERS\"" > "$GRUB_DROP_IN"
     cat "$GRUB_DROP_IN"
+
     remove_grub_parameters
+
     update-grub
 }
 
@@ -400,8 +409,91 @@ set_kernel_parameters() {
     exit 1
 }
 
+booted_from_uki() {
+    [[ -f "$STUB_INFO" ]]
+}
+
+# mkinitcpio builds a UKI when a preset sets PRESET_uki=
+mkinitcpio_builds_uki() {
+    command -v mkinitcpio >/dev/null 2>&1 || return 1
+    grep -qsE '^[[:space:]]*[A-Za-z0-9_]+_uki=' "$ROOT"/etc/mkinitcpio.d/*.preset
+}
+
+# kernel-install builds a UKI with layout=uki (the /etc file overrides the /usr/lib one)
+kernel_install_builds_uki() {
+    command -v kernel-install >/dev/null 2>&1 || return 1
+    grep -qsE '^[[:space:]]*layout=uki' "$ROOT/etc/kernel/install.conf" "$ROOT/usr/lib/kernel/install.conf"
+}
+
+# A UKI that came built, such as Fedora's kernel-uki-virt: its initrd and command line are inside
+uses_prebuilt_uki() {
+    booted_from_uki || return 1
+    mkinitcpio_builds_uki && return 1
+    kernel_install_builds_uki && return 1
+    return 0
+}
+
+stop_on_prebuilt_uki() {
+    uses_prebuilt_uki || return 0
+    echo "This machine boots a UKI that it did not build (a distribution's ready kernel, such as Fedora's kernel-uki-virt):" >&2
+    echo "the boot image and the kernel command line are inside it, so the EDID cannot be added. Nothing was changed." >&2
+    echo "Install a kernel that builds its own boot image, or use an HDMI dummy plug." >&2
+    exit 1
+}
+
+# The UKI command line comes from /etc/kernel/cmdline; without it, from the running one
+set_uki_parameters() {
+    mkdir -p "$(dirname "$KERNEL_COMMAND_LINE")"
+    [[ -f "$KERNEL_COMMAND_LINE" ]] || running_command_line > "$KERNEL_COMMAND_LINE"
+
+    set_command_line_parameters "$KERNEL_COMMAND_LINE"
+}
+
+# What the boot loader added (BOOT_IMAGE=, initrd=) is not part of a UKI command line
+running_command_line() {
+    local program
+    program='
+        {
+            for (position = 1; position <= NF; position++) {
+                if ($position ~ /^(BOOT_IMAGE|initrd)=/) { continue }
+                line = line separator $position
+                separator = " "
+            }
+
+            print line
+        }
+    '
+
+    awk "$program" "$ROOT/proc/cmdline"
+}
+
+build_uki() {
+    echo "==> Building the UKI"
+    if mkinitcpio_builds_uki; then
+        mkinitcpio -P
+        return
+    fi
+
+    kernel-install add "$KERNEL_VERSION" "$ROOT/usr/lib/modules/$KERNEL_VERSION/vmlinuz"
+}
+
+# A UKI holds the initrd and the command line: set the command line first, then build it
+install_in_boot() {
+    if booted_from_uki; then
+        set_uki_parameters
+        build_uki
+        return
+    fi
+
+    build_boot_image
+    check_boot_image
+    set_kernel_parameters
+}
+
 [[ -f "$EDID_SOURCE" ]] || { echo "$EDID_SOURCE not found" >&2; exit 1; }
 [[ "$(wc -c < "$EDID_SOURCE" | tr -d ' ')" -eq 256 ]] || { echo "$EDID_SOURCE is not 256 bytes; it does not look like an EDID." >&2; exit 1; }
+
+stop_on_prebuilt_uki
 
 echo "==> Copying the EDID to $EDID_TARGET"
 mkdir -p "$(dirname "$EDID_TARGET")"
@@ -435,10 +527,7 @@ EOF
     chmod 755 "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor"
 fi
 
-build_boot_image
-check_boot_image
-
-set_kernel_parameters
+install_in_boot
 
 echo
 echo "Done: $CONNECTOR gets the virtual monitor at the next boot. Reboot with: sudo reboot"
