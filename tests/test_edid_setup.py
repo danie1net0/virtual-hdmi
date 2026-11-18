@@ -70,12 +70,12 @@ class OutputsTest(DrmTestCase):
 
     def test_target_is_the_output_of_this_boot(self):
         self.output("card1-DP-1", "disconnected")
-        with mock.patch.object(displays, "cmdline_connector", return_value="HDMI-A-1"):
+        with mock.patch.object(displays, "command_line_connector", return_value="HDMI-A-1"):
             self.assertEqual(edid_setup.target_output(self.drm), "HDMI-A-1")
 
     def test_target_without_edid_at_boot_is_a_free_output(self):
         self.output("card1-DP-1", "disconnected")
-        with mock.patch.object(displays, "cmdline_connector", return_value=None):
+        with mock.patch.object(displays, "command_line_connector", return_value=None):
             self.assertEqual(edid_setup.target_output(self.drm), "DP-1")
 
     def test_default_folder(self):

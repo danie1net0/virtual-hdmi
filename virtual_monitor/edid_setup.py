@@ -70,7 +70,7 @@ def free_output(drm=DRM):
 
 def target_output(drm=DRM):
     """The output that gets the virtual monitor: the one this boot already uses, else a free one."""
-    return displays.cmdline_connector() or free_output(drm)
+    return displays.command_line_connector() or free_output(drm)
 
 
 def write_edid(modes):

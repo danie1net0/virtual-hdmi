@@ -11,7 +11,7 @@
 set -euo pipefail
 
 NAME="virtual-monitor"
-DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_FOLDER="$(cd "$(dirname "$0")" && pwd)"
 
 # Names used by the old Portuguese-named version, cleaned up on user installs
 # The launcher is named after the application id: Wayland docks find the icon of a window by its
@@ -34,20 +34,20 @@ Usage: bash install.sh [options]
 With no options, installs a copy in ~/.local/share/${NAME} and the command ~/.local/bin/${NAME}.
 Run without sudo."
 
-DEV=0
+DEVELOPMENT=0
 SKIP_CHECK=0
 UNINSTALL=0
-DEST=""
+DESTINATION=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --help|-h) echo "$HELP"; exit 0 ;;
-        --dev) DEV=1 ;;
+        --dev) DEVELOPMENT=1 ;;
         --skip-check) SKIP_CHECK=1 ;;
         --uninstall) UNINSTALL=1 ;;
         --dest-dir)
             [[ $# -ge 2 && "$2" != -* ]] || { echo "--dest-dir needs a path." >&2; exit 1; }
-            DEST="$2"
+            DESTINATION="$2"
             shift
             ;;
         *) echo "Unknown option: $1. Use --help." >&2; exit 1 ;;
@@ -69,17 +69,17 @@ xdg() {
 }
 
 # The data folder: --dest-dir (created, made absolute) or the user's XDG one
-data_dir() {
-    if [[ -n "$DEST" ]]; then
-        mkdir -p "$DEST"
-        (cd "$DEST" && pwd)
+data_folder() {
+    if [[ -n "$DESTINATION" ]]; then
+        mkdir -p "$DESTINATION"
+        (cd "$DESTINATION" && pwd)
         return
     fi
 
     xdg "${XDG_DATA_HOME:-}" "$HOME/.local/share"
 }
 
-DATA="$(data_dir)"
+DATA="$(data_folder)"
 CONFIG="$(xdg "${XDG_CONFIG_HOME:-}" "$HOME/.config")"
 
 APP="$DATA/$NAME"
@@ -99,7 +99,7 @@ MODE="$CONFIG/$NAME/mode.json"
 
 # With --dest-dir the install is standalone: it leaves the user's caches and autostart alone
 is_user_install() {
-    [[ -z "$DEST" ]]
+    [[ -z "$DESTINATION" ]]
 }
 
 update_caches() {
@@ -176,12 +176,12 @@ check_dependencies() {
 stage_file() {
     local file="$1"
     mkdir -p "$(dirname "$STAGING/app/$file")"
-    if [[ $DEV -eq 1 ]]; then
-        ln -s "$DIR/$file" "$STAGING/app/$file"
+    if [[ $DEVELOPMENT -eq 1 ]]; then
+        ln -s "$PROJECT_FOLDER/$file" "$STAGING/app/$file"
         return
     fi
 
-    install -m 644 "$DIR/$file" "$STAGING/app/$file"
+    install -m 644 "$PROJECT_FOLDER/$file" "$STAGING/app/$file"
 }
 
 # Migrates the old Portuguese-named install: remembered resolution and autostart
@@ -211,17 +211,17 @@ if [[ $UNINSTALL -eq 1 ]]; then
 fi
 
 FILES=("$NAME.py" scripts/install-edid.sh scripts/auto-login.sh)
-for module in "$DIR"/virtual_monitor/*.py; do
+for module in "$PROJECT_FOLDER"/virtual_monitor/*.py; do
     FILES+=("virtual_monitor/$(basename "$module")")
 done
 
 for file in "${FILES[@]}" "assets/$NAME.png" "data/$NAME.desktop"; do
-    [[ -f "$DIR/$file" ]] || { echo "Missing file: $file" >&2; exit 1; }
+    [[ -f "$PROJECT_FOLDER/$file" ]] || { echo "Missing file: $file" >&2; exit 1; }
 done
 
 # The destination cannot be inside this folder nor contain it
-case "$APP/" in "$DIR"/*) echo "Destination cannot be inside the project folder." >&2; exit 1 ;; esac
-case "$DIR/" in "$APP"/*) echo "Destination cannot contain the project folder." >&2; exit 1 ;; esac
+case "$APP/" in "$PROJECT_FOLDER"/*) echo "Destination cannot be inside the project folder." >&2; exit 1 ;; esac
+case "$PROJECT_FOLDER/" in "$APP"/*) echo "Destination cannot contain the project folder." >&2; exit 1 ;; esac
 
 check_dependencies
 
@@ -232,12 +232,12 @@ trap 'rm -rf "$STAGING"' EXIT
 for file in "${FILES[@]}"; do
     stage_file "$file"
 done
-[[ $DEV -eq 1 ]] || chmod 755 "$STAGING/app/$NAME.py" "$STAGING/app/scripts/install-edid.sh" "$STAGING/app/scripts/auto-login.sh"
+[[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/app/$NAME.py" "$STAGING/app/scripts/install-edid.sh" "$STAGING/app/scripts/auto-login.sh"
 
-install -m 644 "$DIR/assets/$NAME.png" "$STAGING/icon.png"
+install -m 644 "$PROJECT_FOLDER/assets/$NAME.png" "$STAGING/icon.png"
 
 sed -E "s#^Exec=.*#Exec=python3 \"$APP/$NAME.py\"#; s#^Icon=.*#Icon=$ICON#" \
-    "$DIR/data/$NAME.desktop" > "$STAGING/launcher.desktop"
+    "$PROJECT_FOLDER/data/$NAME.desktop" > "$STAGING/launcher.desktop"
 chmod 644 "$STAGING/launcher.desktop"
 
 mkdir -p "$(dirname "$ICON")" "$(dirname "$LAUNCHER")"

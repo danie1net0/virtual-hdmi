@@ -25,12 +25,12 @@ fail() {
 }
 
 check_arguments() {
-    local version="$1" arg
+    local version="$1" argument
     shift
     [[ "$version" =~ ^[A-Za-z0-9._-]+$ ]] || fail "Invalid VERSION: $version"
 
-    for arg in "$@"; do
-        [[ "$arg" != --dev ]] || fail "--dev links to a checkout; clone the repository and run bash install.sh --dev."
+    for argument in "$@"; do
+        [[ "$argument" != --dev ]] || fail "--dev links to a checkout; clone the repository and run bash install.sh --dev."
     done
 }
 

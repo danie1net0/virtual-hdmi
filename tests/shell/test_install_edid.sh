@@ -85,19 +85,19 @@ echo "# permissions and input"
 new_case
 FAKE_UID=1000 run_script "$SCRIPT" "$EDID"
 status_is 1 "fails without root"
-contains "$ERRS" "Run with sudo." "asks for sudo"
+contains "$ERRORS" "Run with sudo." "asks for sudo"
 check "copies nothing without root" test ! -e "$ROOT/usr"
 
 new_case
 run_script "$SCRIPT" "$CASE/missing.bin"
 status_is 1 "missing EDID fails"
-contains "$ERRS" "missing.bin not found" "says which file is missing"
+contains "$ERRORS" "missing.bin not found" "says which file is missing"
 
 new_case
 printf 'short' > "$CASE/short.bin"
 run_script "$SCRIPT" "$CASE/short.bin"
 status_is 1 "a file that is not 256 bytes fails"
-contains "$ERRS" "is not 256 bytes" "explains the size"
+contains "$ERRORS" "is not 256 bytes" "explains the size"
 check "does not copy an invalid file" test ! -e "$ROOT/usr/lib/firmware/edid/virtual-monitor.bin"
 
 echo "# Armbian"
@@ -113,8 +113,8 @@ called "lsinitramfs $ROOT/boot/initrd.img-$KERNEL_VERSION"
 check "appends the parameters to extraargs" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=cma=256M $PARAMETERS"
 check "keeps the other lines" grep -qx 'rootdev=UUID=abc' "$ROOT/boot/armbianEnv.txt"
 check "keeps the original" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt.before-edid")" = "extraargs=cma=256M"
-contains "$OUT" "ok (lsinitramfs)" "checks the image with lsinitramfs"
-contains "$OUT" "Done" "ends with the reboot instruction"
+contains "$OUTPUT" "ok (lsinitramfs)" "checks the image with lsinitramfs"
+contains "$OUTPUT" "Done" "ends with the reboot instruction"
 not_called update-grub
 
 run_script "$SCRIPT" "$EDID"
@@ -141,7 +141,7 @@ check "without update-initramfs, creates no hook" test ! -e "$ROOT/etc/initramfs
 called "dracut -f --kver $KERNEL_VERSION"
 called "lsinitrd --kver $KERNEL_VERSION"
 called "update-grub"
-contains "$OUT" "ok (lsinitrd)" "checks the image with lsinitrd"
+contains "$OUTPUT" "ok (lsinitrd)" "checks the image with lsinitrd"
 check "appends the parameters to GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMETERS\""
 check "keeps the original GRUB" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' "$ROOT/etc/default/grub.before-edid"
 check "keeps the other GRUB lines" grep -qx 'GRUB_TIMEOUT=5' "$ROOT/etc/default/grub"
@@ -166,7 +166,7 @@ called "kernelstub -a $PARAMETERS"
 not_called "kernelstub -d"
 check "keeps the original kernelstub configuration" cmp "$ROOT/etc/kernelstub/configuration" "$ROOT/etc/kernelstub/configuration.before-edid"
 called "update-initramfs -u -k $KERNEL_VERSION"
-contains "$OUT" "Adjusting the kernel parameters with kernelstub" "says it uses kernelstub"
+contains "$OUTPUT" "Adjusting the kernel parameters with kernelstub" "says it uses kernelstub"
 not_called update-grub
 
 pop ', "drm.edid_firmware=HDMI-A-1:edid/velho.bin", "video=HDMI-A-1:D", "video=DP-2:e"'
@@ -212,7 +212,7 @@ pop ""
 CONNECTOR=DP-1 run_script "$SCRIPT" "$EDID" HDMI-A-2
 status_is 0 "installs on the output given as argument"
 called "kernelstub -a drm.edid_firmware=HDMI-A-2:edid/virtual-monitor.bin video=HDMI-A-2:e"
-contains "$OUT" "Done: HDMI-A-2 gets the virtual monitor" "says which output gets it"
+contains "$OUTPUT" "Done: HDMI-A-2 gets the virtual monitor" "says which output gets it"
 
 echo "# hooks of earlier versions"
 armbian "extraargs=cma=256M"
@@ -227,7 +227,7 @@ check "removes the old dracut configuration" test ! -e "$ROOT/etc/dracut.conf.d/
 new_case
 CONNECTOR='HDMI-A-1 rm -rf /' run_script "$SCRIPT" "$EDID"
 status_is 1 "refuses an invalid connector"
-contains "$ERRS" "Invalid CONNECTOR" "says the connector is invalid"
+contains "$ERRORS" "Invalid CONNECTOR" "says the connector is invalid"
 check "copies nothing with an invalid connector" test ! -e "$ROOT/usr"
 
 echo "# boot image"
@@ -235,15 +235,15 @@ grub "quiet"
 rm "$STUBS/dracut" "$STUBS/lsinitrd"
 run_script "$SCRIPT" "$EDID"
 status_is 0 "installs without a boot image tool"
-contains "$OUT" "the kernel reads the EDID from /usr/lib/firmware" "says there is no boot image to build"
-not_contains "$OUT" "Checking that the EDID is in the image" "checks no image"
+contains "$OUTPUT" "the kernel reads the EDID from /usr/lib/firmware" "says there is no boot image to build"
+not_contains "$OUTPUT" "Checking that the EDID is in the image" "checks no image"
 called "update-grub"
 
 armbian "extraargs=cma=256M"
 stub lsinitramfs 'echo usr/lib/modules'
 run_script "$SCRIPT" "$EDID"
 status_is 1 "EDID outside the image fails"
-contains "$ERRS" "stopping before touching the boot setup" "stops before the boot setup"
+contains "$ERRORS" "stopping before touching the boot setup" "stops before the boot setup"
 check "leaves armbianEnv alone" test "$(line '^extraargs=' "$ROOT/boot/armbianEnv.txt")" = "extraargs=cma=256M"
 check "keeps no backup without changes" test ! -e "$ROOT/boot/armbianEnv.txt.before-edid"
 
@@ -251,7 +251,7 @@ armbian "extraargs=cma=256M"
 stub lsinitrd 'echo nada'
 run_script "$SCRIPT" "$EDID"
 status_is 0 "lsinitrd without the EDID falls back to lsinitramfs"
-contains "$OUT" "ok (lsinitramfs)" "uses lsinitramfs after lsinitrd"
+contains "$OUTPUT" "ok (lsinitramfs)" "uses lsinitramfs after lsinitrd"
 
 # A real image lists thousands of files after the EDID; grep -q would stop reading and the lister
 # would die of SIGPIPE, which pipefail turns into a failed check
@@ -259,7 +259,7 @@ armbian "extraargs=cma=256M"
 stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin; index=0; while [ $index -lt 50000 ]; do echo usr/lib/modules/file-$index; index=$((index + 1)); done'
 run_script "$SCRIPT" "$EDID"
 status_is 0 "finds the EDID at the top of a long listing"
-contains "$OUT" "ok (lsinitramfs)" "accepts the long listing"
+contains "$OUTPUT" "ok (lsinitramfs)" "accepts the long listing"
 
 armbian "extraargs=cma=256M"
 stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin; exit 1'
@@ -304,7 +304,7 @@ grub "quiet"
 rm "$STUBS/update-grub"
 run_script "$SCRIPT" "$EDID"
 status_is 1 "fails with no tool to apply GRUB"
-contains "$ERRS" "Neither update-grub, grubby, grub2-mkconfig nor grub-mkconfig" "names the missing tools"
+contains "$ERRORS" "Neither update-grub, grubby, grub2-mkconfig nor grub-mkconfig" "names the missing tools"
 
 echo "# mkinitcpio (Arch)"
 arch
@@ -316,7 +316,7 @@ contains "$ROOT/etc/mkinitcpio.conf.d/virtual-monitor.conf" "FILES+=(/usr/lib/fi
 called "mkinitcpio -P"
 called "lsinitcpio $ROOT/boot/initramfs-linux.img"
 not_called "lsinitcpio $ROOT/boot/initramfs-linux-fallback.img"
-contains "$OUT" "ok (lsinitcpio)" "checks the image with lsinitcpio"
+contains "$OUTPUT" "ok (lsinitcpio)" "checks the image with lsinitcpio"
 
 arch
 stub lsinitcpio 'echo usr/lib/modules'
@@ -418,7 +418,7 @@ mkdir -p "$ROOT/boot/extlinux"
 printf 'label linux\n  kernel /Image\n' > "$ROOT/boot/extlinux/extlinux.conf"
 run_script "$SCRIPT" "$EDID"
 status_is 1 "fails with an extlinux.conf without append"
-contains "$ERRS" "has no append line" "says there is no append line"
+contains "$ERRORS" "has no append line" "says there is no append line"
 check "keeps no backup of extlinux.conf" test ! -e "$ROOT/boot/extlinux/extlinux.conf.before-edid"
 
 echo "# boot loader"
@@ -428,8 +428,8 @@ stub update-initramfs
 stub lsinitramfs 'echo usr/lib/firmware/edid/virtual-monitor.bin'
 run_script "$SCRIPT" "$EDID"
 status_is 1 "fails without a known boot setup"
-contains "$ERRS" "No boot setup found" "says no boot setup was found"
-contains "$ERRS" "Add to the kernel command line: $PARAMETERS" "shows the parameters to set by hand"
+contains "$ERRORS" "No boot setup found" "says no boot setup was found"
+contains "$ERRORS" "Add to the kernel command line: $PARAMETERS" "shows the parameters to set by hand"
 
 echo "# EDID path"
 armbian "extraargs=cma=256M"

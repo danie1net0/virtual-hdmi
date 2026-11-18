@@ -2,7 +2,7 @@
 Fake gi, to test the window and the GNOME backend without GTK, libadwaita or DBus.
 
 Each widget keeps what it received (subtitle, children, suffixes, signals) for the
-tests to check; signals fire with widget.emit(name, *args).
+tests to check; signals fire with widget.emit(name, *arguments).
 """
 
 import sys
@@ -10,16 +10,16 @@ import types
 
 
 class Widget:
-    def __init__(self, **props):
-        self.init_props = props
+    def __init__(self, **properties):
+        self.init_properties = properties
         self.children = []
         self.suffixes = []
         self.css_classes = []
         self.handlers = {}
         self.toasts = []
         self.responses = []
-        self.subtitle = props.get("subtitle")
-        self.label = props.get("label")
+        self.subtitle = properties.get("subtitle")
+        self.label = properties.get("label")
         self.text = ""
         self.active = False
         self.sensitive = True
@@ -30,16 +30,16 @@ class Widget:
         self.appearances = {}
         self.presented_on = []
         self.selected = 0
-        self.body = props.get("body")
+        self.body = properties.get("body")
         self.close_response = None
         self.force_closed = False
 
-    def connect(self, signal, handler, *args):
-        self.handlers[signal] = (handler, args)
+    def connect(self, signal, handler, *arguments):
+        self.handlers[signal] = (handler, arguments)
 
     def emit(self, signal, *extra):
-        handler, args = self.handlers[signal]
-        return handler(self, *extra, *args)
+        handler, arguments = self.handlers[signal]
+        return handler(self, *extra, *arguments)
 
     def add(self, child):
         self.children.append(child)
@@ -121,12 +121,12 @@ class Widget:
 class ApplicationWindow(Widget):
     def present(self, parent=None):
         super().present(parent)
-        self.init_props["application"].props.active_window = self
+        self.init_properties["application"].props.active_window = self
 
 
 class NavigationView(Widget):
-    def __init__(self, **props):
-        super().__init__(**props)
+    def __init__(self, **properties):
+        super().__init__(**properties)
         self.pushed = []
 
     def push(self, page):
@@ -136,8 +136,8 @@ class NavigationView(Widget):
 class AlertDialog(Widget):
     created = []
 
-    def __init__(self, **props):
-        super().__init__(**props)
+    def __init__(self, **properties):
+        super().__init__(**properties)
         AlertDialog.created.append(self)
 
 
@@ -148,10 +148,10 @@ class Application:
         Application.created.append(self)
         self.application_id = application_id
         self.props = types.SimpleNamespace(active_window=None)
-        self.run_args = None
+        self.run_arguments = None
 
     def run(self, argv):
-        self.run_args = argv
+        self.run_arguments = argv
         self.do_activate()
         return 0
 
@@ -218,8 +218,8 @@ class DBusProxy:
     calls = []
 
     @classmethod
-    def new_for_bus_sync(cls, *args):
-        cls.calls.append(args)
+    def new_for_bus_sync(cls, *arguments):
+        cls.calls.append(arguments)
         if isinstance(cls.next, Exception):
             raise cls.next
         return cls.next
@@ -231,9 +231,9 @@ class Variant:
         self.value = value
 
 
-def namespace(name, **attrs):
+def namespace(name, **attributes):
     module = types.ModuleType(name)
-    module.__dict__.update(attrs)
+    module.__dict__.update(attributes)
     return module
 
 
@@ -289,7 +289,7 @@ GLib = namespace(
     second_timeouts=[],
     prgnames=[],
     set_prgname=lambda name: GLib.prgnames.append(name),
-    timeout_add=lambda ms, callback: GLib.timeouts.append((ms, callback)),
+    timeout_add=lambda milliseconds, callback: GLib.timeouts.append((milliseconds, callback)),
     timeout_add_seconds=lambda seconds, callback, *data: GLib.second_timeouts.append((seconds, callback, data)),
 )
 

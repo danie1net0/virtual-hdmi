@@ -46,17 +46,17 @@ class PendingMode:
 
 
 def run_async(argv, done):
-    """Runs argv without freezing the window and calls done(ok, output) at the end."""
+    """Runs argv without freezing the window and calls done(succeeded, output) at the end."""
     process = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE)
 
-    def finished(proc, result):
+    def finished(source, result):
         try:
-            _ok, stdout, _err = proc.communicate_utf8_finish(result)
+            _succeeded, stdout, _stderr = source.communicate_utf8_finish(result)
         except GLib.Error as error:
             done(False, error.message)
             return
 
-        done(proc.get_exit_status() == 0, stdout or "")
+        done(source.get_exit_status() == 0, stdout or "")
 
     process.communicate_utf8_async(None, None, finished)
 
@@ -195,7 +195,7 @@ class Window(Adw.ApplicationWindow):
         self.update_install_button()
         return group
 
-    def update_install_button(self, *_args):
+    def update_install_button(self, *_arguments):
         texts = self.modes_entry.get_text().split()
         self.timings_row.set_subtitle(timings_text(texts))
         installed = edid.is_installed(texts)
@@ -207,7 +207,7 @@ class Window(Adw.ApplicationWindow):
 
     def refresh(self):
         self.display_row.set_subtitle(self.display_text())
-        self.edid_row.set_subtitle(edid_text(displays.cmdline_connector()))
+        self.edid_row.set_subtitle(edid_text(displays.command_line_connector()))
 
         for row in self.mode_rows:
             self.modes_group.remove(row)
@@ -377,9 +377,9 @@ class Window(Adw.ApplicationWindow):
         self.install_button.set_sensitive(False)
         run_async(edid_setup.install_command(path, self.output, ["pkexec"]), self.after_install)
 
-    def after_install(self, ok, _text):
+    def after_install(self, succeeded, _text):
         self.update_install_button()
-        if not ok:
+        if not succeeded:
             self.toast("Install cancelled or failed")
             return
 

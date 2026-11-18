@@ -232,11 +232,11 @@ class BuildEdidTest(unittest.TestCase):
             edid.build_edid([], [16])
 
     def test_first_three_modes_in_base_rest_in_extension(self):
-        timings = [edid.build_timing(1000 + i, 700, 100) for i in range(5)]
+        timings = [edid.build_timing(1000 + position, 700, 100) for position in range(5)]
         data = edid.build_edid(timings, [])
 
         self.assertEqual(len(data), 256)
-        self.assertEqual([decode_dtd(data[54 + 18 * i : 72 + 18 * i])["width"] for i in range(3)], [1000, 1001, 1002])
+        self.assertEqual([decode_dtd(data[54 + 18 * position : 72 + 18 * position])["width"] for position in range(3)], [1000, 1001, 1002])
         self.assertEqual(data[108:113], b"\x00\x00\x00\xfc\x00")
         offset = 128 + data[130]
         self.assertEqual(decode_dtd(data[offset : offset + 18])["width"], 1003)
@@ -273,9 +273,9 @@ class InstalledPathTest(unittest.TestCase):
 
 class IsInstalledTest(unittest.TestCase):
     def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        self.installed = Path(tmp.name) / "virtual-monitor.bin"
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.installed = Path(temporary.name) / "virtual-monitor.bin"
         patcher = mock.patch.object(edid, "INSTALLED", self.installed)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -302,35 +302,35 @@ class IsInstalledTest(unittest.TestCase):
 
 class MainTest(unittest.TestCase):
     def run_main(self, argv):
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        standard_output, error_output = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(standard_output), contextlib.redirect_stderr(error_output):
             code = edid.main(argv)
-        return code, out.getvalue(), err.getvalue()
+        return code, standard_output.getvalue(), error_output.getvalue()
 
     def test_writes_file_and_lists_modes(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "x.bin"
-            code, out, _ = self.run_main([str(path), "3440x1440@312", "2560x1080@216", "--vic", "16", "--vic", "4"])
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "x.bin"
+            code, standard_output, _ = self.run_main([str(path), "3440x1440@312", "2560x1080@216", "--vic", "16", "--vic", "4"])
             self.assertEqual(code, 0)
             self.assertEqual(len(path.read_bytes()), 256)
         self.assertEqual(
-            out.splitlines(),
+            standard_output.splitlines(),
             ["3440x1440 @ 312 MHz = 59.24 Hz", "2560x1080 @ 216 MHz = 59.98 Hz", "VICs: 16 4"],
         )
 
     def test_without_vics_prints_no_vic_line(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            code, out, _ = self.run_main([str(Path(tmp) / "x.bin"), "1920x1080@148.5", "--name", "Test"])
+        with tempfile.TemporaryDirectory() as temporary:
+            code, standard_output, _ = self.run_main([str(Path(temporary) / "x.bin"), "1920x1080@148.5", "--name", "Test"])
         self.assertEqual(code, 0)
-        self.assertNotIn("VICs", out)
+        self.assertNotIn("VICs", standard_output)
 
     def test_invalid_mode_returns_1_and_writes_nothing(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "x.bin"
-            code, out, err = self.run_main([str(path), "ruim"])
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "x.bin"
+            code, standard_output, error_output = self.run_main([str(path), "ruim"])
             self.assertFalse(path.exists())
-        self.assertEqual((code, out), (1, ""))
-        self.assertIn("Error: Invalid mode: ruim", err)
+        self.assertEqual((code, standard_output), (1, ""))
+        self.assertIn("Error: Invalid mode: ruim", error_output)
 
     def test_missing_modes_is_usage_error(self):
         with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
@@ -338,8 +338,8 @@ class MainTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, 2)
 
     def test_runs_as_module(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            argv = ["edid", str(Path(tmp) / "x.bin"), "1920x1080@148.5"]
+        with tempfile.TemporaryDirectory() as temporary:
+            argv = ["edid", str(Path(temporary) / "x.bin"), "1920x1080@148.5"]
             with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
                 with self.assertRaises(SystemExit) as raised:
                     runpy.run_path(edid.__file__, run_name="__main__")

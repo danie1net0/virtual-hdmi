@@ -9,9 +9,9 @@
 set -uo pipefail
 
 PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
-BIN="$TMP/bin"
+TEMPORARY="$(mktemp -d)"
+trap 'rm -rf "$TEMPORARY"' EXIT
+BIN="$TEMPORARY/bin"
 FAILURES=0
 TOTAL=0
 
@@ -23,12 +23,12 @@ done
 
 # Starts a new case: empty root, stubs and call log
 new_case() {
-    CASE="$TMP/case-$((TOTAL + 1))-$RANDOM"
+    CASE="$TEMPORARY/case-$((TOTAL + 1))-$RANDOM"
     ROOT="$CASE/root"
     STUBS="$CASE/stubs"
     CALLS="$CASE/calls"
-    OUT="$CASE/out"
-    ERRS="$CASE/errs"
+    OUTPUT="$CASE/out"
+    ERRORS="$CASE/errs"
     mkdir -p "$ROOT" "$STUBS"
     : > "$CALLS"
     # id -u says root (FAKE_UID); id <user> exists (FAKE_USER_EXISTS)
@@ -46,19 +46,19 @@ stub() {
     chmod +x "$STUBS/$name"
 }
 
-# run_script script [args...]: runs in the sandbox; leaves stdout in $OUT, stderr in $ERRS and the exit code in $STATUS.
+# run_script script [args...]: runs in the sandbox; leaves stdout in $OUTPUT, stderr in $ERRORS and the exit code in $STATUS.
 # EXTRA_PATH, when set, goes at the end of the sandbox PATH.
 run_script() {
     local script="$1" path="$STUBS:$BIN${EXTRA_PATH:+:$EXTRA_PATH}"
     shift
     if [[ -z "${COVERAGE:-}" ]]; then
-        ROOT="$ROOT" PATH="$path" bash "$script" "$@" > "$OUT" 2> "$ERRS"
+        ROOT="$ROOT" PATH="$path" bash "$script" "$@" > "$OUTPUT" 2> "$ERRORS"
         STATUS=$?
         return
     fi
 
     PS4='+@@${BASH_SOURCE}:${LINENO}@@ ' BASH_XTRACEFD=7 ROOT="$ROOT" PATH="$path" \
-        bash -x "$script" "$@" > "$OUT" 2> "$ERRS" 7>> "$COVERAGE"
+        bash -x "$script" "$@" > "$OUTPUT" 2> "$ERRORS" 7>> "$COVERAGE"
     STATUS=$?
 }
 
@@ -77,9 +77,9 @@ record() {
 
 # Output of the last run_script, shown under a failure
 show_output() {
-    [[ -f "${OUT:-}" ]] || return 0
-    sed 's/^/      output: /' "$OUT"
-    sed 's/^/      errors: /' "$ERRS"
+    [[ -f "${OUTPUT:-}" ]] || return 0
+    sed 's/^/      output: /' "$OUTPUT"
+    sed 's/^/      errors: /' "$ERRORS"
 }
 
 # check description command...: passes if the command exits with 0

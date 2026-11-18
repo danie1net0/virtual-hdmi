@@ -18,12 +18,12 @@ echo "# arguments"
 manager gdm3
 FAKE_UID=1000 run_script "$SCRIPT" daniel
 status_is 1 "fails without root"
-contains "$ERRS" "Run with sudo." "asks for sudo"
+contains "$ERRORS" "Run with sudo." "asks for sudo"
 
 manager gdm3
 run_script "$SCRIPT"
 status_is 1 "fails without a user"
-contains "$ERRS" "Give the user" "asks for the user"
+contains "$ERRORS" "Give the user" "asks for the user"
 
 manager gdm3
 run_script "$SCRIPT" 'Daniel; rm -rf /'
@@ -32,12 +32,12 @@ status_is 1 "refuses an invalid user name"
 manager gdm3
 run_script "$SCRIPT" daniel maybe
 status_is 1 "refuses a state other than on or off"
-contains "$ERRS" "Use on or off, not maybe." "says which states it takes"
+contains "$ERRORS" "Use on or off, not maybe." "says which states it takes"
 
 manager gdm3
 FAKE_USER_EXISTS=0 run_script "$SCRIPT" ghost
 status_is 1 "refuses a user that does not exist"
-contains "$ERRS" "User ghost does not exist." "names the missing user"
+contains "$ERRORS" "User ghost does not exist." "names the missing user"
 
 echo "# GDM"
 manager gdm3
@@ -51,9 +51,9 @@ check "drops the old setting" test "$(grep -c '^AutomaticLoginEnable' "$ROOT/etc
 check "keeps the other settings" grep -qx "WaylandEnable=true" "$ROOT/etc/gdm3/custom.conf"
 check "keeps the other sections" grep -qx "\[security\]" "$ROOT/etc/gdm3/custom.conf"
 check "keeps a copy of the original" grep -qx "AutomaticLoginEnable = false" "$ROOT/etc/gdm3/custom.conf.before-auto-login"
-contains "$OUT" "Automatic login of daniel: on (gdm3)" "says what it does"
-contains "$OUT" "without a password" "warns about the open desktop"
-contains "$OUT" "to open it again: sudo systemctl restart display-manager" "says how to open the session again after logging out"
+contains "$OUTPUT" "Automatic login of daniel: on (gdm3)" "says what it does"
+contains "$OUTPUT" "without a password" "warns about the open desktop"
+contains "$OUTPUT" "to open it again: sudo systemctl restart display-manager" "says how to open the session again after logging out"
 
 run_script "$SCRIPT" daniel
 check "running again does not duplicate the settings" test "$(grep -c '^AutomaticLogin=' "$ROOT/etc/gdm3/custom.conf")" = 1
@@ -63,8 +63,8 @@ run_script "$SCRIPT" daniel off
 status_is 0 "turns GDM auto-login off"
 check "off removes the settings" test "$(grep -c '^AutomaticLogin' "$ROOT/etc/gdm3/custom.conf")" = 0
 check "off keeps [daemon]" grep -qx "\[daemon\]" "$ROOT/etc/gdm3/custom.conf"
-not_contains "$OUT" "without a password" "off does not warn"
-not_contains "$OUT" "restart display-manager" "off does not mention logging out"
+not_contains "$OUTPUT" "without a password" "off does not warn"
+not_contains "$OUTPUT" "restart display-manager" "off does not mention logging out"
 
 manager gdm
 run_script "$SCRIPT" daniel
@@ -118,7 +118,7 @@ check "keeps a copy of the PAM service" test "$(grep -c virtual-monitor "$ROOT/e
 check "adds the automatic session with COSMIC" test "$(tail -n 3 "$ROOT/etc/greetd/cosmic-greeter.toml")" = "$(printf '[initial_session]\ncommand = "start-cosmic"\nuser = "daniel"')"
 check "keeps the greeter session" grep -qx 'user = "cosmic-greeter"' "$ROOT/etc/greetd/cosmic-greeter.toml"
 check "edits the COSMIC file, not config.toml" grep -qx "old" "$ROOT/etc/greetd/config.toml"
-contains "$OUT" "to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager" "greetd opens the session again only without its runfile"
+contains "$OUTPUT" "to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager" "greetd opens the session again only without its runfile"
 
 run_script "$SCRIPT" daniel
 check "running again keeps one automatic session" test "$(grep -c '^\[initial_session\]' "$ROOT/etc/greetd/cosmic-greeter.toml")" = 1
@@ -139,7 +139,7 @@ status_is 0 "greetd without COSMIC uses the first session"
 check "replaces the old automatic session" test "$(grep -c 'someone' "$ROOT/etc/greetd/config.toml")" = 0
 check "keeps the table after the old session" grep -qx "vt = 2" "$ROOT/etc/greetd/config.toml"
 check "runs the Exec of the Wayland session" grep -qx 'command = "/usr/bin/startplasma-wayland"' "$ROOT/etc/greetd/config.toml"
-contains "$OUT" "no $ROOT/etc/pam.d/greetd" "without the PAM service of greetd, says the type stays"
+contains "$OUTPUT" "no $ROOT/etc/pam.d/greetd" "without the PAM service of greetd, says the type stays"
 
 manager greetd
 mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"
@@ -150,7 +150,7 @@ run_script "$SCRIPT" daniel
 status_is 0 "greetd with only an X11 session"
 check "without pam_env, the line goes before the first session line" test "$(sed -n 3p "$ROOT/etc/pam.d/greetd")" = "session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf"
 check "an X11 session is marked x11" grep -qx "XDG_SESSION_TYPE OVERRIDE=x11" "$ROOT/etc/security/virtual-monitor-session.conf"
-contains "$OUT" "sudo rm -f /var/run/greetd-custom.run &&" "uses the runfile set in the configuration"
+contains "$OUTPUT" "sudo rm -f /var/run/greetd-custom.run &&" "uses the runfile set in the configuration"
 
 manager greetd
 mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"
@@ -165,23 +165,23 @@ echo '[default_session]' > "$ROOT/etc/greetd/config.toml"
 rm "$ROOT/usr/share/wayland-sessions/plasma.desktop" "$ROOT/usr/share/xsessions/xfce.desktop"
 run_script "$SCRIPT" daniel
 status_is 1 "greetd without any session fails"
-contains "$ERRS" "No desktop session found" "says there is no session"
+contains "$ERRORS" "No desktop session found" "says there is no session"
 check "fails before touching PAM" test ! -e "$ROOT/etc/security/virtual-monitor-session.conf"
 
 manager greetd
 run_script "$SCRIPT" daniel
 status_is 1 "greetd without configuration fails"
-contains "$ERRS" "greetd has no configuration" "says the configuration is missing"
+contains "$ERRORS" "greetd has no configuration" "says the configuration is missing"
 
 echo "# unknown display manager"
 manager xdm
 run_script "$SCRIPT" daniel
 status_is 1 "unknown display manager fails"
-contains "$ERRS" "Unknown display manager (xdm)" "names it"
+contains "$ERRORS" "Unknown display manager (xdm)" "names it"
 
 new_case
 run_script "$SCRIPT" daniel
 status_is 1 "no display manager fails"
-contains "$ERRS" "Unknown display manager (none)" "says there is none"
+contains "$ERRORS" "Unknown display manager (none)" "says there is none"
 
 summary

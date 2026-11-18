@@ -195,8 +195,8 @@ def base_block(descriptors: list[bytes]) -> bytearray:
     block[25:35] = bytes.fromhex("ee91a3544c99260f5054")  # sRGB colors
     block[38:54] = b"\x01" * 16  # no standard timings
 
-    for i, descriptor in enumerate(descriptors):
-        block[54 + 18 * i : 72 + 18 * i] = descriptor
+    for position, descriptor in enumerate(descriptors):
+        block[54 + 18 * position : 72 + 18 * position] = descriptor
 
     block[126] = 1  # one extension
     checksum(block)
@@ -235,7 +235,7 @@ def build_edid(timings: list[Timing], vics: list[int], name: str = DEFAULT_NAME)
     if not timings:
         raise EdidError("Provide at least one mode")
 
-    dtds = [detailed_timing(t) for t in timings]
+    dtds = [detailed_timing(timing) for timing in timings]
     base = dtds[:3] + [name_descriptor(name)]
     return bytes(base_block(base) + cta_block(list(vics), dtds[3:]))
 
@@ -263,20 +263,20 @@ def main(argv=None) -> int:
     parser.add_argument("modes", nargs="+", help="WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ]")
     parser.add_argument("--vic", type=int, action="append", default=[], help="standard CEA mode (VIC)")
     parser.add_argument("--name", default=DEFAULT_NAME)
-    args = parser.parse_args(argv)
+    arguments = parser.parse_args(argv)
 
     try:
-        timings, data = generate(args.modes, args.vic, args.name)
+        timings, data = generate(arguments.modes, arguments.vic, arguments.name)
     except EdidError as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
 
-    args.output.write_bytes(data)
+    arguments.output.write_bytes(data)
     for timing in timings:
         print(timing.label())
 
-    if args.vic:
-        print("VICs:", " ".join(str(v) for v in args.vic))
+    if arguments.vic:
+        print("VICs:", " ".join(str(vic) for vic in arguments.vic))
 
     return 0
 

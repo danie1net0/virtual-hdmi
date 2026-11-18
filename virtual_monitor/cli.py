@@ -38,7 +38,7 @@ def scale_argument(text):
     return scale
 
 
-def parse_args(argv):
+def parse_arguments(argv):
     parser = argparse.ArgumentParser(prog="virtual-monitor", description="With no options, opens the window.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     action = parser.add_mutually_exclusive_group()
@@ -84,13 +84,13 @@ def flag(on, mark):
     return mark
 
 
-def print_modes(backend, connector, out):
-    print(f"session: {backend.name}", file=out)
-    print(f"connector: {connector}  (EDID at boot: {displays.cmdline_connector() or 'no'})", file=out)
+def print_modes(backend, connector, standard_output):
+    print(f"session: {backend.name}", file=standard_output)
+    print(f"connector: {connector}  (EDID at boot: {displays.command_line_connector() or 'no'})", file=standard_output)
 
     for mode in backend.modes(connector):
         flags = flag(mode.current, "*") + flag(mode.preferred, "+")
-        print(f"{flags} {mode.id}  {mode.width}x{mode.height}  {mode.refresh:.3f} Hz", file=out)
+        print(f"{flags} {mode.id}  {mode.width}x{mode.height}  {mode.refresh:.3f} Hz", file=standard_output)
 
 
 def current_index(modes):
@@ -114,48 +114,48 @@ def current_mode(modes):
     return modes[index].id
 
 
-def target_mode(args, modes):
+def target_mode(arguments, modes):
     """The mode the options switch to, or None when they only list."""
-    if args.apply:
-        return args.apply
+    if arguments.apply:
+        return arguments.apply
 
-    if args.next:
+    if arguments.next:
         return next_mode(modes)
 
-    if args.scale is None:
+    if arguments.scale is None:
         return None
 
     return current_mode(modes)
 
 
-def save_settings(args, backend, connector, mode_id):
+def save_settings(arguments, backend, connector, mode_id):
     """Saves --scale for the size of mode_id; an unknown mode keeps nothing."""
     mode = backend.find_mode(connector, mode_id)
     if mode is None:
         return
 
-    if args.scale is not None:
-        choice.save_setting(mode.width, mode.height, "scale", args.scale or None)
+    if arguments.scale is not None:
+        choice.save_setting(mode.width, mode.height, "scale", arguments.scale or None)
 
 
-def run_action(args, backend, out, err):
-    if args.restore:
+def run_action(arguments, backend, standard_output, error_output):
+    if arguments.restore:
         choice.restore(backend)
         return 0
 
     connector = displays.pick_connector(backend)
     if connector is None:
-        print("No monitor connected.", file=err)
+        print("No monitor connected.", file=error_output)
         return 1
 
-    mode_id = target_mode(args, backend.modes(connector))
+    mode_id = target_mode(arguments, backend.modes(connector))
     if mode_id is None:
-        print_modes(backend, connector, out)
+        print_modes(backend, connector, standard_output)
         return 0
 
-    save_settings(args, backend, connector, mode_id)
-    choice.apply_mode(backend, connector, mode_id, not args.temp)
-    print(f"applied {mode_id} on {connector}", file=out)
+    save_settings(arguments, backend, connector, mode_id)
+    choice.apply_mode(backend, connector, mode_id, not arguments.temp)
+    print(f"applied {mode_id} on {connector}", file=standard_output)
     return 0
 
 
@@ -165,21 +165,21 @@ SESSION_HINT = (
 )
 
 
-def print_session_hint(err):
+def print_session_hint(error_output):
     """Hints at a closed session when the user has no Wayland socket: an X display alone may be the
     login screen's."""
     if os.environ.get("WAYLAND_DISPLAY"):
         return
 
-    print(SESSION_HINT, file=err)
+    print(SESSION_HINT, file=error_output)
 
 
-def print_edid_hint(reasons, err):
+def print_edid_hint(reasons, error_output):
     """A backend ran but saw no output: no monitor is plugged in and no virtual EDID makes one up."""
     if not any(reason == "no connected output" for _name, reason in reasons):
         return
 
-    print(EDID_HINT, file=err)
+    print(EDID_HINT, file=error_output)
 
 
 def elevate():
@@ -190,20 +190,20 @@ def elevate():
     return ["sudo"]
 
 
-def install_edid(args, out, err):
+def install_edid(arguments, standard_output, error_output):
     """Generates the EDID of --modes and installs it on --output or the output edid_setup picks."""
-    output = args.output or edid_setup.target_output()
+    output = arguments.output or edid_setup.target_output()
     if output is None:
-        print(NO_FREE_OUTPUT, file=err)
+        print(NO_FREE_OUTPUT, file=error_output)
         return 1
 
     try:
-        path = edid_setup.write_edid(args.modes.split())
+        path = edid_setup.write_edid(arguments.modes.split())
     except edid.EdidError as error:
-        print(f"Invalid EDID: {error}", file=err)
+        print(f"Invalid EDID: {error}", file=error_output)
         return 1
 
-    print(f"Installing the virtual monitor on {output}", file=out)
+    print(f"Installing the virtual monitor on {output}", file=standard_output)
     return subprocess.call(edid_setup.install_command(path, output, elevate()))
 
 
@@ -216,27 +216,27 @@ def auto_login(state):
     return subprocess.call([*elevate(), "bash", str(AUTO_LOGIN_SCRIPT), login_user(), state])
 
 
-def main(argv, out=None, err=None):
-    out, err = out or sys.stdout, err or sys.stderr
-    args = parse_args(argv)
-    if args.install_edid:
-        return install_edid(args, out, err)
+def main(argv, standard_output=None, error_output=None):
+    standard_output, error_output = standard_output or sys.stdout, error_output or sys.stderr
+    arguments = parse_arguments(argv)
+    if arguments.install_edid:
+        return install_edid(arguments, standard_output, error_output)
 
-    if args.auto_login:
-        return auto_login(args.auto_login)
+    if arguments.auto_login:
+        return auto_login(arguments.auto_login)
 
     backend = displays.detect()
     if backend is None:
-        print("No supported video environment in this session:", file=err)
+        print("No supported video environment in this session:", file=error_output)
         reasons = displays.diagnose()
         for name, reason in reasons:
-            print(f"  {name}: {reason}", file=err)
-        print_session_hint(err)
-        print_edid_hint(reasons, err)
+            print(f"  {name}: {reason}", file=error_output)
+        print_session_hint(error_output)
+        print_edid_hint(reasons, error_output)
         return 1
 
     try:
-        return run_action(args, backend, out, err)
+        return run_action(arguments, backend, standard_output, error_output)
     except Exception as error:  # xrandr, kscreen-doctor or DBus refused the mode
-        print(f"Failed: {error}", file=err)
+        print(f"Failed: {error}", file=error_output)
         return 1

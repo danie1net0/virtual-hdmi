@@ -13,7 +13,7 @@ stub_download() {
 }
 
 # Folder tar extracted into, from its recorded call
-work_dir() {
+work_folder() {
     sed -n 's/^tar -xz -C \(.*\) --strip-components=1$/\1/p' "$CALLS"
 }
 
@@ -21,28 +21,28 @@ new_case
 stub tar
 run_script "$SCRIPT"
 status_is 1 "fails without curl"
-contains "$ERRS" "Missing curl." "says curl is missing"
+contains "$ERRORS" "Missing curl." "says curl is missing"
 not_called tar
 
 new_case
 stub curl
 run_script "$SCRIPT"
 status_is 1 "fails without tar"
-contains "$ERRS" "Missing tar." "says tar is missing"
+contains "$ERRORS" "Missing tar." "says tar is missing"
 not_called curl
 
 new_case
 stub_download
 VERSION="../evil" run_script "$SCRIPT"
 status_is 1 "rejects a VERSION with a path"
-contains "$ERRS" "Invalid VERSION: ../evil" "names the invalid VERSION"
+contains "$ERRORS" "Invalid VERSION: ../evil" "names the invalid VERSION"
 not_called curl
 
 new_case
 stub_download
 run_script "$SCRIPT" --skip-check --dev
 status_is 1 "rejects --dev"
-contains "$ERRS" "clone the repository" "explains how to use --dev"
+contains "$ERRORS" "clone the repository" "explains how to use --dev"
 not_called curl
 
 new_case
@@ -50,10 +50,10 @@ stub_download
 run_script "$SCRIPT"
 status_is 0 "installs master by default"
 called "curl -fsSL $ARCHIVE/master/virtual-hdmi-master.tar.gz"
-check "extracts into a temporary folder" test -n "$(work_dir)"
+check "extracts into a temporary folder" test -n "$(work_folder)"
 called "install.sh"
-check "removes the temporary folder" test ! -e "$(work_dir)"
-contains "$OUT" "==> Installing" "says it is installing"
+check "removes the temporary folder" test ! -e "$(work_folder)"
+contains "$OUTPUT" "==> Installing" "says it is installing"
 
 new_case
 stub_download
@@ -73,6 +73,6 @@ new_case
 stub_download 3
 run_script "$SCRIPT"
 status_is 3 "returns the status of install.sh"
-check "removes the temporary folder after a failure" test ! -e "$(work_dir)"
+check "removes the temporary folder after a failure" test ! -e "$(work_folder)"
 
 summary

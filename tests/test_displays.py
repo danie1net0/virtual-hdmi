@@ -88,7 +88,7 @@ def mutter_monitor(connector, *modes):
     """Monitor in the GetCurrentState format; each mode is (id, current, preferred)."""
     return (
         (connector, "VHD", "Virtual", "0"),
-        [(mode_id, 1920, 1080, 60.0, 1.0, [1.0], {"is-current": cur, "is-preferred": pref}) for mode_id, cur, pref in modes],
+        [(mode_id, 1920, 1080, 60.0, 1.0, [1.0], {"is-current": current, "is-preferred": preferred}) for mode_id, current, preferred in modes],
         {},
     )
 
@@ -98,8 +98,8 @@ def sized_mutter_monitor(connector, width, height, scales):
     return ((connector, "VHD", "Virtual", "0"), [("big", width, height, 60.0, 1.0, scales, {})], {})
 
 
-def logical(x, primary, *connectors):
-    return (x, 0, 1.0, 0, primary, [(c, "VHD", "Virtual", "0") for c in connectors], {})
+def logical(left, primary, *connectors):
+    return (left, 0, 1.0, 0, primary, [(connector, "VHD", "Virtual", "0") for connector in connectors], {})
 
 
 class FakeBackend(displays.Backend):
@@ -118,7 +118,7 @@ class ParseXrandrTest(unittest.TestCase):
         self.assertEqual(list(self.outputs), ["HDMI-1", "DP-1"])
 
     def test_flags_and_ids(self):
-        modes = {m.id: m for m in self.outputs["HDMI-1"]}
+        modes = {mode.id: mode for mode in self.outputs["HDMI-1"]}
 
         self.assertTrue(modes["3440x1440@59.24"].current)
         self.assertTrue(modes["3440x1440@59.24"].preferred)
@@ -130,12 +130,12 @@ class ParseXrandrTest(unittest.TestCase):
         self.assertEqual(modes["2560x1080@59.98"].refresh, 59.98)
 
     def test_skips_interlaced_and_detail_lines(self):
-        ids = [m.id for m in self.outputs["HDMI-1"]]
+        ids = [mode.id for mode in self.outputs["HDMI-1"]]
         self.assertNotIn("1920x1080@30.00", ids)
         self.assertEqual(len(ids), 5)
 
     def test_ignores_modes_of_disconnected_and_before_any_output(self):
-        all_ids = [m.id for modes in self.outputs.values() for m in modes]
+        all_ids = [mode.id for modes in self.outputs.values() for mode in modes]
         self.assertNotIn("1024x768@60.00", all_ids)
         self.assertNotIn("640x480@60.00", all_ids)
 
@@ -145,7 +145,7 @@ class ParseXrandrTest(unittest.TestCase):
     def test_ignores_stray_tokens(self):
         text = "HDMI-1 connected\n   800x600   +  60.32 junk 56.25*\n"
         modes = displays.parse_xrandr(text)["HDMI-1"]
-        self.assertEqual([(m.id, m.current, m.preferred) for m in modes], [("800x600@60.32", False, False), ("800x600@56.25", True, False)])
+        self.assertEqual([(mode.id, mode.current, mode.preferred) for mode in modes], [("800x600@60.32", False, False), ("800x600@56.25", True, False)])
 
 
 class ParseOtherBackendsTest(unittest.TestCase):
@@ -153,7 +153,7 @@ class ParseOtherBackendsTest(unittest.TestCase):
         outputs = displays.parse_wlr(WLR)
         modes = outputs["HDMI-A-1"]
 
-        self.assertEqual([m.id for m in modes], ["3440x1440@59.239", "1920x1080@60.000"])
+        self.assertEqual([mode.id for mode in modes], ["3440x1440@59.239", "1920x1080@60.000"])
         self.assertTrue(modes[0].current and modes[0].preferred)
         self.assertFalse(modes[1].current or modes[1].preferred)
         self.assertEqual(outputs["eDP-1"], [])
@@ -193,10 +193,10 @@ class ParseOtherBackendsTest(unittest.TestCase):
         outputs = displays.parse_mutter(monitors)
 
         self.assertEqual(list(outputs), ["HDMI-1", "DP-1"])
-        a, b = outputs["HDMI-1"]
-        self.assertEqual((a.id, a.width, a.height, a.refresh), ("a", 1920, 1080, 60.0))
-        self.assertTrue(a.current and not a.preferred)
-        self.assertTrue(b.preferred and not b.current)
+        first, second = outputs["HDMI-1"]
+        self.assertEqual((first.id, first.width, first.height, first.refresh), ("a", 1920, 1080, 60.0))
+        self.assertTrue(first.current and not first.preferred)
+        self.assertTrue(second.preferred and not second.current)
 
     def test_normalize_matches_kernel_and_mutter_names(self):
         self.assertEqual(displays.normalize("HDMI-A-1"), "HDMI-1")
@@ -329,20 +329,20 @@ class RunTest(unittest.TestCase):
 
 
 class CommandBackendsTest(unittest.TestCase):
-    def check_requirement(self, cls, env, tool):
-        variable = next(iter(env), None)
+    def check_requirement(self, backend_class, environment, tool):
+        variable = next(iter(environment), None)
         cases = [
-            (env, f"/usr/bin/{tool}", ""),
-            (env, None, f"{tool} is not installed"),
+            (environment, f"/usr/bin/{tool}", ""),
+            (environment, None, f"{tool} is not installed"),
         ]
         if variable:
             cases.append(({}, f"/usr/bin/{tool}", f"{variable} is not set"))
 
         for environ, which, expected in cases:
-            with self.subTest(cls=cls.name, env=environ, which=which):
+            with self.subTest(backend_class=backend_class.name, environment=environ, which=which):
                 with mock.patch.dict("os.environ", environ, clear=True), mock.patch("shutil.which", return_value=which):
-                    self.assertEqual(cls.requirement(), expected)
-                    self.assertIs(cls.available(), not expected)
+                    self.assertEqual(backend_class.requirement(), expected)
+                    self.assertIs(backend_class.available(), not expected)
 
     def test_requirements(self):
         self.check_requirement(displays.XrandrBackend, {"DISPLAY": ":0"}, "xrandr")
@@ -452,8 +452,8 @@ class FakeProxy:
     def get_name_owner(self):
         return self.owner
 
-    def call_sync(self, method, args, flags, timeout, cancellable):
-        self.calls.append((method, args, flags, timeout))
+    def call_sync(self, method, arguments, flags, timeout, cancellable):
+        self.calls.append((method, arguments, flags, timeout))
         return mock.Mock(unpack=mock.Mock(return_value=self.state))
 
 
@@ -467,7 +467,7 @@ class MutterBackendTest(unittest.TestCase):
     def test_available_when_mutter_owns_the_name(self):
         self.assertEqual(displays.MutterBackend.requirement(), "")
         self.assertTrue(displays.MutterBackend.available())
-        bus, flags, info, *names, cancellable = fake_gi.DBusProxy.calls[-1]
+        bus, flags, information, *names, cancellable = fake_gi.DBusProxy.calls[-1]
 
         self.assertEqual((bus, flags), ("session", "do-not-auto-start"))
         self.assertEqual(tuple(names), displays.MUTTER)
@@ -487,7 +487,7 @@ class MutterBackendTest(unittest.TestCase):
 
     def test_outputs(self):
         backend = displays.MutterBackend()
-        self.assertEqual([m.id for m in backend.modes("HDMI-1")], ["a", "b"])
+        self.assertEqual([mode.id for mode in backend.modes("HDMI-1")], ["a", "b"])
         self.assertEqual(self.proxy.calls[-1][0], "GetCurrentState")
 
     def test_apply_persistent_and_temporary(self):
@@ -586,26 +586,26 @@ class DetectTest(unittest.TestCase):
 
 class ConnectorTest(unittest.TestCase):
     def cmdline(self, text):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        path = Path(tmp.name) / "cmdline"
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        path = Path(temporary.name) / "cmdline"
         if text is not None:
             path.write_text(text)
-        patcher = mock.patch.object(displays, "CMDLINE", path)
+        patcher = mock.patch.object(displays, "KERNEL_COMMAND_LINE", path)
         patcher.start()
         self.addCleanup(patcher.stop)
 
     def test_reads_connector_from_cmdline(self):
         self.cmdline("root=/dev/mmcblk0p1 drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin video=HDMI-A-1:e\n")
-        self.assertEqual(displays.cmdline_connector(), "HDMI-A-1")
+        self.assertEqual(displays.command_line_connector(), "HDMI-A-1")
 
     def test_cmdline_without_edid(self):
         self.cmdline("root=/dev/sda1 quiet")
-        self.assertIsNone(displays.cmdline_connector())
+        self.assertIsNone(displays.command_line_connector())
 
     def test_unreadable_cmdline(self):
         self.cmdline(None)
-        self.assertIsNone(displays.cmdline_connector())
+        self.assertIsNone(displays.command_line_connector())
 
     def test_picks_edid_connector_by_normalized_name(self):
         self.cmdline("drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin")

@@ -53,9 +53,9 @@ class FlowRulesTest(unittest.TestCase):
                 self.assertEqual(shell_problems(path), [])
 
     def test_detects_each_problem(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        sample = Path(tmp.name) / "sample"
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        sample = Path(temporary.name) / "sample"
 
         sample.write_text("a = 1 if b else 2\nif a:\n    if b:\n        pass\nelse:\n    pass\n")
         problems = sorted(python_problems(sample))

@@ -27,7 +27,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-CMDLINE = Path("/proc/cmdline")
+KERNEL_COMMAND_LINE = Path("/proc/cmdline")
 MUTTER = ("org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig")
 TABLET_SCALE = 1.5
 TABLET_MIN_HEIGHT = 1500
@@ -230,13 +230,13 @@ def start_cosmic_output(outputs, header):
 
 
 def parse_mutter(monitors):
-    """Monitors from GetCurrentState: ((connector, ...), [(id, w, h, hz, scale, scales, props)], ...)."""
+    """Monitors from GetCurrentState: ((connector, ...), [(id, width, height, refresh, scale, scales, properties)], ...)."""
     outputs = {}
     for monitor in monitors:
         modes = []
-        for mode_id, width, height, refresh, _scale, _scales, props in monitor[1]:
+        for mode_id, width, height, refresh, _scale, _scales, properties in monitor[1]:
             modes.append(
-                Mode(mode_id, width, height, refresh, bool(props.get("is-current")), bool(props.get("is-preferred")))
+                Mode(mode_id, width, height, refresh, bool(properties.get("is-current")), bool(properties.get("is-preferred")))
             )
         outputs[monitor[0][0]] = modes
     return outputs
@@ -271,16 +271,16 @@ def mutter_layout(monitors, logical, change):
     scale = mutter_scale(monitors, change)
 
     layout = []
-    for x, y, own_scale, own_transform, primary, monitors_in, _props in logical:
+    for left, top, own_scale, own_transform, primary, monitors_in, _properties in logical:
         members = [(monitor[0], mode_of[monitor[0]], {}) for monitor in monitors_in if mode_of.get(monitor[0])]
         if not members:
             continue
 
         if holds(members, change.connector):
-            layout.append((x, y, scale, own_transform, primary, members))
+            layout.append((left, top, scale, own_transform, primary, members))
             continue
 
-        layout.append((x, y, own_scale, own_transform, primary, members))
+        layout.append((left, top, own_scale, own_transform, primary, members))
 
     if not any(holds(item[5], change.connector) for item in layout):
         layout.append((0, 0, scale, 0, not layout, [(change.connector, change.mode_id, {})]))
@@ -445,7 +445,7 @@ class MutterBackend(Backend):
     def state(self):
         from gi.repository import Gio
 
-        serial, monitors, logical, _props = self.proxy.call_sync(
+        serial, monitors, logical, _properties = self.proxy.call_sync(
             "GetCurrentState", None, Gio.DBusCallFlags.NONE, -1, None
         ).unpack()
         return serial, monitors, logical
@@ -463,21 +463,21 @@ class MutterBackend(Backend):
         if persistent:
             method = 2  # persistent (monitors.xml)
 
-        args = GLib.Variant("(uua(iiduba(ssa{sv}))a{sv})", (serial, method, layout, {}))
-        self.proxy.call_sync("ApplyMonitorsConfig", args, Gio.DBusCallFlags.NONE, -1, None)
+        arguments = GLib.Variant("(uua(iiduba(ssa{sv}))a{sv})", (serial, method, layout, {}))
+        self.proxy.call_sync("ApplyMonitorsConfig", arguments, Gio.DBusCallFlags.NONE, -1, None)
 
 
 BACKENDS = (MutterBackend, KScreenBackend, CosmicBackend, WlrBackend, XrandrBackend)
 
 
-def probe(cls):
-    """(backend, "") when cls lists an output in this session; (None, why not) otherwise."""
-    reason = cls.requirement()
+def probe(backend_class):
+    """(backend, "") when backend_class lists an output in this session; (None, why not) otherwise."""
+    reason = backend_class.requirement()
     if reason:
         return None, reason
 
     try:
-        backend = cls()
+        backend = backend_class()
         outputs = backend.outputs()
     except Exception as error:  # the tool, DBus or gi refused
         return None, str(error)
@@ -490,8 +490,8 @@ def probe(cls):
 
 def detect():
     """The first backend that works in the current session, or None."""
-    for cls in BACKENDS:
-        backend, _reason = probe(cls)
+    for backend_class in BACKENDS:
+        backend, _reason = probe(backend_class)
         if backend is not None:
             return backend
     return None
@@ -499,13 +499,13 @@ def detect():
 
 def diagnose():
     """(backend name, why it does not work) for every backend, to explain a None from detect()."""
-    return [(cls.name, probe(cls)[1]) for cls in BACKENDS]
+    return [(backend_class.name, probe(backend_class)[1]) for backend_class in BACKENDS]
 
 
-def cmdline_connector():
+def command_line_connector():
     """Connector of drm.edid_firmware at the current boot, or None."""
     try:
-        cmdline = CMDLINE.read_text()
+        cmdline = KERNEL_COMMAND_LINE.read_text()
     except OSError:
         return None
 
@@ -519,7 +519,7 @@ def cmdline_connector():
 def pick_connector(backend):
     """The virtual EDID output, if the backend sees it; otherwise the first connected one."""
     connectors = backend.connectors()
-    wanted = normalize(cmdline_connector())
+    wanted = normalize(command_line_connector())
     for connector in connectors:
         if wanted and normalize(connector) == wanted:
             return connector

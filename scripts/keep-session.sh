@@ -34,7 +34,7 @@ check() {
     local user_name="$1" sessions active_greeter user_session
     sessions="$(list_sessions)"
     active_greeter="$(awk -F'\t' '$2 == "greeter" && $6 == "yes" {print $1; exit}' <<<"$sessions")"
-    user_session="$(awk -F'\t' -v u="$user_name" '$2 == "user" && $3 == u && ($4 == "wayland" || $4 == "x11") && $5 == "seat0" && $6 == "no" {print $1; exit}' <<<"$sessions")"
+    user_session="$(awk -F'\t' -v user="$user_name" '$2 == "user" && $3 == user && ($4 == "wayland" || $4 == "x11") && $5 == "seat0" && $6 == "no" {print $1; exit}' <<<"$sessions")"
     [[ -n "$active_greeter" && -n "$user_session" ]] || return 0
 
     echo "Login screen ($active_greeter) active with session $user_session of $user_name in the background; reactivating the session."

@@ -26,21 +26,21 @@ class Backend(displays.Backend):
 
 class ConfigTest(unittest.TestCase):
     def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        self.home = Path(tmp.name)
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.home = Path(temporary.name)
         patcher = mock.patch("pathlib.Path.home", return_value=self.home)
         patcher.start()
         self.addCleanup(patcher.stop)
 
     def test_uses_absolute_xdg_config_home(self):
         with mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": "/xdg"}):
-            self.assertEqual(choice.config_dir(), Path("/xdg"))
+            self.assertEqual(choice.config_folder(), Path("/xdg"))
 
     def test_ignores_relative_or_missing_xdg(self):
-        for env in ({"XDG_CONFIG_HOME": "rel"}, {}):
-            with self.subTest(env=env), mock.patch.dict("os.environ", env, clear=True):
-                self.assertEqual(choice.config_dir(), self.home / ".config")
+        for environment in ({"XDG_CONFIG_HOME": "rel"}, {}):
+            with self.subTest(environment=environment), mock.patch.dict("os.environ", environment, clear=True):
+                self.assertEqual(choice.config_folder(), self.home / ".config")
 
     def test_files(self):
         with mock.patch.dict("os.environ", {}, clear=True):
@@ -51,9 +51,9 @@ class ConfigTest(unittest.TestCase):
 
 class SaveLoadTest(unittest.TestCase):
     def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        self.config = Path(tmp.name) / "config"
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.config = Path(temporary.name) / "config"
         patcher = mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.config)})
         patcher.start()
         self.addCleanup(patcher.stop)

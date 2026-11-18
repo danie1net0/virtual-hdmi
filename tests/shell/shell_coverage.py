@@ -107,7 +107,7 @@ def hits(trace_file):
 
 
 def main(argv):
-    trace, scripts = argv[0], [Path(p).resolve() for p in argv[1:]]
+    trace, scripts = argv[0], [Path(script).resolve() for script in argv[1:]]
     executed = hits(trace)
     total = covered = 0
     for script in scripts:

@@ -30,7 +30,7 @@ def is_socket(path):
         return False
 
 
-def runtime_dir(environ, uid, root=RUNTIME_ROOT):
+def runtime_folder(environ, uid, root=RUNTIME_ROOT):
     """XDG_RUNTIME_DIR, or /run/user/<uid> when it exists; None without either."""
     if environ.get("XDG_RUNTIME_DIR"):
         return Path(environ["XDG_RUNTIME_DIR"])
@@ -108,7 +108,7 @@ def add_x11_variables(found, environ, runtime, home, x11_sockets, uid):
 def missing_variables(environ, uid, home, runtime_root=RUNTIME_ROOT, x11_sockets=X11_SOCKETS):
     """The session variables environ lacks and this user's session provides."""
     found = {}
-    runtime = runtime_dir(environ, uid, runtime_root)
+    runtime = runtime_folder(environ, uid, runtime_root)
     if runtime is None:
         return found
 

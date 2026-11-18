@@ -14,10 +14,10 @@ machine() {
     new_case
     mkdir -p "$ROOT/etc/gdm3" "$CASE/sessions"
     printf '[daemon]\nAutomaticLoginEnable=True\nAutomaticLogin=%s\n' "${1-daniel}" > "$ROOT/etc/gdm3/custom.conf"
-    stub loginctl "d=\"$CASE/sessions\"
+    stub loginctl "folder=\"$CASE/sessions\"
 case \"\$1\" in
-    list-sessions) for f in \"\$d\"/*; do [[ -e \"\$f\" ]] && echo \"\$(basename \"\$f\") 1000 user seat0 tty2\"; done ;;
-    show-session) cat \"\$d/\$2\" ;;
+    list-sessions) for file in \"\$folder\"/*; do [[ -e \"\$file\" ]] && echo \"\$(basename \"\$file\") 1000 user seat0 tty2\"; done ;;
+    show-session) cat \"\$folder/\$2\" ;;
 esac"
     stub sleep
 }
@@ -32,7 +32,7 @@ new_case
 stub loginctl
 run_script "$SCRIPT"
 status_is 0 "no GDM exits with 0"
-contains "$OUT" "Auto-login not configured" "explains why it does nothing"
+contains "$OUTPUT" "Auto-login not configured" "explains why it does nothing"
 not_called loginctl
 
 machine ""
@@ -47,7 +47,7 @@ session 2 user daniel wayland seat0 no
 once
 status_is 0 "reactivates the session"
 called "loginctl activate 2"
-contains "$OUT" "Login screen (c1) active with session 2 of daniel" "explains what it did"
+contains "$OUTPUT" "Login screen (c1) active with session 2 of daniel" "explains what it did"
 called "sleep 1"
 
 machine daniel
@@ -55,7 +55,7 @@ session c1 greeter gdm wayland seat0 yes
 session 3 user daniel x11 seat0 no
 DRY_RUN=1 WINDOW_SECONDS=1 INTERVAL=1 run_script "$SCRIPT"
 status_is 0 "DRY_RUN exits with 0"
-contains "$OUT" "session 3 of daniel" "DRY_RUN shows what it would do"
+contains "$OUTPUT" "session 3 of daniel" "DRY_RUN shows what it would do"
 not_called "loginctl activate"
 
 machine daniel

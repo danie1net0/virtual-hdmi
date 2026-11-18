@@ -9,7 +9,7 @@ new_case
 stub systemctl
 FAKE_UID=1000 run_script "$SCRIPT"
 status_is 1 "fails without root"
-contains "$ERRS" "Run with sudo." "asks for sudo"
+contains "$ERRORS" "Run with sudo." "asks for sudo"
 not_called systemctl
 
 new_case
@@ -24,7 +24,7 @@ check "service joins graphical.target" grep -qx "WantedBy=graphical.target" "$RO
 called "systemctl daemon-reload"
 called "systemctl enable keep-session.service"
 check "reloads before enabling" test "$(grep '^systemctl' "$CALLS" | head -1)" = "systemctl daemon-reload"
-contains "$OUT" "journalctl -u keep-session" "shows where to see the log"
+contains "$OUTPUT" "journalctl -u keep-session" "shows where to see the log"
 
 run_script "$SCRIPT"
 status_is 0 "reinstalls over the previous one"
@@ -33,6 +33,6 @@ new_case
 stub systemctl 'exit 1'
 run_script "$SCRIPT"
 status_is 1 "systemctl failure stops the install"
-not_contains "$OUT" "Done" "does not say it finished"
+not_contains "$OUTPUT" "Done" "does not say it finished"
 
 summary

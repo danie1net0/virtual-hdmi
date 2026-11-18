@@ -17,14 +17,14 @@ set -euo pipefail
 
 [[ "$(id -u)" -eq 0 ]] || { echo "Run with sudo." >&2; exit 1; }
 
-DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_FOLDER="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${ROOT:-}"
 SCRIPT="/usr/local/sbin/keep-session.sh"
 SERVICE="$ROOT/etc/systemd/system/keep-session.service"
 
 echo "==> Installing $SCRIPT"
 mkdir -p "$ROOT/usr/local/sbin" "$(dirname "$SERVICE")"
-install -m 755 "$DIR/keep-session.sh" "$ROOT$SCRIPT"
+install -m 755 "$SCRIPT_FOLDER/keep-session.sh" "$ROOT$SCRIPT"
 
 echo "==> Creating the keep-session.service service"
 cat > "$SERVICE" <<EOF

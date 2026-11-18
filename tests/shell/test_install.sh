@@ -47,23 +47,23 @@ echo "# options"
 user
 run_script "$SCRIPT" --help
 status_is 0 "--help exits with 0"
-contains "$OUT" "Virtual monitor installer" "--help shows the help"
+contains "$OUTPUT" "Virtual monitor installer" "--help shows the help"
 run_script "$SCRIPT" -h
 status_is 0 "-h exits with 0"
 run_script "$SCRIPT" --nothing
 status_is 1 "unknown option fails"
-contains "$ERRS" "Unknown option: --nothing" "says which option"
+contains "$ERRORS" "Unknown option: --nothing" "says which option"
 run_script "$SCRIPT" --dest-dir
 status_is 1 "--dest-dir without a path fails"
 run_script "$SCRIPT" --dest-dir --dev
 status_is 1 "--dest-dir followed by an option fails"
-contains "$ERRS" "--dest-dir needs a path." "explains --dest-dir"
+contains "$ERRORS" "--dest-dir needs a path." "explains --dest-dir"
 
 user
 stub id 'echo 0'
 run_script "$SCRIPT"
 status_is 1 "fails as root"
-contains "$ERRS" "Run without sudo" "asks to run without sudo"
+contains "$ERRORS" "Run without sudo" "asks to run without sudo"
 check "as root installs nothing" test ! -e "$(app)"
 
 echo "# user install"
@@ -91,10 +91,10 @@ called "update-desktop-database $DATA/applications"
 called "python3 -c import gi; gi.require_version(\"Gtk\", \"4.0\"); gi.require_version(\"Adw\", \"1\")"
 check "leaves no install leftovers" test -z "$(ls -A "$DATA" | grep '^\.virtual-monitor-install')"
 check "creates no autostart" test ! -e "$(autostart)"
-contains "$OUT" "Open it from the menu" "says how to open it"
+contains "$OUTPUT" "Open it from the menu" "says how to open it"
 check "installs the executable command" test -x "$(command_file)"
-contains "$OUT" "Command installed: $(command_file)" "says where the command is"
-contains "$OUT" "$HOME/.local/bin is not in PATH yet" "warns when ~/.local/bin is not in PATH"
+contains "$OUTPUT" "Command installed: $(command_file)" "says where the command is"
+contains "$OUTPUT" "$HOME/.local/bin is not in PATH yet" "warns when ~/.local/bin is not in PATH"
 stub python3 'exit 7'
 : > "$CALLS"
 PATH="$STUBS:$BIN" "$(command_file)" --list "two words" > /dev/null 2>&1
@@ -115,7 +115,7 @@ EXTRA_PATH="$HOME/.local/bin"
 run_script "$SCRIPT"
 unset EXTRA_PATH
 status_is 0 "installs with ~/.local/bin in PATH"
-not_contains "$OUT" "is not in PATH yet" "does not warn when ~/.local/bin is in PATH"
+not_contains "$OUTPUT" "is not in PATH yet" "does not warn when ~/.local/bin is in PATH"
 
 user
 export XDG_DATA_HOME="$CASE/data" XDG_CONFIG_HOME="$CASE/config"
@@ -156,8 +156,8 @@ check "copies the remembered resolution to mode.json" cmp "$(legacy_mode_file)" 
 check "keeps the old modo.json" test -f "$(legacy_mode_file)"
 check "creates the new autostart with --restore" grep -qx "Exec=python3 \"$(app)/$NAME.py\" --restore" "$(autostart)"
 check "new autostart is hidden from menus" grep -qx "NoDisplay=true" "$(autostart)"
-contains "$OUT" "Autostart migrated" "says it migrated the autostart"
-contains "$OUT" "Migrated: " "says it migrated the resolution"
+contains "$OUTPUT" "Autostart migrated" "says it migrated the autostart"
+contains "$OUTPUT" "Migrated: " "says it migrated the resolution"
 
 user
 make_legacy
@@ -187,14 +187,14 @@ user
 stub python3 'exit 1'
 run_script "$SCRIPT"
 status_is 1 "fails without GTK 4"
-contains "$ERRS" "sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1" "shows the apt install"
+contains "$ERRORS" "sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1" "shows the apt install"
 check "without GTK installs nothing" test ! -e "$(app)"
 
 user
 rm "$STUBS/python3"
 run_script "$SCRIPT"
 status_is 1 "fails without python3"
-contains "$ERRS" "Missing python3." "says python3 is missing"
+contains "$ERRORS" "Missing python3." "says python3 is missing"
 
 user
 rm "$STUBS/python3"
@@ -205,7 +205,7 @@ user
 rm "$STUBS/pkexec"
 run_script "$SCRIPT"
 status_is 0 "installs without pkexec"
-contains "$OUT" "Warning: without pkexec" "warns about the missing pkexec"
+contains "$OUTPUT" "Warning: without pkexec" "warns about the missing pkexec"
 
 echo "# --dest-dir and --dev"
 user
@@ -249,14 +249,14 @@ user
 copy_project "$CASE/project"
 run_script "$CASE/project/install.sh" --skip-check --dest-dir "$CASE/project/out"
 status_is 1 "refuses a destination inside the project"
-contains "$ERRS" "Destination cannot be inside the project folder." "explains the destination inside the project"
+contains "$ERRORS" "Destination cannot be inside the project folder." "explains the destination inside the project"
 check "does not install inside the project" test ! -e "$CASE/project/out/$NAME"
 
 user
 copy_project "$CASE/x/$NAME/sub/project"
 run_script "$CASE/x/$NAME/sub/project/install.sh" --skip-check --dest-dir "$CASE/x"
 status_is 1 "refuses a destination that contains the project"
-contains "$ERRS" "Destination cannot contain the project folder." "explains the destination that contains the project"
+contains "$ERRORS" "Destination cannot contain the project folder." "explains the destination that contains the project"
 check "does not delete the project" test -f "$CASE/x/$NAME/sub/project/install.sh"
 
 echo "# project files"
@@ -266,7 +266,7 @@ copy_project "$COPY"
 rm -r "$COPY/assets"
 run_script "$COPY/install.sh" --skip-check
 status_is 1 "project without an icon fails"
-contains "$ERRS" "Missing file: assets/$NAME.png" "says which file is missing"
+contains "$ERRORS" "Missing file: assets/$NAME.png" "says which file is missing"
 
 echo "# uninstall"
 user
@@ -285,14 +285,14 @@ check "launcher removed" test ! -e "$(launcher)"
 check "launcher named after the command removed" test ! -e "$(named_launcher)"
 check "autostart removed" test ! -e "$(autostart)"
 check "command removed" test ! -e "$(command_file)"
-contains "$OUT" "Removed: $(command_file)" "says the command was removed"
+contains "$OUTPUT" "Removed: $(command_file)" "says the command was removed"
 check "old app removed" test ! -e "$(legacy_app)"
 check "old icon removed" test ! -e "$(legacy_icon)"
 check "old launcher removed" test ! -e "$(legacy_launcher)"
 check "old autostart removed" test ! -e "$(legacy_autostart)"
 check "remembered choice stays" test -f "$(mode_file)"
 called "update-desktop-database $DATA/applications"
-contains "$OUT" "The remembered resolution stays in $CONFIG/$NAME" "says where the choice stayed"
+contains "$OUTPUT" "The remembered resolution stays in $CONFIG/$NAME" "says where the choice stayed"
 
 run_script "$SCRIPT" --uninstall
 status_is 0 "uninstalling again does not fail"
@@ -306,6 +306,6 @@ run_script "$SCRIPT" --uninstall --dest-dir "$DATA"
 status_is 0 "removes from --dest-dir"
 check "removes the app from --dest-dir" test ! -e "$(app)"
 check "--dest-dir does not remove the user autostart" test -f "$(autostart)"
-not_contains "$OUT" "Removed: $(command_file)" "--dest-dir does not mention the command"
+not_contains "$OUTPUT" "Removed: $(command_file)" "--dest-dir does not mention the command"
 
 summary

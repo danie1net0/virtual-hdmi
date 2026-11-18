@@ -35,9 +35,9 @@ class ShellPortabilityTest(unittest.TestCase):
                 self.assertEqual(portability_problems(path), [])
 
     def test_detects_each_problem(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        sample = Path(tmp.name) / "sample.sh"
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        sample = Path(temporary.name) / "sample.sh"
         sample.write_text(
             "sed -i 's/a/b/' file\n"
             "sed -n -i.bak 's/a/b/' file\n"

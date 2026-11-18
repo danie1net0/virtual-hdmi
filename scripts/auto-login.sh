@@ -115,7 +115,7 @@ configure_lightdm() {
     echo "    $file"
 }
 
-greetd_config() {
+greetd_configuration() {
     local file
     for file in "$ROOT/etc/greetd/cosmic-greeter.toml" "$ROOT/etc/greetd/config.toml"; do
         [[ -f "$file" ]] || continue
@@ -156,8 +156,8 @@ greetd_setting() {
 # greetd starts [initial_session] without saying it is graphical, so logind records it as a tty
 # session and remote desktop servers (Jump Desktop Connect, for one) find no graphical session.
 # A pam_env line in greetd's PAM service sets XDG_SESSION_TYPE before pam_systemd reads it.
-SESSION_TYPE_CONF="/etc/security/virtual-monitor-session.conf"
-PAM_LINE="session optional pam_env.so readenv=0 conffile=$SESSION_TYPE_CONF"
+SESSION_TYPE_FILE="/etc/security/virtual-monitor-session.conf"
+PAM_LINE="session optional pam_env.so readenv=0 conffile=$SESSION_TYPE_FILE"
 
 configure_session_type() {
     local pam="$ROOT/etc/pam.d/$1" content
@@ -167,30 +167,33 @@ configure_session_type() {
     content="$(awk -v line="$PAM_LINE" -v state="$STATE" '
         index($0, "virtual-monitor-session.conf") { next }
         { lines[++count] = $0 }
-        /^session[[:space:]].*pam_env\.so/ { last_env = count }
+        /^session[[:space:]].*pam_env\.so/ { last_pam_env = count }
         /^(session|@include[[:space:]]+common-session)/ && !first_session { first_session = count }
         END {
-            at = last_env ? last_env + 1 : first_session
+            insert_at = first_session
+            if (last_pam_env) { insert_at = last_pam_env + 1 }
+
             for (index_line = 1; index_line <= count; index_line++) {
-                if (state == "on" && index_line == at) { print line }
+                if (state == "on" && index_line == insert_at) { print line }
                 print lines[index_line]
             }
-            if (state == "on" && !at) { print line }
+
+            if (state == "on" && !insert_at) { print line }
         }
     ' "$pam")"
     rewrite "$pam" "$content"
     echo "    $pam"
 
-    rm -f "$ROOT$SESSION_TYPE_CONF"
+    rm -f "$ROOT$SESSION_TYPE_FILE"
     [[ "$STATE" == on ]] || return 0
-    mkdir -p "$(dirname "$ROOT$SESSION_TYPE_CONF")"
-    echo "XDG_SESSION_TYPE OVERRIDE=$(session_type)" > "$ROOT$SESSION_TYPE_CONF"
-    echo "    $ROOT$SESSION_TYPE_CONF"
+    mkdir -p "$(dirname "$ROOT$SESSION_TYPE_FILE")"
+    echo "XDG_SESSION_TYPE OVERRIDE=$(session_type)" > "$ROOT$SESSION_TYPE_FILE"
+    echo "    $ROOT$SESSION_TYPE_FILE"
 }
 
 configure_greetd() {
     local file command content service
-    file="$(greetd_config)"
+    file="$(greetd_configuration)"
     [[ -n "$file" ]] || fail "greetd has no configuration in $ROOT/etc/greetd."
     backup "$file"
 

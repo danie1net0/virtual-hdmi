@@ -15,7 +15,7 @@ from virtual_monitor import displays
 LAUNCHER = Path(__file__).resolve().parent.parent / "virtual-monitor.py"
 
 
-def config_dir():
+def config_folder():
     xdg = os.environ.get("XDG_CONFIG_HOME", "")
     if not xdg.startswith("/"):
         return Path.home() / ".config"
@@ -24,15 +24,15 @@ def config_dir():
 
 
 def choice_file():
-    return config_dir() / "virtual-monitor" / "mode.json"
+    return config_folder() / "virtual-monitor" / "mode.json"
 
 
 def autostart_file():
-    return config_dir() / "autostart" / "virtual-monitor-restore.desktop"
+    return config_folder() / "autostart" / "virtual-monitor-restore.desktop"
 
 
 def settings_file():
-    return config_dir() / "virtual-monitor" / "settings.json"
+    return config_folder() / "virtual-monitor" / "settings.json"
 
 
 def autostart_entry():

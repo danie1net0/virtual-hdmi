@@ -24,13 +24,13 @@ echo "# user"
 system "polkit-gnome"
 FAKE_UID=1000 run_script "$SCRIPT" daniel
 status_is 1 "fails without root"
-contains "$ERRS" "Run with sudo." "asks for sudo"
+contains "$ERRORS" "Run with sudo." "asks for sudo"
 not_called apt-get
 
 system "polkit-gnome"
 run_script "$SCRIPT"
 status_is 1 "fails without a user and without GDM"
-contains "$ERRS" "Give the user" "asks for the user"
+contains "$ERRORS" "Give the user" "asks for the user"
 
 system "polkit-gnome"
 mkdir -p "$ROOT/etc/gdm3"
@@ -41,7 +41,7 @@ status_is 1 "GDM without auto-login fails"
 system "polkit-gnome"
 FAKE_USER_EXISTS=0 run_script "$SCRIPT" fantasma
 status_is 1 "nonexistent user fails"
-contains "$ERRS" "User fantasma does not exist." "says which user is missing"
+contains "$ERRORS" "User fantasma does not exist." "says which user is missing"
 not_called apt-get
 
 system "polkit-gnome"
@@ -65,7 +65,7 @@ called "apt-get update"
 called "apt-get install -y --no-install-recommends xfce4 xfce4-terminal xfce4-settings lightdm lightdm-gtk-greeter xserver-xorg xserver-xorg-core x11-xserver-utils dbus-x11"
 called "apt-get install -y --no-install-recommends lxpolkit"
 not_called "apt-get install -y --no-install-recommends mate-polkit"
-contains "$OUT" "polkit agent: lxpolkit" "says which polkit agent it installed"
+contains "$OUTPUT" "polkit agent: lxpolkit" "says which polkit agent it installed"
 called "apt-cache policy policykit-1-gnome"
 check "stops at the first available agent" test "$(grep -c '^apt-cache' "$CALLS")" = 3
 check "XFCE session in the auto-login" grep -qx "autologin-session=xfce" "$ROOT/$AUTOLOGIN"
@@ -76,7 +76,7 @@ called "systemctl enable --force lightdm.service"
 system ""
 run_script "$SCRIPT" daniel
 status_is 0 "continues without a polkit agent"
-contains "$ERRS" "no polkit agent available" "warns that the polkit agent is missing"
+contains "$ERRORS" "no polkit agent available" "warns that the polkit agent is missing"
 check "tries the four agents" test "$(grep -c '^apt-cache' "$CALLS")" = 4
 check "installs no agent" test "$(grep -c '^apt-get install' "$CALLS")" = 1
 
