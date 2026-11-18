@@ -28,6 +28,25 @@ grub() {
     stub update-grub
 }
 
+# Debian and Ubuntu: GRUB with a grub.d file that sets the command line again
+grub_drop_in() {
+    grub "$1"
+    mkdir -p "$ROOT/etc/default/grub.d"
+    printf 'GRUB_CMDLINE_LINUX_DEFAULT="console=tty1"\n' > "$ROOT/etc/default/grub.d/50-cloudimg-settings.cfg"
+    DROP_IN="$ROOT/etc/default/grub.d/99-virtual-monitor.cfg"
+}
+
+# What update-grub reads: /etc/default/grub, then each grub.d file in order
+grub_command_line() {
+    (
+        source "$ROOT/etc/default/grub"
+        for file in "$ROOT"/etc/default/grub.d/*.cfg; do
+            source "$file"
+        done
+        echo "$GRUB_CMDLINE_LINUX_DEFAULT"
+    )
+}
+
 # Pop!_OS: kernelstub (systemd-boot) and initramfs-tools; the configuration keeps the options in JSON
 pop() {
     new_case
@@ -157,6 +176,39 @@ check "empty GRUB has no leading space" test "$(line '^GRUB_CMDLINE_LINUX_DEFAUL
 grub "quiet video=HDMI-A-1:D drm.edid_firmware=HDMI-A-1:edid/velho.bin splash"
 run_script "$SCRIPT" "$EDID"
 check "replaces old parameters in GRUB" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash $PARAMETERS\""
+
+echo "# GRUB drop-in (Debian, Ubuntu)"
+grub_drop_in "quiet splash"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs with a grub.d folder"
+called "update-grub"
+contains "$OUTPUT" "Adjusting the kernel parameters in $DROP_IN" "says it writes the drop-in"
+check "writes the parameters in a drop-in" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$DROP_IN")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"\$GRUB_CMDLINE_LINUX_DEFAULT $PARAMETERS\""
+check "adds to what the other grub.d files set" test "$(grub_command_line)" = "console=tty1 $PARAMETERS"
+check "leaves /etc/default/grub as it was" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' "$ROOT/etc/default/grub"
+check "keeps no backup of an unchanged GRUB" test ! -e "$ROOT/etc/default/grub.before-edid"
+
+run_script "$SCRIPT" "$EDID"
+check "does not duplicate the drop-in line" test "$(grep -c '^GRUB_CMDLINE_LINUX_DEFAULT=' "$DROP_IN")" = 1
+check "does not duplicate the parameters" test "$(grub_command_line)" = "console=tty1 $PARAMETERS"
+
+grub_drop_in "quiet $PARAMETERS splash"
+run_script "$SCRIPT" "$EDID"
+status_is 0 "installs over an earlier version"
+check "removes the parameters an earlier version wrote in GRUB" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' "$ROOT/etc/default/grub"
+check "keeps the GRUB of the earlier version" grep -qx "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet $PARAMETERS splash\"" "$ROOT/etc/default/grub.before-edid"
+
+grub_drop_in "$PARAMETERS"
+run_script "$SCRIPT" "$EDID"
+check "leaves an empty GRUB line empty" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT=""' "$ROOT/etc/default/grub"
+
+grub_drop_in "quiet"
+rm "$STUBS/update-grub"
+stub grub2-mkconfig
+run_script "$SCRIPT" "$EDID"
+status_is 0 "without update-grub, ignores grub.d"
+check "writes no drop-in" test ! -e "$DROP_IN"
+check "changes /etc/default/grub" test "$(line '^GRUB_CMDLINE_LINUX_DEFAULT=' "$ROOT/etc/default/grub")" = "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet $PARAMETERS\""
 
 echo "# kernelstub (Pop!_OS)"
 pop ""

@@ -11,8 +11,9 @@
 #   Armbian             /boot/armbianEnv.txt
 #   Raspberry Pi        /boot/firmware/cmdline.txt (Raspberry Pi OS, Ubuntu), or /boot/cmdline.txt
 #   kernelstub          Pop!_OS (systemd-boot)
-#   GRUB                /etc/default/grub, applied with update-grub (Debian, Ubuntu), grubby (Fedora),
-#                       grub2-mkconfig (openSUSE) or grub-mkconfig (Arch)
+#   GRUB                /etc/default/grub.d/99-virtual-monitor.cfg with update-grub (Debian, Ubuntu),
+#                       else /etc/default/grub with grubby (Fedora), grub2-mkconfig (openSUSE) or
+#                       grub-mkconfig (Arch)
 #   U-Boot              /etc/default/u-boot with u-boot-update, else /boot/extlinux/extlinux.conf
 #   systemd-boot        the loader entries in /boot, /efi or /boot/efi, and /etc/kernel/cmdline
 # With no boot image tool, it only copies the EDID: the kernel then reads it from /usr/lib/firmware.
@@ -27,8 +28,10 @@
 # ROOT=/folder writes the files under /folder instead of / (used by the tests).
 #
 # To undo, copy back each *.before-edid file it kept, then apply it and reboot:
-#   GRUB:       sudo cp /etc/default/grub.before-edid /etc/default/grub && sudo update-grub
-#               (Fedora: sudo grubby --update-kernel=ALL --remove-args="drm.edid_firmware video=OUTPUT:e")
+#   GRUB:       Debian, Ubuntu: sudo rm /etc/default/grub.d/99-virtual-monitor.cfg && sudo update-grub
+#               Fedora: sudo grubby --update-kernel=ALL --remove-args="drm.edid_firmware video=OUTPUT:e"
+#               openSUSE, Arch: sudo cp /etc/default/grub.before-edid /etc/default/grub, then
+#               grub2-mkconfig -o /boot/grub2/grub.cfg or grub-mkconfig -o /boot/grub/grub.cfg
 #   U-Boot:     sudo cp /etc/default/u-boot.before-edid /etc/default/u-boot && sudo u-boot-update
 #   kernelstub: sudo kernelstub -d "drm.edid_firmware=OUTPUT:edid/virtual-monitor.bin video=OUTPUT:e"
 #   the others: sudo cp FILE.before-edid FILE (armbianEnv.txt, cmdline.txt, extlinux.conf, the
@@ -48,6 +51,8 @@ CONNECTOR="${2:-${CONNECTOR:-HDMI-A-1}}"
 PARAMETERS="drm.edid_firmware=${CONNECTOR}:${EDID_RELATIVE} video=${CONNECTOR}:e"
 ARMBIAN_ENVIRONMENT="$ROOT/boot/armbianEnv.txt"
 GRUB="$ROOT/etc/default/grub"
+GRUB_DROP_IN_FOLDER="$ROOT/etc/default/grub.d"
+GRUB_DROP_IN="$GRUB_DROP_IN_FOLDER/99-virtual-monitor.cfg"
 KERNELSTUB_CONFIG="$ROOT/etc/kernelstub/configuration"
 UBOOT_DEFAULTS="$ROOT/etc/default/u-boot"
 EXTLINUX="$ROOT/boot/extlinux/extlinux.conf"
@@ -69,27 +74,33 @@ keep_original() {
 }
 
 # Rewrites the kernel arguments on the lines of FILE that match PREFIX, an awk regular expression
-# for what comes before them (FILE PREFIX [FIRST]): drops the parameters of an earlier run and
-# adds the new ones. A closing quote stays at the end. FIRST=1 changes only the first match.
+# for what comes before them (FILE PREFIX [FIRST] [ADDED]): drops the parameters of an earlier
+# run and adds ADDED, by default $PARAMETERS. A closing quote stays at the end. FIRST=1 changes
+# only the first match.
 set_arguments() {
     local file="$1" program content
     program='
-        function rewrite(arguments,    count, words, position, kept, quote) {
+        function rewrite(arguments,    count, words, position, kept, quote, separator) {
             quote = ""
             if (arguments ~ /"$/) { quote = "\""; arguments = substr(arguments, 1, length(arguments) - 1) }
             count = split(arguments, words, /[[:space:]]+/)
             kept = ""
+            separator = ""
             for (position = 1; position <= count; position++) {
                 if (words[position] == "" || words[position] ~ /^drm\.edid_firmware=/ || index(words[position], video) == 1) { continue }
-                kept = kept words[position] " "
+                kept = kept separator words[position]
+                separator = " "
             }
-            return kept parameters quote
+
+            if (parameters != "") { kept = kept separator parameters }
+
+            return kept quote
         }
         !done && match($0, prefix) { print substr($0, 1, RLENGTH) rewrite(substr($0, RLENGTH + 1)); done = first; next }
         { print }
     '
 
-    content="$(awk -v prefix="$2" -v first="${3:-0}" -v parameters="$PARAMETERS" -v video="video=${CONNECTOR}:" "$program" "$file")"
+    content="$(awk -v prefix="$2" -v first="${3:-0}" -v parameters="${4-$PARAMETERS}" -v video="video=${CONNECTOR}:" "$program" "$file")"
     printf '%s\n' "$content" > "$file"
 }
 
@@ -175,7 +186,32 @@ set_armbian_parameters() {
     grep '^extraargs=' "$ARMBIAN_ENVIRONMENT"
 }
 
+# Debian and Ubuntu read /etc/default/grub.d/*.cfg after /etc/default/grub, and a file there
+# (the cloud images' 50-cloudimg-settings.cfg) can set GRUB_CMDLINE_LINUX_DEFAULT again
+uses_grub_drop_in() {
+    [[ -d "$GRUB_DROP_IN_FOLDER" ]] && command -v update-grub >/dev/null 2>&1
+}
+
+# The parameters go in a file of their own that runs last and adds to what the others set
+set_grub_drop_in_parameters() {
+    echo "==> Adjusting the kernel parameters in $GRUB_DROP_IN"
+    printf '%s\n' "# Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub." \
+        "GRUB_CMDLINE_LINUX_DEFAULT=\"\$GRUB_CMDLINE_LINUX_DEFAULT $PARAMETERS\"" > "$GRUB_DROP_IN"
+    cat "$GRUB_DROP_IN"
+    remove_grub_parameters
+    update-grub
+}
+
+# An earlier version wrote the parameters in /etc/default/grub itself
+remove_grub_parameters() {
+    grep -q 'drm\.edid_firmware=' "$GRUB" || return 0
+    keep_original "$GRUB"
+    set_arguments "$GRUB" '^GRUB_CMDLINE_LINUX_DEFAULT="' 0 ""
+}
+
 set_grub_parameters() {
+    uses_grub_drop_in && { set_grub_drop_in_parameters; return; }
+
     echo "==> Adjusting the kernel parameters in GRUB"
     keep_original "$GRUB"
     # Fedora and openSUSE set only GRUB_CMDLINE_LINUX; every grub.cfg generator also reads this one
