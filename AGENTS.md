@@ -10,7 +10,7 @@ modules) are notes, not defaults.
 ## Layout
 
 - `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`,
-  `--next`, `--restore`, `--scale N|auto`, `--install-edid [--output NAME] [--modes ...]`,
+  `--next`, `--size WIDTHxHEIGHT`, `--restore`, `--scale N|auto`, `--install-edid [--output NAME] [--modes ...]`,
   `--auto-login [on|off]` and `--version` run in the terminal.
 - `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, cosmic-randr, wlr-randr, xrandr backends; `detect`
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
@@ -19,14 +19,17 @@ modules) are notes, not defaults.
   `settings.json`, with `auto_scale` as the default), `session.py` (fills the missing session
   variables from `/run/user/<uid>` and `/tmp/.X11-unix`, so the app also runs over SSH; `__main__`
   calls it first), `cli.py`, `window.py` (GTK; a switch goes back after `REVERT_SECONDS` without Keep).
-- `scripts/`: root-only system scripts. All accept `ROOT=` for tests. `install-edid.sh` and
-  `auto-login.sh` (GDM, SDDM, LightDM, greetd) ship with the app and back `--install-edid` and
-  `--auto-login`.
+- `scripts/`: root-only system scripts. All accept `ROOT=` for tests. `install-edid.sh`,
+  `set-edid.sh` and `auto-login.sh` (GDM, SDDM, LightDM, greetd) ship with the app and back
+  `--install-edid`, `--size` and `--auto-login`. `set-edid.sh` writes the kernel's EDID override in
+  debugfs and turns the output off and on, so the desktop lists a new size with no reboot; a
+  systemd service sets it again at every boot.
 - `edid/virtual-monitor.bin`: the default EDID, equal to `edid.generate(DEFAULT_MODES)`; its clocks
   (`SAFE_CLOCKS_MHZ`) are standard ones every GPU generates, the RK3566 PLL included.
 - `virtual_monitor/edid_setup.py`: picks the output for the EDID (the one at boot, else a free
   external one from `/sys/class/drm`, HDMI first) and builds the `install-edid.sh` command that
-  `--install-edid` (sudo) and the window (pkexec) run.
+  `--install-edid` (sudo) and the window (pkexec) run; for `--size` and the Other size row, the
+  EDID with the size first and the default modes after it, and the `set-edid.sh` command.
 - `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
   1280×640 PNG uploaded in Settings) and the GitLab project avatar.
 - `install.sh`: per-user install of app, icon, launcher and the `~/.local/bin/virtual-monitor`

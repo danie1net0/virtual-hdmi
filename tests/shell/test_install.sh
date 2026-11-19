@@ -79,6 +79,7 @@ status_is 0 "installs into ~/.local/share"
 check "copies the executable launcher" test -x "$(application_folder)/$NAME.py"
 check "copies the executable EDID installer" test -x "$(application_folder)/scripts/install-edid.sh"
 check "copies the executable auto-login script" test -x "$(application_folder)/scripts/auto-login.sh"
+check "copies the executable EDID switcher" test -x "$(application_folder)/scripts/set-edid.sh"
 for module in "$PROJECT"/virtual_monitor/*.py; do
     check "copies virtual_monitor/$(basename "$module")" cmp "$module" "$(application_folder)/virtual_monitor/$(basename "$module")"
 done
@@ -261,10 +262,10 @@ copy_project() {
 
 user
 copy_project "$CASE/checkout"
-chmod 644 "$CASE/checkout/$NAME.py" "$CASE/checkout/scripts/install-edid.sh" "$CASE/checkout/scripts/auto-login.sh"
+chmod 644 "$CASE/checkout/$NAME.py" "$CASE/checkout/scripts/install-edid.sh" "$CASE/checkout/scripts/set-edid.sh" "$CASE/checkout/scripts/auto-login.sh"
 run_script "$CASE/checkout/install.sh" --skip-check --dev --dest-dir "$CASE/linked"
 status_is 0 "installs a checkout in dev mode"
-check "dev mode leaves the checkout's file modes alone" test "$(ls -l "$CASE/checkout/$NAME.py" "$CASE/checkout/scripts/install-edid.sh" "$CASE/checkout/scripts/auto-login.sh" | cut -c1-10 | sort -u)" = "-rw-r--r--"
+check "dev mode leaves the checkout's file modes alone" test "$(ls -l "$CASE/checkout/$NAME.py" "$CASE/checkout/scripts/install-edid.sh" "$CASE/checkout/scripts/set-edid.sh" "$CASE/checkout/scripts/auto-login.sh" | cut -c1-10 | sort -u)" = "-rw-r--r--"
 
 user
 copy_project "$CASE/project"

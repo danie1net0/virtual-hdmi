@@ -13,7 +13,7 @@ from tests import fake_gi
 
 fake_gi.install()
 
-from virtual_monitor import __version__, cli, displays, edid  # noqa: E402
+from virtual_monitor import __version__, cli, displays, edid, edid_setup  # noqa: E402
 from virtual_monitor import window as window_module  # noqa: E402
 
 SNAPSHOTS = Path(__file__).resolve().parent / "snapshots"
@@ -70,11 +70,15 @@ class InterfaceTextsTest(SnapshotTestCase):
             "cli.SESSION_HINT": cli.SESSION_HINT,
             "displays.MUTTER": displays.MUTTER,
             "displays.KERNEL_COMMAND_LINE": str(displays.KERNEL_COMMAND_LINE),
+            "edid_setup.NOT_INSTALLED": edid_setup.NOT_INSTALLED,
+            "edid_setup.WAIT_ATTEMPTS": edid_setup.WAIT_ATTEMPTS,
+            "edid_setup.WAIT_MILLISECONDS": edid_setup.WAIT_MILLISECONDS,
             "window.EDID_HELP": window_module.EDID_HELP,
             "window.NO_FREE_OUTPUT": window_module.NO_FREE_OUTPUT,
             "window.NO_DISPLAY": window_module.NO_DISPLAY,
             "window.REVERT_SECONDS": window_module.REVERT_SECONDS,
             "window.SCALES": window_module.SCALES,
+            "window.SIZE_HELP": window_module.SIZE_HELP,
         }
         self.assert_snapshot("messages", [f"{name} = {value!r}" for name, value in values.items()])
 

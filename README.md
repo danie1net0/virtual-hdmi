@@ -40,7 +40,7 @@ curl -fsSL https://gitlab.com/danie1net0/virtual-hdmi/-/raw/master/get.sh | bash
 
 This adds **Virtual monitor** to the app menu and the `virtual-monitor` command to
 `~/.local/bin`, without sudo. Run the same line to update; add `-s -- --uninstall` after `bash` to
-remove it, or `VERSION=v0.5.1` before `bash` to pin a release ([CHANGELOG.md](CHANGELOG.md)). From
+remove it, or `VERSION=v0.6.0` before `bash` to pin a release ([CHANGELOG.md](CHANGELOG.md)). From
 a clone, `bash install.sh` does the same (`--help` lists the options).
 
 ## Set up the virtual monitor
@@ -78,6 +78,13 @@ seconds, the previous mode comes back, so a mode without a picture undoes itself
 saved for each resolution. Without a saved scale, tablet-like modes such as 2360×1640 get 150% and the others 100% (on X11, only XFCE scales,
 through its font DPI).
 
+For any other size, such as the screen of the computer you connect from, type it in **Other
+size** (`2880x1800` for a 15" MacBook). A size the output does not list gets a new EDID right
+away, with no reboot: the output goes off for two seconds and comes back with it, and it stays
+at every boot. This needs a driver that lets the kernel's EDID be replaced (not with kernel
+lockdown, nor NVIDIA's own modules); there, add the size to `--modes` and reboot. The header of
+[scripts/set-edid.sh](scripts/set-edid.sh) says how to go back to the installed EDID.
+
 Or use the terminal (from a clone, `python3 virtual-monitor.py` does the same):
 
 ```sh
@@ -85,6 +92,7 @@ virtual-monitor --list                           # outputs and modes
 virtual-monitor --apply 2560x1080@59.98          # switch and remember
 virtual-monitor --apply 1920x1080@60.00 --temp   # switch only
 virtual-monitor --next                           # next mode, for a keyboard shortcut
+virtual-monitor --size 2880x1800                 # any size; a new one gets a new EDID (sudo)
 virtual-monitor --scale 1.25                     # current mode at 125%
 ```
 

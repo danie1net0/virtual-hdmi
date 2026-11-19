@@ -1,0 +1,100 @@
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 1)
+-- errors
+Run with sudo.
+== set-edid.sh (status 1)
+-- errors
+Usage: set-edid.sh EDID OUTPUT | --boot | --reset
+== set-edid.sh -x (status 1)
+-- errors
+Usage: set-edid.sh EDID OUTPUT | --boot | --reset
+== set-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+-- errors
+Usage: set-edid.sh EDID OUTPUT | --boot | --reset
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 extra (status 1)
+-- errors
+Usage: set-edid.sh EDID OUTPUT | --boot | --reset
+== set-edid.sh (status 1)
+-- errors
+Usage: set-edid.sh EDID OUTPUT | --boot | --reset
+== set-edid.sh CASE/missing.bin HDMI-A-1 (status 1)
+-- errors
+CASE/missing.bin not found
+== set-edid.sh CASE/folder.bin HDMI-A-1 (status 1)
+-- errors
+CASE/folder.bin not found
+== set-edid.sh CASE/short.bin HDMI-A-1 (status 1)
+-- errors
+CASE/short.bin is not 256 bytes; it does not look like an EDID.
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI_A_1 (status 1)
+-- errors
+Invalid OUTPUT: HDMI_A_1 (like HDMI-A-1 or DP-1)
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1;reboot (status 1)
+-- errors
+Invalid OUTPUT: HDMI-A-1;reboot (like HDMI-A-1 or DP-1)
+== set-edid.sh PROJECT/edid/virtual-monitor.bin 1HDMI-1 (status 1)
+-- errors
+Invalid OUTPUT: 1HDMI-1 (like HDMI-A-1 or DP-1)
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-B-1 (status 1)
+-- errors
+Invalid OUTPUT: HDMI-A-B-1 (like HDMI-A-1 or DP-1)
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A (status 1)
+-- errors
+Invalid OUTPUT: HDMI-A (like HDMI-A-1 or DP-1)
+== set-edid.sh PROJECT/edid/virtual-monitor.bin DP-1 (status 1)
+-- errors
+No EDID override for DP-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'
+== set-edid.sh PROJECT/edid/virtual-monitor.bin DP-1 (status 1)
+-- errors
+No EDID override for DP-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 1)
+-- errors
+No EDID override for HDMI-A-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 1)
+==> Setting the EDID of HDMI-A-1
+-- errors
+PROJECT/scripts/set-edid.sh: line 148: CASE/root/sys/kernel/debug/dri/1/HDMI-A-1/edid_override: Is a directory
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 0)
+==> Setting the EDID of HDMI-A-1
+Done: HDMI-A-1 has the new modes now and at every boot. To go back to the installed EDID: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset
+-- errors
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 0)
+==> Setting the EDID of HDMI-A-1
+Done: HDMI-A-1 has the new modes now and at every boot. To go back to the installed EDID: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset
+-- errors
+== set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 0)
+==> Setting the EDID of HDMI-A-1
+Done: HDMI-A-1 has the new modes until the next boot; without systemd, nothing sets them again at boot.
+-- errors
+== set-edid.sh --boot (status 0)
+No EDID kept: nothing to set.
+-- errors
+== set-edid.sh --boot (status 0)
+HDMI-A-1 has the kept EDID.
+-- errors
+== set-edid.sh --boot (status 1)
+-- errors
+Invalid OUTPUT: HDMI-A-1;reboot (like HDMI-A-1 or DP-1)
+== set-edid.sh --boot (status 1)
+-- errors
+CASE/root/var/lib/virtual-monitor/edid.bin is not 256 bytes; it does not look like an EDID.
+== set-edid.sh --boot (status 1)
+-- errors
+No EDID override for DP-1 after 30 s: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'
+== set-edid.sh --boot (status 0)
+HDMI-A-1 has the kept EDID.
+-- errors
+== set-edid.sh --reset (status 0)
+No EDID kept: the installed one is in use.
+-- errors
+== set-edid.sh --reset (status 0)
+HDMI-A-1 is back to the installed EDID.
+-- errors
+== set-edid.sh --reset (status 0)
+The kept EDID is gone; the installed one comes back at the next boot.
+-- errors
+== set-edid.sh --reset (status 0)
+HDMI-A-1 is back to the installed EDID.
+-- errors
+== set-edid.sh --reset (status 1)
+-- errors
+Invalid OUTPUT: HDMI-A-1;reboot (like HDMI-A-1 or DP-1)

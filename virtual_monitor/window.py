@@ -7,10 +7,13 @@ GTK4/libadwaita window of the Virtual monitor:
     no picture
   - "Remember choice" reapplies the resolution at every login (choice.py)
   - scale of the current mode, saved for each mode size (choice.py)
+  - any other size, like the screen of the computer that connects: one the output does not list
+    gets a new EDID right away (scripts/set-edid.sh, via pkexec), with no reboot
   - on its own page, opened from the status row, generates a new EDID (edid.py), with a preview
     of the timings, and installs it (scripts/install-edid.sh, via pkexec)
 """
 
+import functools
 import sys
 from dataclasses import dataclass
 
@@ -31,6 +34,10 @@ EDID_HELP = (
 )
 NO_FREE_OUTPUT = "No free video output: every external output has something plugged in"
 REVERT_SECONDS = 15
+SIZE_HELP = (
+    "Any size, like the screen of the computer you connect from: WIDTHxHEIGHT. One that is not in the "
+    "list gets a new EDID right away and asks for the administrator password."
+)
 SCALES = (("Automatic", None), ("100%", 1.0), ("125%", 1.25), ("150%", 1.5), ("175%", 1.75), ("200%", 2.0))
 
 
@@ -42,6 +49,15 @@ class PendingMode:
     mode_id: str
     previous_id: str
     remaining: int = REVERT_SECONDS
+
+
+@dataclass
+class PendingSize:
+    """A size whose EDID was just set, waiting for the desktop to list it."""
+
+    timing: object
+    previous: object
+    remaining: int = edid_setup.WAIT_ATTEMPTS
 
 
 def run_async(command, done):
@@ -130,6 +146,7 @@ class Window(Adw.ApplicationWindow):
         main.add(self.build_status())
         main.add(self.build_current())
         main.add(self.build_modes())
+        main.add(self.build_size())
 
         edid_page = Adw.PreferencesPage()
         edid_page.add(self.build_edid())
@@ -172,6 +189,13 @@ class Window(Adw.ApplicationWindow):
         self.remember.set_active(True)
         self.modes_group.add(self.remember)
         return self.modes_group
+
+    def build_size(self):
+        group = Adw.PreferencesGroup(title="Other size", description=SIZE_HELP)
+        self.size_entry = Adw.EntryRow(title="Size, like 2880x1800", show_apply_button=True)
+        self.size_entry.connect("apply", self.on_size)
+        group.add(self.size_entry)
+        return group
 
     def build_edid(self):
         group = Adw.PreferencesGroup(description=EDID_HELP)
@@ -218,6 +242,7 @@ class Window(Adw.ApplicationWindow):
         if self.connector:
             self.add_mode_rows()
 
+        self.size_entry.set_sensitive(self.connector is not None)
         self.sync_current()
 
     def add_mode_rows(self):
@@ -278,7 +303,10 @@ class Window(Adw.ApplicationWindow):
         return True
 
     def on_mode(self, _row, mode):
-        previous = self.current
+        self.switch_to(mode, self.current)
+
+    def switch_to(self, mode, previous):
+        """Applies mode and, coming from another mode, asks to keep it."""
         if not self.apply(mode.id, False):
             return
 
@@ -362,6 +390,55 @@ class Window(Adw.ApplicationWindow):
         return self.current
 
     def refresh_once(self):
+        self.refresh()
+        return GLib.SOURCE_REMOVE
+
+    def on_size(self, row):
+        text = row.get_text().strip()
+        try:
+            mode = edid_setup.listed_mode(self.backend.modes(self.connector), text)
+        except edid.EdidError as error:
+            self.toast(f"Invalid size: {error}")
+            return
+
+        if mode is not None:
+            self.switch_to(mode, self.current)
+            return
+
+        self.set_size(text)
+
+    def set_size(self, text):
+        """Gives the virtual monitor an EDID with the size in text, then waits for the desktop to list it."""
+        output = displays.command_line_connector()
+        if output is None:
+            self.toast(edid_setup.NOT_INSTALLED)
+            return
+
+        path = edid_setup.write_edid(edid_setup.custom_modes(text))
+        pending = PendingSize(edid.parse_mode(text), self.current)
+        self.size_entry.set_sensitive(False)
+        run_async(edid_setup.set_command(path, output, ["pkexec"]), functools.partial(self.after_size, pending))
+
+    def after_size(self, pending, succeeded, _text):
+        self.size_entry.set_sensitive(True)
+        if not succeeded:
+            self.toast("Cancelled or failed: the EDID did not change")
+            return
+
+        GLib.timeout_add(edid_setup.WAIT_MILLISECONDS, functools.partial(self.wait_for_size, pending))
+
+    def wait_for_size(self, pending):
+        """Checks again until the desktop lists the size, then switches to it."""
+        mode = edid_setup.size_mode(edid_setup.listed_modes(self.backend, self.connector), pending.timing)
+        if mode is not None:
+            self.switch_to(mode, pending.previous)
+            return GLib.SOURCE_REMOVE
+
+        pending.remaining -= 1
+        if pending.remaining > 0:
+            return GLib.SOURCE_CONTINUE
+
+        self.toast(f"The desktop does not list {pending.timing.width}×{pending.timing.height}")
         self.refresh()
         return GLib.SOURCE_REMOVE
 

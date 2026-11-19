@@ -152,7 +152,7 @@ class LayoutTest(WindowTestCase):
         self.assertIs(window.toasts.child, window.navigation)
         self.assertEqual((main.constructor_properties["title"], main.constructor_properties["tag"]), ("Virtual monitor", "main"))
         self.assertEqual(len(view.top_bars), 1)
-        self.assertEqual(titles(view.content.children), ["Status", "Current mode", "Resolution"])
+        self.assertEqual(titles(view.content.children), ["Status", "Current mode", "Resolution", "Other size"])
         self.assertIs(edid_page, window.edid_page)
         self.assertEqual(window.navigation.pushed, [])
 
@@ -524,6 +524,132 @@ class ModeTest(WindowTestCase):
         self.assertEqual(fake_gi.GLib.timeouts, [])
         self.assertEqual(fake_gi.AlertDialog.created, [])
         self.assertIsNone(choice.load())
+
+
+class SizeTest(WindowTestCase):
+    def type_size(self, window, text):
+        window.size_entry.set_text(text)
+        window.size_entry.emit("apply")
+
+    def new_size(self, text="2880x1800"):
+        """Types a size the output does not list and lets set-edid.sh succeed; returns the window and the wait."""
+        window = self.window()
+        self.type_size(window, text)
+        fake_gi.Subprocess.created[-1].finish(0)
+        (milliseconds, wait), = fake_gi.GLib.timeouts
+        self.assertEqual(milliseconds, 500)
+        fake_gi.GLib.timeouts.clear()
+        return window, wait
+
+    def list_new_mode(self):
+        self.backend._outputs["HDMI-1"].append(mode("2880x1800@56.30", 2880, 1800, 56.3))
+
+    def test_size_group(self):
+        window = self.window()
+        view = window.navigation.children[0].constructor_properties["child"]
+        group = view.content.children[-1]
+
+        self.assertEqual(group.constructor_properties, {"title": "Other size", "description": window_module.SIZE_HELP})
+        self.assertEqual(group.children, [window.size_entry])
+        self.assertEqual(window.size_entry.constructor_properties, {"title": "Size, like 2880x1800", "show_apply_button": True})
+        self.assertTrue(window.size_entry.sensitive)
+
+    def test_size_needs_a_monitor(self):
+        self.backend = Backend({})
+        window = self.window()
+
+        self.assertFalse(window.size_entry.sensitive)
+
+    def test_listed_size_switches_and_asks_to_keep(self):
+        window = self.window()
+        self.type_size(window, " 3440x1440 ")
+
+        self.assertEqual(self.backend.applied, [("HDMI-1", "3440x1440@59.24", False)])
+        self.assertEqual(window.pending.previous_id, "2560x1080@59.98")
+        self.assertEqual(fake_gi.Subprocess.created, [])
+
+    def test_current_size_applies_without_asking(self):
+        window = self.window()
+        self.type_size(window, "2560x1080")
+
+        self.assertEqual(self.backend.applied, [("HDMI-1", "2560x1080@59.98", False)])
+        self.assertIsNone(window.pending)
+        self.assertEqual(choice.load(), ("HDMI-1", "2560x1080@59.98"))
+
+    def test_invalid_size_shows_toast(self):
+        window = self.window()
+        self.type_size(window, "2880")
+
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Invalid size: Invalid mode: 2880 (use WIDTHxHEIGHT[@MHZ][:HZ])")
+        self.assertEqual(fake_gi.Subprocess.created, [])
+        self.assertEqual(self.backend.applied, [])
+
+    def test_new_size_needs_the_virtual_monitor(self):
+        self.command_line = None
+        window = self.window()
+        self.type_size(window, "2880x1800")
+
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], edid_setup.NOT_INSTALLED)
+        self.assertEqual(fake_gi.Subprocess.created, [])
+        self.assertTrue(window.size_entry.sensitive)
+
+    def test_new_size_runs_set_edid_with_pkexec(self):
+        window = self.window()
+        self.type_size(window, "  2880x1800 ")
+        (process,) = fake_gi.Subprocess.created
+        written = Path(process.command[-2])
+
+        self.assertEqual(process.command[:3], ["pkexec", "bash", str(edid_setup.SET_SCRIPT)])
+        self.assertEqual(process.command[-1], "HDMI-A-1")
+        self.assertEqual(written.read_bytes(), edid.generate(edid_setup.custom_modes("2880x1800"))[1])
+        self.assertFalse(window.size_entry.sensitive)
+        self.assertEqual(fake_gi.GLib.timeouts, [])
+
+    def test_failed_set_edid_shows_toast(self):
+        window = self.window()
+        self.type_size(window, "2880x1800")
+        fake_gi.Subprocess.created[-1].finish(126)
+
+        self.assertTrue(window.size_entry.sensitive)
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Cancelled or failed: the EDID did not change")
+        self.assertEqual(fake_gi.GLib.timeouts, [])
+
+    def test_new_size_switches_once_listed_and_asks_to_keep(self):
+        window, wait = self.new_size()
+        self.assertTrue(window.size_entry.sensitive)
+
+        self.assertIs(wait(), fake_gi.GLib.SOURCE_CONTINUE)
+        self.assertEqual(self.backend.applied, [])
+
+        self.list_new_mode()
+        self.assertIs(wait(), fake_gi.GLib.SOURCE_REMOVE)
+        self.assertEqual(self.backend.applied, [("HDMI-1", "2880x1800@56.30", False)])
+        self.assertEqual((window.pending.mode_id, window.pending.previous_id), ("2880x1800@56.30", "2560x1080@59.98"))
+
+    def test_new_size_gives_up_after_the_last_check(self):
+        window, wait = self.new_size()
+        answers = [wait() for _attempt in range(edid_setup.WAIT_ATTEMPTS)]
+
+        self.assertEqual(answers, [fake_gi.GLib.SOURCE_CONTINUE] * (edid_setup.WAIT_ATTEMPTS - 1) + [fake_gi.GLib.SOURCE_REMOVE])
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "The desktop does not list 2880×1800")
+        self.assertEqual(self.backend.applied, [])
+
+    def test_giving_up_shows_the_modes_again(self):
+        window, wait = self.new_size()
+        rows = window.mode_rows
+        for _attempt in range(edid_setup.WAIT_ATTEMPTS):
+            wait()
+
+        self.assertIsNot(window.mode_rows, rows)
+
+    def test_wait_survives_the_output_going_away(self):
+        window, wait = self.new_size()
+        # While the output is off, the display tool fails
+        with mock.patch.object(self.backend, "outputs", side_effect=displays.DisplayError("gone")):
+            self.assertIs(wait(), fake_gi.GLib.SOURCE_CONTINUE)
+
+        self.list_new_mode()
+        self.assertIs(wait(), fake_gi.GLib.SOURCE_REMOVE)
 
 
 class HelpersTest(unittest.TestCase):

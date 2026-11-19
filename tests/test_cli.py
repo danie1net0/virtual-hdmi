@@ -300,6 +300,100 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(backend.last_change, displays.ModeChange("HDMI-1", "1920x1080@60.00", 1.25))
 
+    def run_size(self, command_line_arguments, code=0, lists_new_mode=True):
+        """Runs --size; the set-edid.sh call returns code and, if lists_new_mode, makes the output list 2880x1800."""
+
+        def set_edid(command):
+            if lists_new_mode:
+                self.backend.outputs()["HDMI-1"].append(mode("2880x1800@56.30"))
+
+            return code
+
+        with mock.patch.object(cli.subprocess, "call", side_effect=set_edid) as call, mock.patch.object(
+            cli.edid_setup.time, "sleep"
+        ) as sleep, mock.patch("os.geteuid", return_value=1000):
+            result = self.run_cli(command_line_arguments)
+
+        for command in [called.args[0] for called in call.call_args_list]:
+            self.addCleanup(Path(command[-2]).parent.rmdir)
+            self.addCleanup(Path(command[-2]).unlink)
+
+        return (*result, call, sleep)
+
+    def test_size_of_a_listed_mode_applies_it(self):
+        code, standard_output, error_output, call, _sleep = self.run_size(["--size", "1920x1080"])
+
+        self.assertEqual((code, standard_output, error_output), (0, "applied 1920x1080@60.00 on HDMI-1\n", ""))
+        self.assertEqual(self.backend.applied, [("HDMI-1", "1920x1080@60.00", True)])
+        self.assertEqual(choice.load(), ("HDMI-1", "1920x1080@60.00"))
+        call.assert_not_called()
+
+    def test_size_with_temp_and_scale(self):
+        code, _standard_output, _error_output, _call, _sleep = self.run_size(["--size", "1920x1080", "--temp", "--scale", "1.5"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(self.backend.applied, [("HDMI-1", "1920x1080@60.00", False)])
+        self.assertEqual(self.backend.last_change.scale, 1.5)
+        self.assertEqual(choice.size_settings(1920, 1080), {"scale": 1.5})
+        self.assertIsNone(choice.load())
+
+    def test_invalid_size(self):
+        code, standard_output, error_output, call, _sleep = self.run_size(["--size", "2880"])
+
+        self.assertEqual((code, standard_output), (1, ""))
+        self.assertEqual(error_output, "Invalid size: Invalid mode: 2880 (use WIDTHxHEIGHT[@MHZ][:HZ])\n")
+        call.assert_not_called()
+
+    def test_new_size_needs_the_virtual_monitor(self):
+        with mock.patch.object(displays, "command_line_connector", return_value=None):
+            code, standard_output, error_output, call, _sleep = self.run_size(["--size", "2880x1800"])
+
+        self.assertEqual((code, standard_output), (1, ""))
+        self.assertEqual(error_output, cli.edid_setup.NOT_INSTALLED + "\n")
+        call.assert_not_called()
+        self.assertEqual(self.backend.applied, [])
+
+    def test_new_size_gets_an_edid_and_applies_it(self):
+        code, standard_output, error_output, call, sleep = self.run_size(["--size", "2880x1800"])
+
+        self.assertEqual((code, error_output), (0, ""))
+        self.assertEqual(standard_output, "Giving HDMI-A-1 an EDID with 2880x1800\napplied 2880x1800@56.30 on HDMI-1\n")
+        command = call.call_args.args[0]
+        self.assertEqual(command[:3], ["sudo", "bash", str(cli.edid_setup.SET_SCRIPT)])
+        self.assertEqual(command[-1], "HDMI-A-1")
+        self.assertEqual(Path(command[-2]).read_bytes(), cli.edid.generate(cli.edid_setup.custom_modes("2880x1800"))[1])
+        self.assertEqual(self.backend.applied, [("HDMI-1", "2880x1800@56.30", True)])
+        self.assertEqual(choice.load(), ("HDMI-1", "2880x1800@56.30"))
+        sleep.assert_not_called()
+
+    def test_size_with_a_clock_gets_an_edid_even_when_listed(self):
+        self.backend.outputs()["HDMI-1"].append(mode("2880x1800@50.00"))
+        code, _standard_output, _error_output, call, _sleep = self.run_size(["--size", "2880x1800@312"])
+
+        self.assertEqual(code, 0)
+        call.assert_called_once()
+        self.assertEqual(self.backend.applied, [("HDMI-1", "2880x1800@56.30", True)])
+
+    def test_new_size_stops_when_the_script_fails(self):
+        code, _standard_output, error_output, call, sleep = self.run_size(["--size", "2880x1800"], code=1)
+
+        self.assertEqual((code, error_output), (1, ""))
+        call.assert_called_once()
+        sleep.assert_not_called()
+        self.assertEqual(self.backend.applied, [])
+
+    def test_new_size_the_desktop_does_not_list(self):
+        code, _standard_output, error_output, _call, sleep = self.run_size(["--size", "2880x1800"], lists_new_mode=False)
+
+        self.assertEqual(code, 1)
+        self.assertEqual(error_output, "The desktop does not list 2880x1800 yet; see virtual-monitor --list\n")
+        self.assertEqual(sleep.call_count, cli.edid_setup.WAIT_ATTEMPTS)
+        self.assertEqual(self.backend.applied, [])
+
+    def test_size_and_apply_go_alone(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            cli.parse_arguments(["--size", "2880x1800", "--apply", "1920x1080@60.00"])
+
     def test_apply_with_scale_saves_it_for_the_size(self):
         code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--scale", "1.25"])
 

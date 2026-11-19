@@ -216,7 +216,7 @@ if [[ $UNINSTALL -eq 1 ]]; then
     uninstall
 fi
 
-FILES=("$NAME.py" scripts/install-edid.sh scripts/auto-login.sh)
+FILES=("$NAME.py" scripts/install-edid.sh scripts/set-edid.sh scripts/auto-login.sh)
 for module in "$PROJECT_FOLDER"/virtual_monitor/*.py; do
     FILES+=("virtual_monitor/$(basename "$module")")
 done
@@ -239,7 +239,8 @@ for project_file in "${FILES[@]}"; do
     stage_file "$project_file"
 done
 
-[[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/application/$NAME.py" "$STAGING/application/scripts/install-edid.sh" "$STAGING/application/scripts/auto-login.sh"
+[[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/application/$NAME.py" "$STAGING/application/scripts/install-edid.sh" \
+    "$STAGING/application/scripts/set-edid.sh" "$STAGING/application/scripts/auto-login.sh"
 
 install -m 644 "$PROJECT_FOLDER/assets/$NAME.png" "$STAGING/icon.png"
 

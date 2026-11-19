@@ -131,8 +131,16 @@ check "does not copy an invalid file" test ! -e "$ROOT/usr/lib/firmware/edid/vir
 
 echo "# Armbian"
 armbian "extraargs=cma=256M"
+# An EDID that set-edid.sh kept, and a file of someone else in the same folder
+mkdir -p "$ROOT/var/lib/virtual-monitor"
+cp "$EDID" "$ROOT/var/lib/virtual-monitor/edid.bin"
+echo HDMI-A-1 > "$ROOT/var/lib/virtual-monitor/output"
+: > "$ROOT/var/lib/virtual-monitor/other"
 run_script "$SCRIPT" "$EDID"
 status_is 0 "installs on Armbian"
+check "drops the EDID kept by set-edid.sh" test ! -e "$ROOT/var/lib/virtual-monitor/edid.bin"
+check "drops the output kept by set-edid.sh" test ! -e "$ROOT/var/lib/virtual-monitor/output"
+check "leaves the other files of the folder" test -e "$ROOT/var/lib/virtual-monitor/other"
 check "copies the EDID" cmp "$EDID" "$ROOT/usr/lib/firmware/edid/virtual-monitor.bin"
 check "initramfs hook is executable" test -x "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor"
 contains "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor" 'cp /usr/lib/firmware/edid/virtual-monitor.bin "${DESTDIR}/usr/lib/firmware/edid/"' "hook copies the EDID into the image"

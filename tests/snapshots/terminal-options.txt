@@ -12,6 +12,8 @@ description: With no options, opens the window.
 --next: version=None
 --restore: help='reapplies the last remembered mode' metavar=None choices=None default=False
 --restore: version=None
+--size: help='applies any size, like the screen you connect from (2880x1800), and remembers it like --apply; a size the output does not list gets a new EDID right away (asks for sudo). Also WIDTHxHEIGHT[@MHZ][:HZ]' metavar='WIDTHxHEIGHT' choices=None default=None
+--size: version=None
 --install-edid: help='installs the virtual monitor, so a free output works with no monitor plugged in (asks for sudo)' metavar=None choices=None default=False
 --install-edid: version=None
 --auto-login: help='opens your desktop session at boot (on, the default) or stops it (off), so the machine works with no one at it (asks for sudo)' metavar=None choices=('on', 'off') default=None
@@ -20,7 +22,7 @@ description: With no options, opens the window.
 --output: version=None
 --modes: help='with --install-edid: WIDTHxHEIGHT[@MHZ][:HZ] modes, separated by spaces (default: %(default)s)' metavar="'MODE ...'" choices=None default='3440x1440@312 2560x1080@216 3008x1260@241.5 2360x1640@297'
 --modes: version=None
---temp: help='with --apply, --next or --scale: does not remember the resolution' metavar=None choices=None default=False
+--temp: help='with --apply, --next, --size or --scale: does not remember the resolution' metavar=None choices=None default=False
 --temp: version=None
 --scale: help='desktop scale (1.25, 1.5...) or auto, saved for the size of the mode; alone, rescales the current mode' metavar='N' choices=None default=None
 --scale: version=None
