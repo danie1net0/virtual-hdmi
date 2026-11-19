@@ -3,6 +3,25 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.6.0 (2026-11-19)
+
+- `--install-edid` works on more distributions and boot loaders. It sets the kernel parameters
+  with grubby, grub2-mkconfig or grub-mkconfig when there is no update-grub, and edits the
+  Raspberry Pi `cmdline.txt`, U-Boot's `/etc/default/u-boot` or `extlinux.conf`, and the
+  systemd-boot loader entries. On Arch it builds the boot image with mkinitcpio; with no boot
+  image tool it only copies the EDID, which the kernel reads from `/usr/lib/firmware`.
+- On Debian and Ubuntu the parameters go in `/etc/default/grub.d/99-virtual-monitor.cfg`. Ubuntu's
+  cloud image sets the kernel command line again in its own `grub.d` file, so the parameters
+  written in `/etc/default/grub` never reached the kernel. The ones an earlier version wrote
+  there are removed.
+- A machine that boots from a UKI it builds gets the parameters in `/etc/kernel/cmdline`, and the
+  UKI is built again with `mkinitcpio -P` or `kernel-install add`. A prebuilt UKI, such as
+  Fedora's `kernel-uki-virt`, holds its own command line: the install stops before changing
+  anything.
+- `install.sh` warns when the icon or launcher cache update fails, instead of hiding it.
+- Tested by booting Fedora 45, Debian 13, Ubuntu 26.04, openSUSE Tumbleweed and Arch (with and
+  without a UKI) in QEMU with `tests/boot/run.sh`.
+
 ## v0.5.2 (2026-11-17)
 
 - The orientation setting is gone from the window, and `--rotation` from the terminal. Remote
