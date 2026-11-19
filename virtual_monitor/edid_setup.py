@@ -7,6 +7,7 @@ The output is the one the current boot already uses for the EDID, or else a free
 virtual connectors never get it. Outputs come from /sys/class/drm, as cardN-NAME folders.
 """
 
+import contextlib
 import re
 import tempfile
 from pathlib import Path
@@ -33,10 +34,9 @@ def kind(connector):
 
 
 def read_status(folder):
-    try:
+    """Connection status of the output in folder, or None when it has none."""
+    with contextlib.suppress(OSError):
         return (folder / "status").read_text().strip()
-    except OSError:
-        return None
 
 
 def external_outputs(drm=DRM):
@@ -46,8 +46,9 @@ def external_outputs(drm=DRM):
     except OSError:
         return []
 
-    named = [(connector_name(folder), read_status(folder)) for folder in folders]
-    return [(name, status) for name, status in named if name and status and kind(name) not in BUILT_IN]
+    named = [(connector_name(folder), folder) for folder in folders]
+    outputs = [(name, read_status(folder)) for name, folder in named if name]
+    return [(name, status) for name, status in outputs if status and kind(name) not in BUILT_IN]
 
 
 def preference(connector):

@@ -6,6 +6,7 @@ Each mode size also keeps its own desktop scale (settings.json), used every time
 that size is applied. Without a saved scale, the size gets displays.auto_scale.
 """
 
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -47,22 +48,22 @@ def autostart_entry():
 
 
 def save(connector, mode_id):
+    configuration_folder().mkdir(parents=True, exist_ok=True)
+
     choice = choice_file()
-    choice.parent.mkdir(parents=True, exist_ok=True)
+    choice.parent.mkdir(exist_ok=True)
     choice.write_text(json.dumps({"connector": connector, "mode": mode_id}))
 
     autostart = autostart_file()
-    autostart.parent.mkdir(parents=True, exist_ok=True)
+    autostart.parent.mkdir(exist_ok=True)
     autostart.write_text(autostart_entry())
 
 
 def load():
     """The remembered (connector, mode), or None if there is no valid choice."""
-    try:
+    with contextlib.suppress(OSError, ValueError, KeyError, TypeError):
         choice = json.loads(choice_file().read_text())
         return choice["connector"], choice["mode"]
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
 
 
 def size_key(width, height):
@@ -146,10 +147,9 @@ def commit(backend, connector, mode_id):
 
 
 def restore(backend):
-    """Reapplies the remembered choice. Returns False if there was nothing to reapply."""
+    """Reapplies the remembered choice, if there is one."""
     choice = load()
     if choice is None:
-        return False
+        return
 
     backend.apply(change_for(backend, *choice), False)
-    return True

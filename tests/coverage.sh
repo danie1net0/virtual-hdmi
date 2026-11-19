@@ -5,7 +5,7 @@
 #   bash tests/coverage.sh
 #
 # On macOS, bash 3.2 cannot split the xtrace; run it in a container, for example:
-#   docker run --rm -v "$PWD":/p:ro -w /p --user 1000:1000 -e HOME=/tmp python:3.13-slim \
+#   docker run --rm -v "$PWD":/project:ro -w /project --user 1000:1000 -e HOME=/tmp python:3.13-slim \
 #       bash -c 'pip -q install --user coverage && bash tests/coverage.sh'
 
 set -uo pipefail
@@ -38,6 +38,7 @@ shell_coverage() {
     for test in tests/shell/test_*.sh; do
         bash "$test" > /dev/null || { echo "Failed: $test"; failures=$((failures + 1)); }
     done
+
     python3 tests/shell/shell_coverage.py "$COVERAGE" get.sh install.sh scripts/*.sh || failures=$((failures + 1))
 }
 

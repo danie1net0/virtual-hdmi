@@ -18,6 +18,7 @@ machine() {
 case \"\$1\" in
     list-sessions) for file in \"\$folder\"/*; do [[ -e \"\$file\" ]] && echo \"\$(basename \"\$file\") 1000 user seat0 tty2\"; done ;;
     show-session) cat \"\$folder/\$2\" ;;
+    activate) [[ -e \"\$folder/../activate-fails\" ]] && exit 1; exit 0 ;;
 esac"
     stub sleep
 }
@@ -72,6 +73,14 @@ WINDOW_SECONDS=0 run_script "$SCRIPT"
 status_is 0 "zero window checks nothing"
 not_called loginctl
 
+machine daniel
+printf '%s\n' '[daemon]' 'AutomaticLogin = old' 'AutomaticLogin = daniel' '#  AutomaticLogin = user1' > "$ROOT/etc/gdm3/custom.conf"
+session c1 greeter gdm wayland seat0 yes
+session 2 user daniel wayland seat0 no
+once
+called "loginctl activate 2"
+contains "$OUTPUT" "session 2 of daniel" "uses the last AutomaticLogin line, not a commented one"
+
 echo "# nothing to do"
 cases=(
     "inactive greeter|c1 greeter gdm wayland seat0 no|2 user daniel wayland seat0 no"
@@ -92,17 +101,33 @@ for case_definition in "${cases[@]}"; do
         [[ "$seat" != - ]] || seat=""
         session "$id" "$class" "$name" "$type" "$seat" "$active"
     done
+
     once
     status_is 0 "$description: exits with 0"
     not_called "loginctl activate"
 done
 
 machine daniel
-session c1 greeter gdm wayland seat0 yes
-session 2 user daniel wayland seat0 no
-stub loginctl 'case "$1" in list-sessions) echo "c1 120 gdm seat0 tty1"; echo "2 1000 daniel seat0 tty2" ;; show-session) case "$2" in c1) printf "Active=yes\nSeat=seat0\nName=gdm\nType=wayland\nClass=greeter\n" ;; *) printf "Name=daniel\nClass=user\nActive=no\nType=wayland\nSeat=seat0\n" ;; esac ;; activate) exit 1 ;; esac'
+printf 'Active=yes\nSeat=seat0\nName=gdm\nType=wayland\nClass=greeter\n' > "$CASE/sessions/c1"
+printf 'Name=daniel\nClass=user\nActive=no\nType=wayland\nSeat=seat0\n' > "$CASE/sessions/2"
+: > "$CASE/activate-fails"
 once
 status_is 1 "reads properties out of order and fails if activate fails"
 called "loginctl activate 2"
+
+echo "# defaults"
+machine daniel
+INTERVAL=300 run_script "$SCRIPT"
+check "checks for 300 seconds by default: one pass of 300" test "$(grep -c '^sleep 300$' "$CALLS")" = 1
+
+machine daniel
+INTERVAL=301 run_script "$SCRIPT"
+not_called sleep
+
+machine daniel
+stub sed
+UNSET_ROOT=1 run_script "$SCRIPT"
+status_is 0 "without ROOT, reads the GDM user"
+contains "$OUTPUT" "Auto-login not configured in GDM" "without ROOT, works on /"
 
 summary

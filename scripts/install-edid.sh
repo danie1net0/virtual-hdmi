@@ -65,28 +65,26 @@ EXTLINUX="$ROOT/boot/extlinux/extlinux.conf"
 KERNEL_COMMAND_LINE="$ROOT/etc/kernel/cmdline"
 LOADER_FOLDERS=("$ROOT/boot/loader/entries" "$ROOT/efi/loader/entries" "$ROOT/boot/efi/loader/entries")
 # systemd-stub, the start of every UKI, leaves this EFI variable at boot
-STUB_INFO="$ROOT/sys/firmware/efi/efivars/StubInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f"
-# Set when no tool builds a boot image here, so there is no image to check
-NO_BOOT_IMAGE=""
+STUB_INFORMATION="$ROOT/sys/firmware/efi/efivars/StubInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f"
 
 # sed without -i, which differs between GNU and BSD; rewrites in place to keep owner and permissions
-edit() {
-    local file="$1" new
+edit() (
+    file="$1"
     shift
     new="$(sed -E "$@" "$file")"
     printf '%s\n' "$new" > "$file"
-}
+)
 
 keep_original() {
-    [[ -f "$1.before-edid" ]] || cp "$1" "$1.before-edid"
+    [[ -e "$1.before-edid" ]] || cp "$1" "$1.before-edid"
 }
 
 # Rewrites the kernel arguments on the lines of FILE that match PREFIX, an awk regular expression
-# for what comes before them (FILE PREFIX [FIRST] [ADDED]): drops the parameters of an earlier
-# run and adds ADDED, by default $PARAMETERS. A closing quote stays at the end. FIRST=1 changes
-# only the first match.
-set_arguments() {
-    local file="$1" program content
+# for what comes before them (FILE PREFIX [first|all] [ADDED]): drops the parameters of an
+# earlier run and adds ADDED, by default $PARAMETERS. A closing quote stays at the end. first
+# changes only the first match, all (the default) every one.
+set_arguments() (
+    file="$1"
     program='
         function rewrite(arguments,    count, words, position, kept, quote, separator) {
             quote = ""
@@ -104,69 +102,75 @@ set_arguments() {
 
             return kept quote
         }
-        !done && match($0, prefix) { print substr($0, 1, RLENGTH) rewrite(substr($0, RLENGTH + 1)); done = first; next }
+
+        !done && match($0, prefix) { print substr($0, 1, RLENGTH) rewrite(substr($0, RLENGTH + 1)); done = (scope == "first"); next }
         { print }
     '
 
-    content="$(awk -v prefix="$2" -v first="${3:-0}" -v parameters="${4-$PARAMETERS}" -v video="video=${CONNECTOR}:" "$program" "$file")"
+    content="$(awk -v prefix="$2" -v scope="${3:-all}" -v parameters="${4-$PARAMETERS}" -v video="video=${CONNECTOR}:" "$program" "$file")"
     printf '%s\n' "$content" > "$file"
-}
+)
 
 # Only the running kernel: old kernels whose modules were removed break the generation
 build_boot_image() {
-    if command -v update-initramfs >/dev/null 2>&1; then
+    if command -v update-initramfs >/dev/null; then
         update-initramfs -u -k "$KERNEL_VERSION"
         return
     fi
 
-    if command -v dracut >/dev/null 2>&1; then
+    if command -v dracut >/dev/null; then
         dracut -f --kver "$KERNEL_VERSION"
         return
     fi
 
     # Arch names its images after the preset, not the kernel version: build them all
-    if command -v mkinitcpio >/dev/null 2>&1; then
-        mkinitcpio -P
+    mkinitcpio -P
+}
+
+boot_image_tool_present() {
+    command -v update-initramfs >/dev/null || command -v dracut >/dev/null || command -v mkinitcpio >/dev/null
+}
+
+update_boot_image() {
+    if ! boot_image_tool_present; then
+        echo "    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware."
         return
     fi
 
-    echo "    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware."
-    NO_BOOT_IMAGE=1
+    build_boot_image
+    check_boot_image
 }
 
 # Whether the listing printed by the command names the EDID. The listing is read whole first: with
 # pipefail, "lister | grep -q" fails when grep stops early and the lister dies of SIGPIPE.
-image_has_edid() {
-    local listing
-    listing="$("$@" 2>/dev/null || true)"
+image_has_edid() (
+    listing="$("$@" 2>/dev/null)"
     [[ "$listing" == *"$EDID_RELATIVE"* ]]
-}
+)
 
 # Whether one of the mkinitcpio images (the fallback ones aside) has the EDID
-initcpio_has_edid() {
-    local image
+initcpio_has_edid() (
     for image in "$ROOT"/boot/initramfs-*.img; do
         [[ "$image" != *-fallback.img ]] || continue
-        image_has_edid lsinitcpio "$image" && return 0
+        image_has_edid lsinitcpio "$image" && return
     done
-    return 1
-}
+
+    false
+)
 
 check_boot_image() {
-    [[ -z "$NO_BOOT_IMAGE" ]] || return 0
-
     echo "==> Checking that the EDID is in the image"
-    if command -v lsinitrd >/dev/null 2>&1 && image_has_edid lsinitrd --kver "$KERNEL_VERSION"; then
+    if command -v lsinitrd >/dev/null && image_has_edid lsinitrd --kver "$KERNEL_VERSION"; then
         echo "    ok (lsinitrd)"
         return
     fi
 
-    if command -v lsinitramfs >/dev/null 2>&1 && image_has_edid lsinitramfs "$ROOT/boot/initrd.img-$KERNEL_VERSION"; then
+    if command -v lsinitramfs >/dev/null && image_has_edid lsinitramfs "$ROOT/boot/initrd.img-$KERNEL_VERSION"; then
         echo "    ok (lsinitramfs)"
         return
     fi
 
-    if command -v lsinitcpio >/dev/null 2>&1 && initcpio_has_edid; then
+    if command -v lsinitcpio >/dev/null && initcpio_has_edid; then
         echo "    ok (lsinitcpio)"
         return
     fi
@@ -198,7 +202,7 @@ set_armbian_parameters() {
 # Debian and Ubuntu read /etc/default/grub.d/*.cfg after /etc/default/grub, and a file there
 # (the cloud images' 50-cloudimg-settings.cfg) can set GRUB_CMDLINE_LINUX_DEFAULT again
 uses_grub_drop_in() {
-    [[ -d "$GRUB_DROP_IN_FOLDER" ]] && command -v update-grub >/dev/null 2>&1
+    [[ -d "$GRUB_DROP_IN_FOLDER" ]] && command -v update-grub >/dev/null
 }
 
 # The parameters go in a file of their own that runs last and adds to what the others set
@@ -217,7 +221,7 @@ set_grub_drop_in_parameters() {
 remove_grub_parameters() {
     grep -q 'drm\.edid_firmware=' "$GRUB" || return 0
     keep_original "$GRUB"
-    set_arguments "$GRUB" '^GRUB_CMDLINE_LINUX_DEFAULT="' 0 ""
+    set_arguments "$GRUB" '^GRUB_CMDLINE_LINUX_DEFAULT="' all ""
 }
 
 set_grub_parameters() {
@@ -235,22 +239,22 @@ set_grub_parameters() {
 # The command that applies /etc/default/grub here. Fedora keeps a boot entry per kernel in
 # /boot/loader/entries, which grub2-mkconfig does not rewrite: grubby changes them.
 apply_grub() {
-    if command -v update-grub >/dev/null 2>&1; then
+    if command -v update-grub >/dev/null; then
         update-grub
         return
     fi
 
-    if command -v grubby >/dev/null 2>&1; then
+    if command -v grubby >/dev/null; then
         set_grubby_parameters
         return
     fi
 
-    if command -v grub2-mkconfig >/dev/null 2>&1; then
+    if command -v grub2-mkconfig >/dev/null; then
         grub2-mkconfig -o "$ROOT/boot/grub2/grub.cfg"
         return
     fi
 
-    if command -v grub-mkconfig >/dev/null 2>&1; then
+    if command -v grub-mkconfig >/dev/null; then
         grub-mkconfig -o "$ROOT/boot/grub/grub.cfg"
         return
     fi
@@ -264,34 +268,32 @@ old_grubby_parameters() {
     grubby --info=ALL 2>/dev/null | tr ' "' '\n\n' | grep -E "^(drm\.edid_firmware=|video=${CONNECTOR}:)" | sort -u | tr '\n' ' ' || true
 }
 
-set_grubby_parameters() {
-    local old_parameters
+set_grubby_parameters() (
     old_parameters="$(old_grubby_parameters)"
     [[ -z "$old_parameters" ]] || grubby --update-kernel=ALL --remove-args="${old_parameters% }"
     grubby --update-kernel=ALL --args="$PARAMETERS"
-}
+)
 
 # The kernel command line of the Raspberry Pi: one line in cmdline.txt
-raspberry_command_line() {
-    local file
+raspberry_command_line() (
     for file in "$ROOT/boot/firmware/cmdline.txt" "$ROOT/boot/cmdline.txt"; do
         [[ -f "$file" ]] || continue
         echo "$file"
         return
     done
-}
+)
 
 # A file that holds only the command line (cmdline.txt, /etc/kernel/cmdline)
 set_command_line_parameters() {
     echo "==> Adjusting the kernel parameters in $1"
     keep_original "$1"
-    set_arguments "$1" '^' 1
-    head -n 1 "$1"
+    set_arguments "$1" "" first
+    cat "$1"
 }
 
 # Debian's u-boot-menu writes extlinux.conf from /etc/default/u-boot at every kernel update
 uses_uboot_menu() {
-    [[ -f "$UBOOT_DEFAULTS" ]] && command -v u-boot-update >/dev/null 2>&1
+    [[ -f "$UBOOT_DEFAULTS" ]] && command -v u-boot-update >/dev/null
 }
 
 set_uboot_parameters() {
@@ -314,15 +316,15 @@ set_extlinux_parameters() {
     grep -iE "$EXTLINUX_APPEND" "$EXTLINUX"
 }
 
-has_loader_entries() {
-    local folder file
+has_loader_entries() (
     for folder in "${LOADER_FOLDERS[@]}"; do
         for file in "$folder"/*.conf; do
-            [[ -f "$file" ]] && return 0
+            [[ -f "$file" ]] && return
         done
     done
-    return 1
-}
+
+    false
+)
 
 # An entry with no options line gets one
 set_entry_parameters() {
@@ -334,8 +336,7 @@ set_entry_parameters() {
 }
 
 # Every systemd-boot entry, and /etc/kernel/cmdline, which kernel-install reads for new kernels
-set_loader_parameters() {
-    local folder file
+set_loader_parameters() (
     for folder in "${LOADER_FOLDERS[@]}"; do
         for file in "$folder"/*.conf; do
             [[ -f "$file" ]] || continue
@@ -345,15 +346,14 @@ set_loader_parameters() {
 
     [[ -f "$KERNEL_COMMAND_LINE" ]] || return 0
     set_command_line_parameters "$KERNEL_COMMAND_LINE"
-}
+)
 
 # Parameters of an earlier run, as kernelstub keeps them in its JSON configuration
 old_kernelstub_parameters() {
     grep -oE "\"(drm\.edid_firmware=[^\"]*|video=${CONNECTOR}:[^\"]*)\"" "$KERNELSTUB_CONFIGURATION" | tr -d '"' | sort -u | tr '\n' ' ' || true
 }
 
-set_kernelstub_parameters() {
-    local old_parameters
+set_kernelstub_parameters() (
     echo "==> Adjusting the kernel parameters with kernelstub"
     keep_original "$KERNELSTUB_CONFIGURATION"
 
@@ -361,15 +361,13 @@ set_kernelstub_parameters() {
     old_parameters="$(old_kernelstub_parameters)"
     [[ -z "$old_parameters" ]] || kernelstub -d "${old_parameters% }"
     kernelstub -a "$PARAMETERS"
-}
+)
 
 uses_kernelstub() {
-    [[ -f "$KERNELSTUB_CONFIGURATION" ]] && command -v kernelstub >/dev/null 2>&1
+    [[ -f "$KERNELSTUB_CONFIGURATION" ]] && command -v kernelstub >/dev/null
 }
 
-set_kernel_parameters() {
-    local command_line
-
+set_kernel_parameters() (
     if [[ -f "$ARMBIAN_ENVIRONMENT" ]]; then
         set_armbian_parameters
         return
@@ -409,30 +407,25 @@ set_kernel_parameters() {
     echo "No boot setup found (armbianEnv.txt, cmdline.txt, kernelstub, GRUB, U-Boot or systemd-boot): I do not know where to put the kernel parameters." >&2
     echo "Add to the kernel command line: $PARAMETERS" >&2
     exit 1
-}
+)
 
 booted_from_uki() {
-    [[ -f "$STUB_INFO" ]]
+    [[ -f "$STUB_INFORMATION" ]]
 }
 
 # mkinitcpio builds a UKI when a preset sets PRESET_uki=
 mkinitcpio_builds_uki() {
-    command -v mkinitcpio >/dev/null 2>&1 || return 1
-    grep -qsE '^[[:space:]]*[A-Za-z0-9_]+_uki=' "$ROOT"/etc/mkinitcpio.d/*.preset
+    command -v mkinitcpio >/dev/null && grep -qsE '^[[:space:]]*[A-Za-z0-9_]+_uki=' "$ROOT"/etc/mkinitcpio.d/*.preset
 }
 
 # kernel-install builds a UKI with layout=uki (the /etc file overrides the /usr/lib one)
 kernel_install_builds_uki() {
-    command -v kernel-install >/dev/null 2>&1 || return 1
-    grep -qsE '^[[:space:]]*layout=uki' "$ROOT/etc/kernel/install.conf" "$ROOT/usr/lib/kernel/install.conf"
+    command -v kernel-install >/dev/null && grep -qsE '^[[:space:]]*layout=uki' "$ROOT/etc/kernel/install.conf" "$ROOT/usr/lib/kernel/install.conf"
 }
 
 # A UKI that came built, such as Fedora's kernel-uki-virt: its initrd and command line are inside
 uses_prebuilt_uki() {
-    booted_from_uki || return 1
-    mkinitcpio_builds_uki && return 1
-    kernel_install_builds_uki && return 1
-    return 0
+    booted_from_uki && ! mkinitcpio_builds_uki && ! kernel_install_builds_uki
 }
 
 stop_on_prebuilt_uki() {
@@ -446,14 +439,13 @@ stop_on_prebuilt_uki() {
 # The UKI command line comes from /etc/kernel/cmdline; without it, from the running one
 set_uki_parameters() {
     mkdir -p "$(dirname "$KERNEL_COMMAND_LINE")"
-    [[ -f "$KERNEL_COMMAND_LINE" ]] || running_command_line > "$KERNEL_COMMAND_LINE"
+    [[ -e "$KERNEL_COMMAND_LINE" ]] || running_command_line > "$KERNEL_COMMAND_LINE"
 
     set_command_line_parameters "$KERNEL_COMMAND_LINE"
 }
 
 # What the boot loader added (BOOT_IMAGE=, initrd=) is not part of a UKI command line
-running_command_line() {
-    local program
+running_command_line() (
     program='
         {
             for (position = 1; position <= NF; position++) {
@@ -467,7 +459,7 @@ running_command_line() {
     '
 
     awk "$program" "$ROOT/proc/cmdline"
-}
+)
 
 build_uki() {
     echo "==> Building the UKI"
@@ -487,8 +479,7 @@ install_in_boot() {
         return
     fi
 
-    build_boot_image
-    check_boot_image
+    update_boot_image
     set_kernel_parameters
 }
 
@@ -506,17 +497,17 @@ echo "==> Adding the EDID to the boot image (kernel $KERNEL_VERSION)"
 # The boot image hooks of earlier versions, which used edid/ultrawide.bin
 rm -f "$ROOT/etc/dracut.conf.d/90-edid-ultrawide.conf" "$ROOT/etc/initramfs-tools/hooks/edid-ultrawide"
 # The hook goes wherever the tool that builds the image reads it; the folder may not exist yet
-if command -v dracut >/dev/null 2>&1; then
+if command -v dracut >/dev/null; then
     mkdir -p "$ROOT/etc/dracut.conf.d"
     echo "install_items+=\" /usr/lib/firmware/$EDID_RELATIVE \"" > "$ROOT/etc/dracut.conf.d/90-edid-virtual-monitor.conf"
 fi
 
-if command -v mkinitcpio >/dev/null 2>&1; then
+if command -v mkinitcpio >/dev/null; then
     mkdir -p "$ROOT/etc/mkinitcpio.conf.d"
     echo "FILES+=(/usr/lib/firmware/$EDID_RELATIVE)" > "$ROOT/etc/mkinitcpio.conf.d/virtual-monitor.conf"
 fi
 
-if command -v update-initramfs >/dev/null 2>&1; then
+if command -v update-initramfs >/dev/null; then
     mkdir -p "$ROOT/etc/initramfs-tools/hooks"
     cat > "$ROOT/etc/initramfs-tools/hooks/edid-virtual-monitor" <<'EOF'
 #!/bin/sh

@@ -32,10 +32,9 @@ apt-get install -y --no-install-recommends \
 
 # Polkit agent: pkexec from the Install EDID button needs one to ask for the password.
 # Installs the first one the distribution offers.
-install_polkit_agent() {
-    local package
+install_polkit_agent() (
     for package in policykit-1-gnome polkit-gnome lxpolkit mate-polkit; do
-        if apt-cache policy "$package" 2>/dev/null | grep -q '^ *Candidate: *[^( ]'; then
+        if apt-cache policy "$package" 2>/dev/null | grep -q 'Candidate: *[^( ]'; then
             apt-get install -y --no-install-recommends "$package"
             echo "    polkit agent: $package"
             return
@@ -43,7 +42,7 @@ install_polkit_agent() {
     done
 
     echo "    Warning: no polkit agent available; the Install EDID button will not ask for the password." >&2
-}
+)
 
 install_polkit_agent
 

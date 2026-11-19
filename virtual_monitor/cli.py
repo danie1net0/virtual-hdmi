@@ -39,6 +39,10 @@ def scale_argument(text):
 
 
 def parse_arguments(command_line_arguments):
+    return build_parser().parse_args(command_line_arguments)
+
+
+def build_parser():
     parser = argparse.ArgumentParser(prog="virtual-monitor", description="With no options, opens the window.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     action = parser.add_mutually_exclusive_group()
@@ -66,7 +70,7 @@ def parse_arguments(command_line_arguments):
         metavar="'MODE ...'",
         help="with --install-edid: WIDTHxHEIGHT[@MHZ][:HZ] modes, separated by spaces (default: %(default)s)",
     )
-    parser.add_argument("--temp", action="store_true", help="with --apply or --next: does not remember the choice")
+    parser.add_argument("--temp", action="store_true", help="with --apply, --next or --scale: does not remember the resolution")
     parser.add_argument(
         "--scale",
         type=scale_argument,
@@ -74,7 +78,7 @@ def parse_arguments(command_line_arguments):
         help="desktop scale (1.25, 1.5...) or auto, saved for the size of the mode; alone, rescales the current mode",
     )
 
-    return parser.parse_args(command_line_arguments)
+    return parser
 
 
 def flag(on, mark):
@@ -130,12 +134,14 @@ def target_mode(arguments, modes):
 
 def save_settings(arguments, backend, connector, mode_id):
     """Saves --scale for the size of mode_id; an unknown mode keeps nothing."""
+    if arguments.scale is None:
+        return
+
     mode = backend.find_mode(connector, mode_id)
     if mode is None:
         return
 
-    if arguments.scale is not None:
-        choice.save_setting(mode.width, mode.height, "scale", arguments.scale or None)
+    choice.save_setting(mode.width, mode.height, "scale", arguments.scale or None)
 
 
 def run_action(arguments, backend, standard_output, error_output):
@@ -217,7 +223,8 @@ def auto_login(state):
 
 
 def main(command_line_arguments, standard_output=None, error_output=None):
-    standard_output, error_output = standard_output or sys.stdout, error_output or sys.stderr
+    # Without a stream, print writes to sys.stdout; errors go to sys.stderr
+    error_output = error_output or sys.stderr
     arguments = parse_arguments(command_line_arguments)
     if arguments.install_edid:
         return install_edid(arguments, standard_output, error_output)
@@ -238,6 +245,6 @@ def main(command_line_arguments, standard_output=None, error_output=None):
 
     try:
         return run_action(arguments, backend, standard_output, error_output)
-    except Exception as error:  # xrandr, kscreen-doctor or DBus refused the mode
+    except Exception as error:  # a display tool or DBus refused the mode
         print(f"Failed: {error}", file=error_output)
         return 1

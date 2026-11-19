@@ -30,6 +30,10 @@ run_script "$SCRIPT" 'Daniel; rm -rf /'
 status_is 1 "refuses an invalid user name"
 
 manager gdm3
+run_script "$SCRIPT" 1daniel
+status_is 1 "refuses a user name that starts with a digit"
+
+manager gdm3
 run_script "$SCRIPT" daniel maybe
 status_is 1 "refuses a state other than on or off"
 contains "$ERRORS" "Use on or off, not maybe." "says which states it takes"
@@ -99,6 +103,7 @@ not_contains "$ROOT/etc/lightdm/lightdm.conf.d/60-virtual-monitor-autologin.conf
 called "gpasswd -a daniel autologin"
 
 run_script "$SCRIPT" daniel off
+status_is 0 "turns LightDM auto-login off"
 check "off removes the LightDM file" test ! -e "$ROOT/etc/lightdm/lightdm.conf.d/60-virtual-monitor-autologin.conf"
 
 echo "# greetd (COSMIC)"
@@ -117,6 +122,7 @@ check "COSMIC is a Wayland session" grep -qx "XDG_SESSION_TYPE OVERRIDE=wayland"
 check "keeps a copy of the PAM service" test "$(grep -c virtual-monitor "$ROOT/etc/pam.d/cosmic-greeter.before-auto-login")" = 0
 check "adds the automatic session with COSMIC" test "$(tail -n 3 "$ROOT/etc/greetd/cosmic-greeter.toml")" = "$(printf '[initial_session]\ncommand = "start-cosmic"\nuser = "daniel"')"
 check "keeps the greeter session" grep -qx 'user = "cosmic-greeter"' "$ROOT/etc/greetd/cosmic-greeter.toml"
+check "keeps a copy of the greetd file" test "$(grep -c initial_session "$ROOT/etc/greetd/cosmic-greeter.toml.before-auto-login")" = 0
 check "edits the COSMIC file, not config.toml" grep -qx "old" "$ROOT/etc/greetd/config.toml"
 contains "$OUTPUT" "to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager" "greetd opens the session again only without its runfile"
 
@@ -133,22 +139,26 @@ check "off removes the session type file" test ! -e "$ROOT/etc/security/virtual-
 
 manager cosmic-greeter
 mkdir -p "$ROOT/etc/greetd"
-printf '[default_session]\ncommand = "agreety"\n\n[initial_session]\ncommand = "old"\nuser = "someone"\n[terminal]\nvt = 2\n' > "$ROOT/etc/greetd/config.toml"
+printf '[default_session]\ncommand = "agreety"\n# [initial_session] logs in once per boot\n\n[initial_session]\ncommand = "old [session]"\nuser = "someone"\n[terminal] # comes after [initial_session]\nvt = 2\n' > "$ROOT/etc/greetd/config.toml"
+printf '[Desktop Entry]\nName=Plasma\nTryExec=/usr/bin/plasma-check\nExec=/usr/bin/startplasma-wayland\n\n[Desktop Action Safe]\nExec=/usr/bin/startplasma-safe\n' > "$ROOT/usr/share/wayland-sessions/plasma.desktop"
 run_script "$SCRIPT" daniel
 status_is 0 "greetd without COSMIC uses the first session"
 check "replaces the old automatic session" test "$(grep -c 'someone' "$ROOT/etc/greetd/config.toml")" = 0
+check "drops the old command, which has brackets" test "$(grep -c 'old \[session\]' "$ROOT/etc/greetd/config.toml")" = 0
+check "keeps a comment that names the table" grep -qx "# \[initial_session\] logs in once per boot" "$ROOT/etc/greetd/config.toml"
+check "the automatic session runs the one Exec line of the entry, not TryExec or an action" test "$(sed -n '/^\[initial_session\]/,$p' "$ROOT/etc/greetd/config.toml")" = "$(printf '%s\n' '[initial_session]' 'command = "/usr/bin/startplasma-wayland"' 'user = "daniel"')"
 check "keeps the table after the old session" grep -qx "vt = 2" "$ROOT/etc/greetd/config.toml"
 check "runs the Exec of the Wayland session" grep -qx 'command = "/usr/bin/startplasma-wayland"' "$ROOT/etc/greetd/config.toml"
 contains "$OUTPUT" "no $ROOT/etc/pam.d/greetd" "without the PAM service of greetd, says the type stays"
 
 manager greetd
 mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"
-printf '[general]\nrunfile = "/var/run/greetd-custom.run"\n\n[default_session]\n' > "$ROOT/etc/greetd/config.toml"
-printf '#%%PAM-1.0\nauth include system-login\nsession include system-login\n' > "$ROOT/etc/pam.d/greetd"
+printf '[terminal] # not [general]\nrunfile = "/run/terminal.run"\n\n[general]\n#runfile = "/run/commented.run"\n# the runfile makes greetd skip [initial_session]\nrunfile = "/var/run/greetd-custom.run"\n\n[default_session]\n' > "$ROOT/etc/greetd/config.toml"
+printf '#%%PAM-1.0\nauth include system-login\n# session lines follow\nsession include system-login\n' > "$ROOT/etc/pam.d/greetd"
 rm "$ROOT/usr/share/wayland-sessions/plasma.desktop"
 run_script "$SCRIPT" daniel
 status_is 0 "greetd with only an X11 session"
-check "without pam_env, the line goes before the first session line" test "$(sed -n 3p "$ROOT/etc/pam.d/greetd")" = "session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf"
+check "without pam_env, the line goes before the first session line" test "$(cat "$ROOT/etc/pam.d/greetd")" = "$(printf '%s\n' '#%PAM-1.0' 'auth include system-login' '# session lines follow' 'session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf' 'session include system-login')"
 check "an X11 session is marked x11" grep -qx "XDG_SESSION_TYPE OVERRIDE=x11" "$ROOT/etc/security/virtual-monitor-session.conf"
 contains "$OUTPUT" "sudo rm -f /var/run/greetd-custom.run &&" "uses the runfile set in the configuration"
 
@@ -173,6 +183,46 @@ run_script "$SCRIPT" daniel
 status_is 1 "greetd without configuration fails"
 contains "$ERRORS" "greetd has no configuration" "says the configuration is missing"
 
+echo "# commented and look-alike lines"
+manager gdm3
+mkdir -p "$ROOT/etc/gdm3"
+printf '[daemon]\n# Enabling automatic login\n#  AutomaticLoginEnable = true\n#  AutomaticLogin = user1\n' > "$ROOT/etc/gdm3/custom.conf"
+run_script "$SCRIPT" daniel
+check "keeps the commented GDM examples" test "$(cat "$ROOT/etc/gdm3/custom.conf")" = "$(printf '%s\n' '[daemon]' 'AutomaticLoginEnable=true' 'AutomaticLogin=daniel' '# Enabling automatic login' '#  AutomaticLoginEnable = true' '#  AutomaticLogin = user1')"
+
+manager gdm3
+mkdir -p "$ROOT/etc/gdm3"
+printf '# The settings go under [daemon]\n' > "$ROOT/etc/gdm3/custom.conf"
+run_script "$SCRIPT" daniel
+check "a comment that names [daemon] is not the section" test "$(cat "$ROOT/etc/gdm3/custom.conf")" = "$(printf '%s\n' '# The settings go under [daemon]' '[daemon]' 'AutomaticLoginEnable=true' 'AutomaticLogin=daniel')"
+
+manager lightdm
+printf 'noautologin:x:976:\n' > "$ROOT/etc/group"
+run_script "$SCRIPT" daniel
+status_is 0 "LightDM with a group whose name only ends in autologin"
+not_called gpasswd
+
+manager greetd
+mkdir -p "$ROOT/etc/greetd" "$ROOT/etc/pam.d"
+echo '[default_session]' > "$ROOT/etc/greetd/config.toml"
+printf '%s\n' 'auth include system-login' 'session required pam_env.so' '#session optional pam_env.so user_readenv=1' 'session include system-login' > "$ROOT/etc/pam.d/greetd"
+run_script "$SCRIPT" daniel
+check "the line goes after the last pam_env line, not after a commented one" test "$(cat "$ROOT/etc/pam.d/greetd")" = "$(printf '%s\n' 'auth include system-login' 'session required pam_env.so' 'session optional pam_env.so readenv=0 conffile=/etc/security/virtual-monitor-session.conf' '#session optional pam_env.so user_readenv=1' 'session include system-login')"
+
+echo "# folders with the name of a file"
+manager sddm
+mkdir -p "$ROOT/usr/share/wayland-sessions/a-folder.desktop"
+run_script "$SCRIPT" daniel
+check "a folder is no desktop session" grep -qx "Session=plasma" "$ROOT/etc/sddm.conf.d/virtual-monitor-autologin.conf"
+
+manager greetd
+mkdir -p "$ROOT/etc/greetd/cosmic-greeter.toml" "$ROOT/etc/pam.d/greetd"
+echo '[default_session]' > "$ROOT/etc/greetd/config.toml"
+run_script "$SCRIPT" daniel
+status_is 0 "greetd with folders where its files go"
+check "a folder is no greetd configuration" grep -qx '\[initial_session\]' "$ROOT/etc/greetd/config.toml"
+contains "$OUTPUT" "no $ROOT/etc/pam.d/greetd" "a folder is no PAM service"
+
 echo "# unknown display manager"
 manager xdm
 run_script "$SCRIPT" daniel
@@ -183,5 +233,17 @@ new_case
 run_script "$SCRIPT" daniel
 status_is 1 "no display manager fails"
 contains "$ERRORS" "Unknown display manager (none)" "says there is none"
+
+echo "# failures and the real machine"
+manager lightdm
+printf 'autologin:x:975:\n' > "$ROOT/etc/group"
+stub gpasswd 'exit 1'
+run_script "$SCRIPT" daniel
+status_is 1 "stops when joining the autologin group fails"
+
+manager gdm3
+UNSET_ROOT=1 run_script "$SCRIPT" 'Bad User'
+status_is 1 "without ROOT, runs up to the user check"
+contains "$ERRORS" "Give the user" "without ROOT, works on /"
 
 summary

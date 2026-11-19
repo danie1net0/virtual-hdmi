@@ -1,0 +1,48 @@
+== keep-session.sh (status 0)
+Auto-login not configured in GDM; nothing to do.
+-- errors
+== keep-session.sh (status 0)
+Auto-login not configured in GDM; nothing to do.
+-- errors
+== keep-session.sh (status 0)
+Login screen (c1) active with session 2 of daniel in the background; reactivating the session.
+-- errors
+== keep-session.sh (status 0)
+Login screen (c1) active with session 3 of daniel in the background; reactivating the session.
+-- errors
+== keep-session.sh (status 0)
+Login screen (c1) active with session 5 of daniel in the background; reactivating the session.
+Login screen (c1) active with session 5 of daniel in the background; reactivating the session.
+Login screen (c1) active with session 5 of daniel in the background; reactivating the session.
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+Login screen (c1) active with session 2 of daniel in the background; reactivating the session.
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 1)
+Login screen (c1) active with session 2 of daniel in the background; reactivating the session.
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+-- errors
+== keep-session.sh (status 0)
+Auto-login not configured in GDM; nothing to do.
+-- errors

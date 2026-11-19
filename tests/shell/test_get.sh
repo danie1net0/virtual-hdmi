@@ -75,4 +75,10 @@ run_script "$SCRIPT"
 status_is 3 "returns the status of install.sh"
 check "removes the temporary folder after a failure" test ! -e "$(work_folder)"
 
+new_case
+stub_download
+VERSION=--dev run_script "$SCRIPT"
+status_is 0 "a version that looks like an option is only a version"
+called "install.sh"
+
 summary

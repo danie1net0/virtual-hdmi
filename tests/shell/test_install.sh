@@ -48,13 +48,17 @@ user
 run_script "$SCRIPT" --help
 status_is 0 "--help exits with 0"
 contains "$OUTPUT" "Virtual monitor installer" "--help shows the help"
+
 run_script "$SCRIPT" -h
 status_is 0 "-h exits with 0"
+
 run_script "$SCRIPT" --nothing
 status_is 1 "unknown option fails"
 contains "$ERRORS" "Unknown option: --nothing" "says which option"
+
 run_script "$SCRIPT" --dest-dir
 status_is 1 "--dest-dir without a path fails"
+
 run_script "$SCRIPT" --dest-dir --dev
 status_is 1 "--dest-dir followed by an option fails"
 contains "$ERRORS" "--dest-dir needs a path." "explains --dest-dir"
@@ -78,11 +82,12 @@ check "copies the executable auto-login script" test -x "$(application_folder)/s
 for module in "$PROJECT"/virtual_monitor/*.py; do
     check "copies virtual_monitor/$(basename "$module")" cmp "$module" "$(application_folder)/virtual_monitor/$(basename "$module")"
 done
+
 check "does not copy tests nor EDIDs" test ! -e "$(application_folder)/tests" -a ! -e "$(application_folder)/edid"
 check "does not copy Python caches" test ! -e "$(application_folder)/virtual_monitor/__pycache__"
 check "modules are not executable" test ! -x "$(application_folder)/virtual_monitor/displays.py"
 check "installs the icon" cmp "$PROJECT/assets/$NAME.png" "$(icon)"
-check "launcher points to the app" grep -qx "Exec=python3 \"$(application_folder)/$NAME.py\"" "$(launcher)"
+check "launcher points to the application" grep -qx "Exec=python3 \"$(application_folder)/$NAME.py\"" "$(launcher)"
 check "launcher points to the icon" grep -qx "Icon=$(icon)" "$(launcher)"
 check "launcher keeps the name" grep -qx "Name=Virtual monitor" "$(launcher)"
 check "removes the launcher named after the command" test ! -e "$(named_launcher)"
@@ -95,6 +100,7 @@ contains "$OUTPUT" "Open it from the menu" "says how to open it"
 check "installs the executable command" test -x "$(command_file)"
 contains "$OUTPUT" "Command installed: $(command_file)" "says where the command is"
 contains "$OUTPUT" "$HOME/.local/bin is not in PATH yet" "warns when ~/.local/bin is not in PATH"
+
 stub python3 'exit 7'
 : > "$CALLS"
 PATH="$STUBS:$TOOLS_FOLDER" "$(command_file)" --list "two words" > /dev/null 2>&1
@@ -102,7 +108,7 @@ check "command passes its exit status" test $? -eq 7
 called "python3 $(application_folder)/$NAME.py --list two words"
 stub python3
 if PATH=/usr/bin:/bin command -v python3 > /dev/null; then
-    check "installed app works outside the project" env -i PATH=/usr/bin:/bin python3 "$(application_folder)/$NAME.py" --help
+    check "installed application works outside the project" env -i PATH=/usr/bin:/bin python3 "$(application_folder)/$NAME.py" --help
 fi
 
 echo 'old' > "$(application_folder)/leftover.py"
@@ -118,7 +124,7 @@ status_is 0 "installs with ~/.local/bin in PATH"
 not_contains "$OUTPUT" "is not in PATH yet" "does not warn when ~/.local/bin is in PATH"
 
 user
-export XDG_DATA_HOME="$CASE/data" XDG_CONFIG_HOME="$CASE/config"
+export XDG_DATA_HOME="$CASE/data" XDG_CONFIG_HOME="$CASE/configuration"
 DATA="$XDG_DATA_HOME"
 run_script "$SCRIPT"
 status_is 0 "respects XDG_DATA_HOME"
@@ -140,6 +146,8 @@ stub gtk-update-icon-cache 'exit 1'
 stub update-desktop-database 'exit 1'
 run_script "$SCRIPT"
 status_is 0 "cache failure does not stop the install"
+contains "$OUTPUT" "Warning: gtk-update-icon-cache failed" "warns that the icon cache failed"
+contains "$OUTPUT" "Warning: update-desktop-database failed" "warns that the launcher database failed"
 
 echo "# migration from the Portuguese-named install"
 user
@@ -148,7 +156,7 @@ mkdir -p "$(dirname "$(legacy_mode_file)")"
 echo '{"connector": "HDMI-A-1", "mode": "old"}' > "$(legacy_mode_file)"
 run_script "$SCRIPT"
 status_is 0 "installs over an old install"
-check "removes the old app folder" test ! -e "$(legacy_application_folder)"
+check "removes the old application folder" test ! -e "$(legacy_application_folder)"
 check "removes the old icon" test ! -e "$(legacy_icon)"
 check "removes the old launcher" test ! -e "$(legacy_launcher)"
 check "removes the old autostart" test ! -e "$(legacy_autostart)"
@@ -175,6 +183,12 @@ run_script "$SCRIPT"
 status_is 0 "installs with only the old modo.json"
 check "migrates modo.json without an old autostart" cmp "$(legacy_mode_file)" "$(mode_file)"
 check "creates no autostart without an old one" test ! -e "$(autostart)"
+
+user
+mkdir -p "$(legacy_mode_file)"
+run_script "$SCRIPT"
+status_is 0 "installs with a folder where the old modo.json was"
+check "a folder is no old modo.json" test ! -e "$(mode_file)"
 
 user
 run_script "$SCRIPT"
@@ -224,7 +238,7 @@ check "--dest-dir leaves the autostart alone" grep -qx "Exec=existing" "$(autost
 check "--dest-dir installs no command" test ! -e "$(command_file)"
 check "--dest-dir does not migrate modo.json" test ! -e "$(mode_file)"
 check "--dest-dir leaves the old autostart" test -f "$CONFIGURATION_FOLDER/autostart/monitor-virtual-restaurar.desktop"
-check "--dest-dir leaves the old app of the user" test -d "$HOME/.local/share/$LEGACY"
+check "--dest-dir leaves the old application of the user" test -d "$HOME/.local/share/$LEGACY"
 
 cd "$CASE" || exit 1
 run_script "$SCRIPT" --skip-check --dest-dir relative
@@ -246,6 +260,13 @@ copy_project() {
 }
 
 user
+copy_project "$CASE/checkout"
+chmod 644 "$CASE/checkout/$NAME.py" "$CASE/checkout/scripts/install-edid.sh" "$CASE/checkout/scripts/auto-login.sh"
+run_script "$CASE/checkout/install.sh" --skip-check --dev --dest-dir "$CASE/linked"
+status_is 0 "installs a checkout in dev mode"
+check "dev mode leaves the checkout's file modes alone" test "$(ls -l "$CASE/checkout/$NAME.py" "$CASE/checkout/scripts/install-edid.sh" "$CASE/checkout/scripts/auto-login.sh" | cut -c1-10 | sort -u)" = "-rw-r--r--"
+
+user
 copy_project "$CASE/project"
 run_script "$CASE/project/install.sh" --skip-check --dest-dir "$CASE/project/out"
 status_is 1 "refuses a destination inside the project"
@@ -253,11 +274,11 @@ contains "$ERRORS" "Destination cannot be inside the project folder." "explains 
 check "does not install inside the project" test ! -e "$CASE/project/out/$NAME"
 
 user
-copy_project "$CASE/x/$NAME/sub/project"
-run_script "$CASE/x/$NAME/sub/project/install.sh" --skip-check --dest-dir "$CASE/x"
+copy_project "$CASE/outside/$NAME/subfolder/project"
+run_script "$CASE/outside/$NAME/subfolder/project/install.sh" --skip-check --dest-dir "$CASE/outside"
 status_is 1 "refuses a destination that contains the project"
 contains "$ERRORS" "Destination cannot contain the project folder." "explains the destination that contains the project"
-check "does not delete the project" test -f "$CASE/x/$NAME/sub/project/install.sh"
+check "does not delete the project" test -f "$CASE/outside/$NAME/subfolder/project/install.sh"
 
 echo "# project files"
 user
@@ -267,6 +288,22 @@ rm -r "$COPY/assets"
 run_script "$COPY/install.sh" --skip-check
 status_is 1 "project without an icon fails"
 contains "$ERRORS" "Missing file: assets/$NAME.png" "says which file is missing"
+
+user
+COPY="$CASE/project"
+copy_project "$COPY"
+printf '%s\n' 'TryExec=python3' 'X-Icon=keep' >> "$COPY/data/$NAME.desktop"
+run_script "$COPY/install.sh" --skip-check
+check "rewrites only the Exec and Icon keys" test "$(tail -n 2 "$(launcher)")" = "$(printf '%s\n' 'TryExec=python3' 'X-Icon=keep')"
+
+user
+COPY="$CASE/project"
+copy_project "$COPY"
+rm "$COPY/data/$NAME.desktop"
+mkdir "$COPY/data/$NAME.desktop"
+run_script "$COPY/install.sh" --skip-check
+status_is 1 "a folder is no project file"
+contains "$ERRORS" "Missing file: data/$NAME.desktop" "says the folder is not the file"
 
 echo "# uninstall"
 user
@@ -279,14 +316,14 @@ echo old > "$(named_launcher)"
 : > "$CALLS"
 run_script "$SCRIPT" --uninstall
 status_is 0 "removes everything"
-check "app removed" test ! -e "$(application_folder)"
+check "application removed" test ! -e "$(application_folder)"
 check "icon removed" test ! -e "$(icon)"
 check "launcher removed" test ! -e "$(launcher)"
 check "launcher named after the command removed" test ! -e "$(named_launcher)"
 check "autostart removed" test ! -e "$(autostart)"
 check "command removed" test ! -e "$(command_file)"
 contains "$OUTPUT" "Removed: $(command_file)" "says the command was removed"
-check "old app removed" test ! -e "$(legacy_application_folder)"
+check "old application removed" test ! -e "$(legacy_application_folder)"
 check "old icon removed" test ! -e "$(legacy_icon)"
 check "old launcher removed" test ! -e "$(legacy_launcher)"
 check "old autostart removed" test ! -e "$(legacy_autostart)"
@@ -304,8 +341,34 @@ DATA="$CASE/destination"
 run_script "$SCRIPT" --skip-check --dest-dir "$DATA"
 run_script "$SCRIPT" --uninstall --dest-dir "$DATA"
 status_is 0 "removes from --dest-dir"
-check "removes the app from --dest-dir" test ! -e "$(application_folder)"
+check "removes the application from --dest-dir" test ! -e "$(application_folder)"
 check "--dest-dir does not remove the user autostart" test -f "$(autostart)"
 not_contains "$OUTPUT" "Removed: $(command_file)" "--dest-dir does not mention the command"
+
+echo "# failures that do not stop the install"
+user
+stub gtk-update-icon-cache 'exit 1'
+run_script "$SCRIPT" --skip-check
+status_is 0 "a failing icon cache update does not stop the install"
+
+echo "# permissions"
+user
+umask 077
+run_script "$SCRIPT" --skip-check
+umask 022
+check "the launcher is readable by everyone" test "$(ls -l "$(launcher)" | cut -c1-10)" = "-rw-r--r--"
+
+echo "# --dest-dir leaves the user's command alone"
+user
+run_script "$SCRIPT" --skip-check
+run_script "$SCRIPT" --uninstall --dest-dir "$CASE/elsewhere"
+check "keeps ~/.local/bin/virtual-monitor" test -x "$(command_file)"
+
+echo "# a failing step stops the install"
+user
+stub install 'exit 1'
+run_script "$SCRIPT" --skip-check
+status_is 1 "stops when a file cannot be installed"
+not_contains "$OUTPUT" "App installed" "does not say it installed"
 
 summary

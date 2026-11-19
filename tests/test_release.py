@@ -20,8 +20,8 @@ def headings():
 
 def release_notes(tag):
     """Runs the awk of the release job in .gitlab-ci.yml, as CI does, and returns the notes it writes."""
-    ci = (ROOT / ".gitlab-ci.yml").read_text()
-    command = re.search(r"^\s+- (awk .*)$", ci, re.MULTILINE).group(1)
+    pipeline_configuration = (ROOT / ".gitlab-ci.yml").read_text()
+    command = re.search(r"^\s+- (awk .*)$", pipeline_configuration, re.MULTILINE).group(1)
     with tempfile.TemporaryDirectory() as folder:
         subprocess.run(
             ["sh", "-c", f"cp '{CHANGELOG}' CHANGELOG.md && {command}"],

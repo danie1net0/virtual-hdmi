@@ -1,4 +1,5 @@
 import contextlib
+import dataclasses
 import io
 import math
 import runpy
@@ -69,6 +70,7 @@ class BuildTimingTest(unittest.TestCase):
     def test_rejects_clock_above_the_16_bit_field(self):
         with self.assertRaisesRegex(edid.EdidError, "655.35"):
             edid.build_timing(1920, 1080, 655.36)
+
         self.assertEqual(edid.build_timing(3840, 2160, 655.35, 75).clock_khz, 655350)
 
     def test_rejects_blanking_that_does_not_fit(self):
@@ -114,13 +116,13 @@ class ParseModeTest(unittest.TestCase):
 
 class BestSafeTimingTest(unittest.TestCase):
     def test_takes_the_rate_closest_to_the_target(self):
-        timing = edid.best_safe_timing(3440, 1440)
+        timing = edid.best_safe_timing(3440, 1440, 60)
         self.assertEqual(timing.clock_khz, 312000)
         self.assertAlmostEqual(timing.refresh, 59.24, places=2)
 
     def test_lowest_clock_wins_when_rates_tie(self):
         self.assertAlmostEqual(edid.build_timing(1920, 1200, 312).refresh, 60, places=1)
-        self.assertEqual(edid.best_safe_timing(1920, 1200).clock_khz, 200000)
+        self.assertEqual(edid.best_safe_timing(1920, 1200, 60).clock_khz, 200000)
 
     def test_target_rate(self):
         timing = edid.best_safe_timing(1920, 1080, 50)
@@ -130,13 +132,13 @@ class BestSafeTimingTest(unittest.TestCase):
     def test_only_safe_clocks(self):
         for width, height in ((2360, 1640), (2560, 1600), (1280, 720), (3840, 1600)):
             with self.subTest(width=width, height=height):
-                clock_mhz = edid.best_safe_timing(width, height).clock_khz / 1000
+                clock_mhz = edid.best_safe_timing(width, height, 60).clock_khz / 1000
                 self.assertIn(clock_mhz, edid.SAFE_CLOCKS_MHZ)
 
     def test_no_clock_fits(self):
         for width, height in ((100, 100), (5000, 1080)):
             with self.subTest(width=width, height=height), self.assertRaisesRegex(edid.EdidError, "No safe clock"):
-                edid.best_safe_timing(width, height)
+                edid.best_safe_timing(width, height, 60)
 
 
 class BytesTest(unittest.TestCase):
@@ -154,6 +156,11 @@ class BytesTest(unittest.TestCase):
         self.assertEqual(dtd[12] | (dtd[14] >> 4) << 8, edid.WIDTH_MM)
         self.assertEqual(dtd[13] | (dtd[14] & 0xF) << 8, edid.HEIGHT_MM)
         self.assertEqual(dtd[17], 0x1E)
+
+    def test_generate_writes_the_name(self):
+        _, data = edid.generate(["1920x1080@148.5"], [], "Test")
+        self.assertIn(edid.name_descriptor("Test"), data)
+        self.assertNotIn(edid.name_descriptor(edid.DEFAULT_NAME), data)
 
     def test_name_descriptor_pads_short_names(self):
         self.assertEqual(edid.name_descriptor("UW"), b"\x00\x00\x00\xfc\x00UW\n" + b" " * 10)
@@ -216,19 +223,20 @@ class BytesTest(unittest.TestCase):
     def test_cta_block_fits_six_dtds_but_not_seven(self):
         dtd = bytes(18)
         edid.cta_block([], [dtd] * 6)
-        with self.assertRaisesRegex(edid.EdidError, "Too many modes"):
+        with self.assertRaisesRegex(edid.EdidError, "^Too many modes to fit in the EDID$"):
             edid.cta_block([], [dtd] * 7)
 
     def test_cta_block_rejects_bad_vics(self):
         for vics in ([0], [128], [16] * 32):
-            with self.subTest(vics=vics), self.assertRaisesRegex(edid.EdidError, "VIC"):
+            with self.subTest(vics=vics), self.assertRaisesRegex(edid.EdidError, "^Provide up to 31 VICs, each from 1 to 127$"):
                 edid.cta_block(vics, [])
+
         self.assertEqual(edid.cta_block([1, 127] + [16] * 29, [])[4], 0x40 | 31)
 
 
 class BuildEdidTest(unittest.TestCase):
     def test_needs_a_mode(self):
-        with self.assertRaisesRegex(edid.EdidError, "at least one mode"):
+        with self.assertRaisesRegex(edid.EdidError, "^Provide at least one mode$"):
             edid.build_edid([], [16])
 
     def test_first_three_modes_in_base_rest_in_extension(self):
@@ -258,8 +266,9 @@ class BuildEdidTest(unittest.TestCase):
     def test_generate_propagates_errors(self):
         with self.assertRaises(edid.EdidError):
             edid.generate([])
+
         with self.assertRaises(edid.EdidError):
-            edid.generate(["oi"])
+            edid.generate(["invalid"])
 
 
 class InstalledPathTest(unittest.TestCase):
@@ -296,8 +305,8 @@ class IsInstalledTest(unittest.TestCase):
     def test_invalid_modes_are_not_installed(self):
         self.installed.write_bytes(b"")
 
-        self.assertFalse(edid.is_installed([]))
-        self.assertFalse(edid.is_installed(["oi"]))
+        self.assertIs(edid.is_installed([]), False)
+        self.assertIs(edid.is_installed(["invalid"]), False)
 
 
 class MainTest(unittest.TestCase):
@@ -305,14 +314,16 @@ class MainTest(unittest.TestCase):
         standard_output, error_output = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(standard_output), contextlib.redirect_stderr(error_output):
             code = edid.main(command_line_arguments)
+
         return code, standard_output.getvalue(), error_output.getvalue()
 
     def test_writes_file_and_lists_modes(self):
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "x.bin"
+            path = Path(temporary) / "output.bin"
             code, standard_output, _ = self.run_main([str(path), "3440x1440@312", "2560x1080@216", "--vic", "16", "--vic", "4"])
             self.assertEqual(code, 0)
-            self.assertEqual(len(path.read_bytes()), 256)
+            self.assertEqual(path.read_bytes(), edid.generate(["3440x1440@312", "2560x1080@216"], [16, 4])[1])
+
         self.assertEqual(
             standard_output.splitlines(),
             ["3440x1440 @ 312 MHz = 59.24 Hz", "2560x1080 @ 216 MHz = 59.98 Hz", "VICs: 16 4"],
@@ -320,30 +331,74 @@ class MainTest(unittest.TestCase):
 
     def test_without_vics_prints_no_vic_line(self):
         with tempfile.TemporaryDirectory() as temporary:
-            code, standard_output, _ = self.run_main([str(Path(temporary) / "x.bin"), "1920x1080@148.5", "--name", "Test"])
+            path = Path(temporary) / "output.bin"
+            code, standard_output, _ = self.run_main([str(path), "1920x1080@148.5", "--name", "Test"])
+            written = path.read_bytes()
+
         self.assertEqual(code, 0)
         self.assertNotIn("VICs", standard_output)
+        self.assertEqual(written, edid.generate(["1920x1080@148.5"], [], "Test")[1])
 
     def test_invalid_mode_returns_1_and_writes_nothing(self):
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "x.bin"
-            code, standard_output, error_output = self.run_main([str(path), "ruim"])
+            path = Path(temporary) / "output.bin"
+            code, standard_output, error_output = self.run_main([str(path), "invalid"])
             self.assertFalse(path.exists())
+
         self.assertEqual((code, standard_output), (1, ""))
-        self.assertIn("Error: Invalid mode: ruim", error_output)
+        self.assertIn("Error: Invalid mode: invalid", error_output)
 
     def test_missing_modes_is_usage_error(self):
         with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
-            edid.main(["x.bin"])
+            edid.main(["output.bin"])
+
         self.assertEqual(raised.exception.code, 2)
 
     def test_runs_as_module(self):
         with tempfile.TemporaryDirectory() as temporary:
-            command_line_arguments = ["edid", str(Path(temporary) / "x.bin"), "1920x1080@148.5"]
+            command_line_arguments = ["edid", str(Path(temporary) / "output.bin"), "1920x1080@148.5"]
             with mock.patch.object(sys, "argv", command_line_arguments), contextlib.redirect_stdout(io.StringIO()):
                 with self.assertRaises(SystemExit) as raised:
                     runpy.run_path(edid.__file__, run_name="__main__")
+
         self.assertEqual(raised.exception.code, 0)
+
+
+class BoundaryTest(unittest.TestCase):
+    def test_safe_clocks(self):
+        self.assertEqual(edid.SAFE_CLOCKS_MHZ, (312, 297, 241.5, 216, 200, 148.5, 74.25))
+
+    def test_timing_is_frozen(self):
+        timing = edid.build_timing(1920, 1080, 148.5)
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            timing.width = 1
+
+    def test_smallest_and_tallest_sizes_fit(self):
+        self.assertEqual(edid.build_timing(1, 1, 1.0).width, 1)
+        self.assertEqual(edid.build_timing(1920, edid.MAXIMUM_PIXELS, 312, 30).height, edid.MAXIMUM_PIXELS)
+        with self.assertRaisesRegex(edid.EdidError, "pixel limit"):
+            edid.build_timing(1920, edid.MAXIMUM_PIXELS + 1, 312, 30)
+
+    def test_vertical_blanking_up_to_the_limit_fits(self):
+        # 1840 + 160 = 2000 columns at 10 Hz: 83.9 MHz gives 4195 lines, a blanking of exactly 4095
+        timing = edid.build_timing(1840, 100, 83.9, 10)
+        self.assertEqual(timing.vertical_total - timing.height, edid.MAXIMUM_PIXELS)
+        with self.assertRaisesRegex(edid.EdidError, "too high"):
+            edid.build_timing(1840, 100, 83.92, 10)
+
+    def test_fine_adjustment_adds_a_column(self):
+        timing = edid.build_timing(1920, 1080, 74.25, 24)
+        self.assertEqual((timing.horizontal_total, timing.vertical_total), (2081, 1487))
+
+    def test_large_horizontal_blanking_round_trips(self):
+        timing = edid.Timing(1920, 1080, 148500, 1920 + 300, 1125)
+        self.assertEqual(decode_dtd(edid.detailed_timing(timing))["horizontal_blanking"], 300)
+
+    def test_six_vics_and_six_modes_fill_the_block(self):
+        dtd = bytes(18)
+        edid.cta_block([16] * 6, [dtd] * 6)
+        with self.assertRaisesRegex(edid.EdidError, "Too many modes"):
+            edid.cta_block([16] * 7, [dtd] * 6)
 
 
 if __name__ == "__main__":

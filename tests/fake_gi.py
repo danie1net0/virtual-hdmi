@@ -158,8 +158,8 @@ class Application:
 
 class Image(Widget):
     @classmethod
-    def new_from_icon_name(cls, name):
-        return cls(icon_name=name)
+    def new_from_icon_name(fake_class, name):
+        return fake_class(icon_name=name)
 
 
 class StringList:
@@ -167,8 +167,8 @@ class StringList:
         self.strings = strings
 
     @classmethod
-    def new(cls, strings):
-        return cls(list(strings))
+    def new(fake_class, strings):
+        return fake_class(list(strings))
 
 
 class GError(Exception):
@@ -189,17 +189,18 @@ class Subprocess:
         self.error = None
 
     @classmethod
-    def new(cls, command, flags):
-        process = cls(command, flags)
-        cls.created.append(process)
+    def new(fake_class, command, flags):
+        process = fake_class(command, flags)
+        fake_class.created.append(process)
         return process
 
-    def communicate_utf8_async(self, stdin, cancellable, callback):
+    def communicate_utf8_async(self, standard_input, cancellable, callback):
         self.callback = callback
 
     def communicate_utf8_finish(self, result):
         if self.error:
             raise GError(self.error)
+
         return True, self.output, None
 
     def get_exit_status(self):
@@ -208,7 +209,7 @@ class Subprocess:
     def finish(self, status=0, output="", error=None):
         """Simulates the end of the process and calls the communicate_utf8_async callback."""
         self.status, self.output, self.error = status, output, error
-        self.callback(self, "resultado")
+        self.callback(self, "result")
 
 
 class DBusProxy:
@@ -218,11 +219,12 @@ class DBusProxy:
     calls = []
 
     @classmethod
-    def new_for_bus_sync(cls, *arguments):
-        cls.calls.append(arguments)
-        if isinstance(cls.next, Exception):
-            raise cls.next
-        return cls.next
+    def new_for_bus_sync(fake_class, *arguments):
+        fake_class.calls.append(arguments)
+        if isinstance(fake_class.next, Exception):
+            raise fake_class.next
+
+        return fake_class.next
 
 
 class Variant:
@@ -287,8 +289,8 @@ GLib = namespace(
     SOURCE_CONTINUE=True,
     timeouts=[],
     second_timeouts=[],
-    prgnames=[],
-    set_prgname=lambda name: GLib.prgnames.append(name),
+    program_names=[],
+    set_prgname=lambda name: GLib.program_names.append(name),
     timeout_add=lambda milliseconds, callback: GLib.timeouts.append((milliseconds, callback)),
     timeout_add_seconds=lambda seconds, callback, *data: GLib.second_timeouts.append((seconds, callback, data)),
 )
@@ -313,6 +315,6 @@ def reset():
     DBusProxy.next = None
     GLib.timeouts.clear()
     GLib.second_timeouts.clear()
-    GLib.prgnames.clear()
+    GLib.program_names.clear()
     Gtk.Window.default_icons.clear()
     Gtk.displays[0] = True

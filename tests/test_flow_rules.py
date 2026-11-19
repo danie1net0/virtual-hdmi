@@ -36,6 +36,7 @@ def python_problems(path):
 
         nested = [child for statement in node.body for child in ast.walk(statement) if isinstance(child, ast.If)]
         problems.extend(f"{child.lineno}: if inside the if of line {node.lineno}" for child in nested)
+
     return problems
 
 
@@ -61,6 +62,7 @@ def shell_problems(path):
                 problems.append(f"{number}: if inside an if")
 
         depth -= len(SHELL_FI.findall(code))
+
     return problems
 
 

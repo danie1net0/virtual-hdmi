@@ -1,0 +1,31 @@
+== get.sh (status 1)
+-- errors
+Missing curl.
+== get.sh (status 1)
+-- errors
+Missing tar.
+== get.sh (status 1)
+-- errors
+Invalid VERSION: ../evil
+== get.sh --skip-check --dev (status 1)
+-- errors
+--dev links to a checkout; clone the repository and run bash install.sh --dev.
+== get.sh (status 0)
+==> Downloading https://gitlab.com/danie1net0/virtual-hdmi/-/archive/master/virtual-hdmi-master.tar.gz
+==> Installing
+-- errors
+== get.sh --uninstall (status 0)
+==> Downloading https://gitlab.com/danie1net0/virtual-hdmi/-/archive/v0.2.0/virtual-hdmi-v0.2.0.tar.gz
+==> Installing
+-- errors
+== get.sh (status 22)
+==> Downloading https://gitlab.com/danie1net0/virtual-hdmi/-/archive/master/virtual-hdmi-master.tar.gz
+-- errors
+== get.sh (status 3)
+==> Downloading https://gitlab.com/danie1net0/virtual-hdmi/-/archive/master/virtual-hdmi-master.tar.gz
+==> Installing
+-- errors
+== get.sh (status 0)
+==> Downloading https://gitlab.com/danie1net0/virtual-hdmi/-/archive/--dev/virtual-hdmi---dev.tar.gz
+==> Installing
+-- errors

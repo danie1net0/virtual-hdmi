@@ -33,27 +33,25 @@ SESSION_FOLDERS=("$ROOT/usr/share/wayland-sessions" "$ROOT/usr/share/xsessions")
 id "$USER_NAME" >/dev/null 2>&1 || fail "User $USER_NAME does not exist."
 
 # Rewrites a file in place, keeping its owner and permissions
-rewrite() {
-    local file="$1" content="$2"
+rewrite() (
+    file="$1" content="$2"
     printf '%s\n' "$content" > "$file"
-}
+)
 
-backup() {
-    local file="$1"
-    [[ -f "$file" && ! -f "$file.before-auto-login" ]] || return 0
+backup() (
+    file="$1"
+    [[ -e "$file" && ! -e "$file.before-auto-login" ]] || return 0
     cp "$file" "$file.before-auto-login"
-}
+)
 
 # Name of the unit display-manager.service points to (gdm3, sddm, lightdm, greetd...), or nothing
-display_manager() {
-    local unit="$ROOT/etc/systemd/system/display-manager.service"
-    [[ -L "$unit" ]] || return 0
+display_manager() (
+    unit="$ROOT/etc/systemd/system/display-manager.service"
     basename "$(readlink "$unit")" .service
-}
+)
 
 # The first desktop session installed, Wayland before X11
-session_file() {
-    local folder file
+session_file() (
     for folder in "${SESSION_FOLDERS[@]}"; do
         for file in "$folder"/*.desktop; do
             [[ -f "$file" ]] || continue
@@ -61,20 +59,18 @@ session_file() {
             return
         done
     done
-}
+)
 
-session_name() {
-    local file
+session_name() (
     file="$(session_file)"
-    [[ -n "$file" ]] || return 0
     basename "$file" .desktop
-}
+)
 
-configure_gdm() {
-    local file="$ROOT/etc/$1/custom.conf" content
+configure_gdm() (
+    file="$ROOT/etc/$1/custom.conf"
     mkdir -p "$(dirname "$file")"
     backup "$file"
-    [[ -f "$file" ]] || : > "$file"
+    : >> "$file"
     grep -q '^\[daemon\]' "$file" || echo "[daemon]" >> "$file"
 
     content="$(awk -v state="$STATE" -v user="$USER_NAME" '
@@ -84,17 +80,17 @@ configure_gdm() {
     ' "$file")"
     rewrite "$file" "$content"
     echo "    $file"
-}
+)
 
-configure_sddm() {
-    local file="$ROOT/etc/sddm.conf.d/virtual-monitor-autologin.conf"
+configure_sddm() (
+    file="$ROOT/etc/sddm.conf.d/virtual-monitor-autologin.conf"
     rm -f "$file"
     [[ "$STATE" == on ]] || return 0
 
     mkdir -p "$(dirname "$file")"
     printf '[Autologin]\nUser=%s\nSession=%s\n' "$USER_NAME" "$(session_name)" > "$file"
     echo "    $file"
-}
+)
 
 # Some distributions only let members of the autologin group log in automatically
 join_autologin_group() {
@@ -102,8 +98,8 @@ join_autologin_group() {
     gpasswd -a "$USER_NAME" autologin
 }
 
-configure_lightdm() {
-    local file="$ROOT/etc/lightdm/lightdm.conf.d/60-virtual-monitor-autologin.conf" session
+configure_lightdm() (
+    file="$ROOT/etc/lightdm/lightdm.conf.d/60-virtual-monitor-autologin.conf"
     rm -f "$file"
     [[ "$STATE" == on ]] || return 0
 
@@ -113,21 +109,19 @@ configure_lightdm() {
     [[ -z "$session" ]] || echo "autologin-session=$session" >> "$file"
     join_autologin_group
     echo "    $file"
-}
+)
 
-greetd_configuration() {
-    local file
+greetd_configuration() (
     for file in "$ROOT/etc/greetd/cosmic-greeter.toml" "$ROOT/etc/greetd/config.toml"; do
         [[ -f "$file" ]] || continue
         echo "$file"
         return
     done
-}
+)
 
 # The command greetd runs for the automatic session: COSMIC's, else the first session's Exec line
-greetd_command() {
-    local file
-    if command -v start-cosmic >/dev/null 2>&1; then
+greetd_command() (
+    if command -v start-cosmic >/dev/null; then
         echo start-cosmic
         return
     fi
@@ -135,23 +129,21 @@ greetd_command() {
     file="$(session_file)"
     [[ -n "$file" ]] || return 0
     sed -n 's/^Exec=//p' "$file" | head -n 1
-}
+)
 
 # x11 when the only session found is an X11 one, else wayland (COSMIC and the Wayland sessions)
-session_type() {
-    local file
+session_type() (
     file="$(session_file)"
     [[ "$file" == */xsessions/* ]] || { echo wayland; return; }
     echo x11
-}
+)
 
 # A [general] setting of greetd's configuration (FILE KEY DEFAULT): service is the PAM service it
 # logs in with, runfile the file that makes it skip [initial_session] when it starts again
-greetd_setting() {
-    local value
+greetd_setting() (
     value="$(awk -F '"' -v key="$2" '/^\[/ { general = ($0 ~ /^\[general\]/) } general && $1 ~ "^[[:space:]]*" key "[[:space:]]*=" { print $2; exit }' "$1")"
     echo "${value:-$3}"
-}
+)
 
 # greetd starts [initial_session] without saying it is graphical, so logind records it as a tty
 # session and remote desktop servers (Jump Desktop Connect, for one) find no graphical session.
@@ -159,8 +151,8 @@ greetd_setting() {
 SESSION_TYPE_FILE="/etc/security/virtual-monitor-session.conf"
 PAM_LINE="session optional pam_env.so readenv=0 conffile=$SESSION_TYPE_FILE"
 
-configure_session_type() {
-    local pam="$ROOT/etc/pam.d/$1" content
+configure_session_type() (
+    pam="$ROOT/etc/pam.d/$1"
     [[ -f "$pam" ]] || { echo "    no $pam: the session type stays as greetd sets it"; return 0; }
     backup "$pam"
 
@@ -189,29 +181,32 @@ configure_session_type() {
     mkdir -p "$(dirname "$ROOT$SESSION_TYPE_FILE")"
     echo "XDG_SESSION_TYPE OVERRIDE=$(session_type)" > "$ROOT$SESSION_TYPE_FILE"
     echo "    $ROOT$SESSION_TYPE_FILE"
-}
+)
 
-configure_greetd() {
-    local file command content service
+configure_greetd() (
     file="$(greetd_configuration)"
     [[ -n "$file" ]] || fail "greetd has no configuration in $ROOT/etc/greetd."
     backup "$file"
 
     # The [initial_session] table is the automatic login; drop the old one before adding the new
-    content="$(awk '/^\[initial_session\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$file")"
+    content="$(awk '/^\[/ { skip = ($0 ~ /^\[initial_session\]/) } !skip' "$file")"
     rewrite "$file" "$content"
     echo "    $file"
 
     service="$(greetd_setting "$file" service greetd)"
-    # greetd runs [initial_session] once per boot: restarting it opens the session only without the runfile
-    REOPEN="sudo rm -f $(greetd_setting "$file" runfile /run/greetd.run) && $REOPEN"
     [[ "$STATE" == on ]] || { configure_session_type "$service"; return 0; }
 
     command="$(greetd_command)"
     [[ -n "$command" ]] || fail "No desktop session found for greetd to start."
     configure_session_type "$service"
     printf '\n[initial_session]\ncommand = "%s"\nuser = "%s"\n' "$command" "$USER_NAME" >> "$file"
-}
+)
+
+# greetd runs [initial_session] once per boot: restarting it opens the session only without the runfile
+greetd_reopen() (
+    file="$(greetd_configuration)"
+    echo "sudo rm -f $(greetd_setting "$file" runfile /run/greetd.run) && $REOPEN"
+)
 
 # The command that opens the session again after logging out
 REOPEN="sudo systemctl restart display-manager"
@@ -222,7 +217,7 @@ case "$MANAGER" in
     gdm) configure_gdm gdm ;;
     sddm) configure_sddm ;;
     lightdm) configure_lightdm ;;
-    greetd | cosmic-greeter) configure_greetd ;;
+    greetd | cosmic-greeter) configure_greetd; REOPEN="$(greetd_reopen)" ;;
     *) fail "Unknown display manager (${MANAGER:-none}): turn automatic login on in its settings." ;;
 esac
 

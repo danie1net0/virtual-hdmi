@@ -35,4 +35,10 @@ run_script "$SCRIPT"
 status_is 1 "systemctl failure stops the install"
 not_contains "$OUTPUT" "Done" "does not say it finished"
 
+new_case
+stub mkdir 'exit 1'
+UNSET_ROOT=1 run_script "$SCRIPT"
+status_is 1 "without ROOT, stops at the first write when it fails"
+called "mkdir -p /usr/local/sbin /etc/systemd/system"
+
 summary

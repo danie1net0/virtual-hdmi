@@ -1,0 +1,79 @@
+== install-xfce.sh daniel (status 1)
+-- errors
+Run with sudo.
+== install-xfce.sh (status 1)
+-- errors
+Give the user: sudo bash scripts/install-xfce.sh <user>
+== install-xfce.sh (status 1)
+-- errors
+Give the user: sudo bash scripts/install-xfce.sh <user>
+== install-xfce.sh ghost (status 1)
+-- errors
+id: ghost: no such user
+User ghost does not exist.
+== install-xfce.sh (status 0)
+==> Installing XFCE, LightDM and the X server
+    polkit agent: polkit-gnome
+==> Auto-login of daniel in the XFCE session
+==> LightDM as the login manager
+
+Done. Reboot with: sudo reboot
+After boot: python3 virtual-monitor.py --list    (should show X11 (xrandr))
+To go back to GNOME: sudo systemctl enable gdm3.service && sudo reboot
+-- errors
+== install-xfce.sh maria (status 0)
+==> Installing XFCE, LightDM and the X server
+    polkit agent: polkit-gnome
+==> Auto-login of maria in the XFCE session
+==> LightDM as the login manager
+
+Done. Reboot with: sudo reboot
+After boot: python3 virtual-monitor.py --list    (should show X11 (xrandr))
+To go back to GNOME: sudo systemctl enable gdm3.service && sudo reboot
+-- errors
+== install-xfce.sh (status 0)
+==> Installing XFCE, LightDM and the X server
+    polkit agent: polkit-gnome
+==> Auto-login of daniel in the XFCE session
+==> LightDM as the login manager
+
+Done. Reboot with: sudo reboot
+After boot: python3 virtual-monitor.py --list    (should show X11 (xrandr))
+To go back to GNOME: sudo systemctl enable gdm3.service && sudo reboot
+-- errors
+== install-xfce.sh daniel (status 0)
+==> Installing XFCE, LightDM and the X server
+    polkit agent: lxpolkit
+==> Auto-login of daniel in the XFCE session
+==> LightDM as the login manager
+
+Done. Reboot with: sudo reboot
+After boot: python3 virtual-monitor.py --list    (should show X11 (xrandr))
+To go back to GNOME: sudo systemctl enable gdm3.service && sudo reboot
+-- errors
+== install-xfce.sh daniel (status 0)
+==> Installing XFCE, LightDM and the X server
+==> Auto-login of daniel in the XFCE session
+==> LightDM as the login manager
+
+Done. Reboot with: sudo reboot
+After boot: python3 virtual-monitor.py --list    (should show X11 (xrandr))
+To go back to GNOME: sudo systemctl enable gdm3.service && sudo reboot
+-- errors
+    Warning: no polkit agent available; the Install EDID button will not ask for the password.
+== install-xfce.sh daniel (status 100)
+==> Installing XFCE, LightDM and the X server
+-- errors
+== install-xfce.sh daniel (status 0)
+==> Installing XFCE, LightDM and the X server
+    polkit agent: polkit-gnome
+==> Auto-login of daniel in the XFCE session
+==> LightDM as the login manager
+
+Done. Reboot with: sudo reboot
+After boot: python3 virtual-monitor.py --list    (should show X11 (xrandr))
+To go back to GNOME: sudo systemctl enable gdm3.service && sudo reboot
+-- errors
+== install-xfce.sh (status 1)
+-- errors
+Give the user: sudo bash scripts/install-xfce.sh <user>

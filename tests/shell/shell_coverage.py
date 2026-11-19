@@ -5,8 +5,9 @@ Line coverage of the shell scripts, from the xtrace recorded by the tests
   python3 tests/shell/shell_coverage.py TRACE_FILE script.sh [script.sh ...]
 
 Not counted: comments, blank lines, heredoc bodies, string or command continuation
-with "\\", closers (fi, done, esac, ;;, }, then, else, do) and function headers;
-bash does not record those lines in the xtrace.
+with "\\", structure lines (fi, done, esac, ;;, {, }, ), then, do), case patterns
+alone on a line (on)) and function headers (name() { or name() (); bash does not record
+those lines in the xtrace.
 """
 
 import re
@@ -14,24 +15,18 @@ import sys
 from pathlib import Path
 
 TRACE = re.compile(r"^\++@@(?P<path>[^:]+):(?P<line>\d+)@@ ")
-STRUCTURE = re.compile(r"^\s*(fi|done|esac|;;|\}|\)|then|else|do|\{)\s*(#.*)?$")
-FUNCTION = re.compile(r"^\s*[\w-]+\(\)\s*\{\s*$")
+STRUCTURE = re.compile(r"^\s*(fi|done|esac|;;|\}|\)|then|do|\{)\s*(#.*)?$")
+FUNCTION = re.compile(r"^\s*[\w-]+\(\)\s*[{(]\s*$")
 HEREDOC = re.compile(r"<<-?\s*'?(\w+)'?")
 CASE_PATTERN = re.compile(r"^\s*[^\s()]+\)\s*$")
 
 
 def quote_state(line, state):
     """Quote state (None, "'" or '"') at the end of the line, starting from state."""
-    escaped = False
-    for character in line:
-        if escaped:
-            escaped = False
-            continue
-
-        if character == "\\" and state != "'":
-            escaped = True
-            continue
-
+    position = 0
+    while position < len(line):
+        character = line[position]
+        position += 1
         if state is None and character == "#":
             break
 
@@ -41,13 +36,18 @@ def quote_state(line, state):
 
         if character == state:
             state = None
+
+        # A backslash outside single quotes hides the next character
+        if character == "\\" and state != "'":
+            position += 1
+
     return state
 
 
 def command_start(line, number):
     """number if the line starts a command that bash records in the xtrace; None otherwise."""
     stripped = line.strip()
-    if not stripped or stripped.startswith("#") or number == 1:
+    if not stripped or stripped.startswith("#"):
         return None
 
     if STRUCTURE.match(line) or FUNCTION.match(line) or CASE_PATTERN.match(line):
@@ -79,7 +79,7 @@ def executable_lines(path):
             continue
 
         inside = quote or continued
-        if inside and command:
+        if inside:
             result[command].add(number)
 
         if not inside:
@@ -93,7 +93,9 @@ def executable_lines(path):
         if found and quote is None and not stripped.startswith("#"):
             heredoc = found.group(1)
 
-        continued = quote is None and line.endswith("\\")
+        # A line continues with "\\" only inside a command; a comment ends at the line end
+        continued = command is not None and line.endswith("\\")
+
     return result
 
 
@@ -103,6 +105,7 @@ def hits(trace_file):
         match = TRACE.match(line)
         if match:
             found.setdefault(str(Path(match["path"]).resolve()), set()).add(int(match["line"]))
+
     return found
 
 
@@ -120,6 +123,7 @@ def main(command_line_arguments):
         print(f"{script.name}: {len(lines) - len(missing)}/{len(lines)} lines")
         for number in missing:
             print(f"   {number}: {text[number - 1].strip()}")
+
     print(f"TOTAL: {covered}/{total} lines ({100 * covered / max(total, 1):.1f}%)")
     if covered != total:
         return 1

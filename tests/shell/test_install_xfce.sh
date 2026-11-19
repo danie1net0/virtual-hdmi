@@ -11,7 +11,7 @@ system() {
     local available="$1"
     stub debconf-set-selections 'cat >> "$(dirname "$0")/../debconf"'
     stub apt-get
-    stub apt-cache "case \" $available \" in *\" \$2 \"*) echo '  Installed: (none)'; echo '  Candidate: 1.0-1' ;; *) echo '  Installed: (none)'; echo '  Candidate: (none)' ;; esac"
+    stub apt-cache "echo '  Installed: (none)'; [[ \" $available \" == *\" \$2 \"* ]] && { echo '  Candidate: 1.0-1'; exit 0; }; echo '  Candidate: (none)'"
     stub systemctl
 }
 
@@ -39,9 +39,9 @@ run_script "$SCRIPT"
 status_is 1 "GDM without auto-login fails"
 
 system "polkit-gnome"
-FAKE_USER_EXISTS=0 run_script "$SCRIPT" fantasma
+FAKE_USER_EXISTS=0 run_script "$SCRIPT" ghost
 status_is 1 "nonexistent user fails"
-contains "$ERRORS" "User fantasma does not exist." "says which user is missing"
+contains "$ERRORS" "User ghost does not exist." "says which user is missing"
 not_called apt-get
 
 system "polkit-gnome"
@@ -55,6 +55,12 @@ system "polkit-gnome"
 gdm_autologin daniel
 run_script "$SCRIPT" maria
 contains "$ROOT/$AUTOLOGIN" "autologin-user=maria" "the argument beats GDM"
+
+system "polkit-gnome"
+mkdir -p "$ROOT/etc/gdm3"
+printf '%s\n' '[daemon]' 'AutomaticLogin = old' 'AutomaticLogin = daniel' '#  AutomaticLogin = user1' > "$ROOT/etc/gdm3/custom.conf"
+run_script "$SCRIPT"
+check "uses the last AutomaticLogin line, not a commented one" grep -qx "autologin-user=daniel" "$ROOT/$AUTOLOGIN"
 
 echo "# installation"
 system "lxpolkit mate-polkit"
@@ -86,5 +92,17 @@ run_script "$SCRIPT" daniel
 status_is 100 "apt failure stops the install"
 check "does not configure LightDM if apt failed" test ! -e "$ROOT/$AUTOLOGIN"
 not_called systemctl
+
+echo "# environment"
+system "polkit-gnome"
+stub apt-get "echo \"frontend \${DEBIAN_FRONTEND:-}\" >> \"$CALLS\""
+run_script "$SCRIPT" daniel
+called "frontend noninteractive"
+
+system "polkit-gnome"
+stub sed
+UNSET_ROOT=1 run_script "$SCRIPT"
+status_is 1 "without ROOT, reads the GDM user and stops without one"
+contains "$ERRORS" "Give the user" "without ROOT, works on /"
 
 summary

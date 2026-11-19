@@ -14,6 +14,10 @@ trap 'rm -rf "$TEMPORARY"' EXIT
 TOOLS_FOLDER="$TEMPORARY/bin"
 FAILURES=0
 TOTAL=0
+# What every run printed, compared at the end with tests/shell/snapshots/<test file>.txt
+SNAPSHOTS="$PROJECT/tests/shell/snapshots"
+TRANSCRIPT="$TEMPORARY/transcript"
+: > "$TRANSCRIPT"
 
 TOOLS=(bash sh cat sed grep awk tail head mkdir install chmod cp mv rm ln ls dirname basename mktemp tr wc env touch sort cmp readlink)
 mkdir -p "$TOOLS_FOLDER"
@@ -32,7 +36,7 @@ new_case() {
     mkdir -p "$ROOT" "$STUBS"
     : > "$CALLS"
     # id -u says root (FAKE_UID); id <user> exists (FAKE_USER_EXISTS)
-    stub id 'if [[ "$1" == -u ]]; then echo "${FAKE_UID:-0}"; exit 0; fi; [[ "${FAKE_USER_EXISTS:-1}" == 1 ]]'
+    stub id 'if [[ "$1" == -u ]]; then echo "${FAKE_UID:-0}"; exit 0; fi; [[ "${FAKE_USER_EXISTS:-1}" == 1 ]] && exit 0; echo "id: $1: no such user" >&2; exit 1'
 }
 
 # stub name [body]: creates the command name, which records "name arguments" in $CALLS and runs the body
@@ -47,19 +51,50 @@ stub() {
 }
 
 # run_script script [arguments...]: runs in the sandbox; leaves stdout in $OUTPUT, stderr in $ERRORS and the exit code in $STATUS.
-# EXTRA_PATH, when set, goes at the end of the sandbox PATH.
+# EXTRA_PATH, when set, goes at the end of the sandbox PATH. UNSET_ROOT=1 runs without ROOT, as on
+# a real machine (only for runs that stop before writing anything).
 run_script() {
-    local script="$1" path="$STUBS:$TOOLS_FOLDER${EXTRA_PATH:+:$EXTRA_PATH}"
+    local script="$1" path="$STUBS:$TOOLS_FOLDER${EXTRA_PATH:+:$EXTRA_PATH}" root_setting=(ROOT="$ROOT")
     shift
+    [[ -z "${UNSET_ROOT:-}" ]] || root_setting=(-u ROOT)
+
     if [[ -z "${COVERAGE:-}" ]]; then
-        ROOT="$ROOT" PATH="$path" bash "$script" "$@" > "$OUTPUT" 2> "$ERRORS"
+        env "${root_setting[@]}" PATH="$path" bash "$script" "$@" > "$OUTPUT" 2> "$ERRORS"
         STATUS=$?
+        add_to_transcript "$script" "$@"
         return
     fi
 
-    PS4='+@@${BASH_SOURCE}:${LINENO}@@ ' BASH_XTRACEFD=7 ROOT="$ROOT" PATH="$path" \
+    env "${root_setting[@]}" PS4='+@@${BASH_SOURCE}:${LINENO}@@ ' BASH_XTRACEFD=7 PATH="$path" \
         bash -x "$script" "$@" > "$OUTPUT" 2> "$ERRORS" 7>> "$COVERAGE"
     STATUS=$?
+    add_to_transcript "$script" "$@"
+}
+
+# add_to_transcript script [arguments...]: the run, its status and output, with the sandbox paths
+# replaced by names, so that the transcript is the same on every machine
+add_to_transcript() {
+    local script="$1"
+    shift
+    {
+        echo "== $(basename "$script")${*:+ $*} (status $STATUS)"
+        cat "$OUTPUT"
+        echo "-- errors"
+        cat "$ERRORS"
+    } | sed -e "s#$CASE#CASE#g" -e "s#$TEMPORARY/#TEMPORARY/#g" -e "s#$PROJECT/#PROJECT/#g" >> "$TRANSCRIPT"
+}
+
+# The transcript must equal the snapshot; UPDATE_SNAPSHOTS=1 writes the snapshot instead
+check_transcript() {
+    local snapshot
+    snapshot="$SNAPSHOTS/$(basename "$0" .sh).txt"
+    [[ "${UPDATE_SNAPSHOTS:-}" != 1 ]] || cp "$TRANSCRIPT" "$snapshot"
+
+    OUTPUT="$TEMPORARY/transcript-difference"
+    ERRORS=/dev/null
+    diff -u "$snapshot" "$TRANSCRIPT" > "$OUTPUT" 2>&1
+    local same=$(($? == 0))
+    record "every run printed what tests/shell/snapshots/${snapshot##*/} holds" "$same"
 }
 
 record() {
@@ -121,6 +156,7 @@ not_called() {
 }
 
 summary() {
+    check_transcript
     echo "$((TOTAL - FAILURES))/$TOTAL ok in $(basename "$0")"
     [[ $FAILURES -eq 0 ]]
 }

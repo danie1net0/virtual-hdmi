@@ -1,0 +1,806 @@
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+-- errors
+Run with sudo.
+== install-edid.sh CASE/missing.bin (status 1)
+-- errors
+CASE/missing.bin not found
+== install-edid.sh CASE/short.bin (status 1)
+-- errors
+CASE/short.bin is not 256 bytes; it does not look like an EDID.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet my.drm.edid_firmware=keep drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
+# Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
+GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
+# Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
+GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
+# Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
+GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
+# Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
+GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
+# Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
+GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters with kernelstub
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters with kernelstub
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters with kernelstub
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters with kernelstub
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+-- errors
+No boot setup found (armbianEnv.txt, cmdline.txt, kernelstub, GRUB, U-Boot or systemd-boot): I do not know where to put the kernel parameters.
+Add to the kernel command line: drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters with kernelstub
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters with kernelstub
+
+Done: DP-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-2 (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters with kernelstub
+
+Done: HDMI-A-2 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+-- errors
+Invalid CONNECTOR: HDMI-A-1 rm -rf / (like HDMI-A-1 or DP-1)
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+-- errors
+    The EDID was not found in the boot image; stopping before touching the boot setup.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+-- errors
+    The EDID was not found in the boot image; stopping before touching the boot setup.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+#GRUB_CMDLINE_LINUX_DEFAULT="quiet video=HDMI-A-1:D"
+GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitrd)
+==> Adjusting the kernel parameters in GRUB
+GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+-- errors
+Neither update-grub, grubby, grub2-mkconfig nor grub-mkconfig found to apply CASE/root/etc/default/grub.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitcpio)
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/arch.conf
+options root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+-- errors
+    The EDID was not found in the boot image; stopping before touching the boot setup.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitcpio)
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/arch.conf
+options root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+==> Adjusting the kernel parameters in CASE/root/efi/loader/entries/fallback.conf
+options drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
+root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitcpio)
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/arch.conf
+options root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+==> Adjusting the kernel parameters in CASE/root/efi/loader/entries/fallback.conf
+options drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
+root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitcpio)
+==> Adjusting the kernel parameters in CASE/root/boot/efi/loader/entries/opensuse.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
+console=serial0,115200 root=PARTUUID=abc rootwait drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
+console=serial0,115200 root=PARTUUID=abc rootwait drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/cmdline.txt
+root=/dev/mmcblk0p2 rootwait drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
+root=/dev/mmcblk0p2 drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/etc/default/u-boot
+U_BOOT_PARAMETERS="ro quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/etc/default/u-boot
+U_BOOT_PARAMETERS="ro quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/extlinux/extlinux.conf
+append root=/dev/sda1 drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/extlinux/extlinux.conf
+  APPEND root=/dev/mmcblk0p2 drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+  append root=/dev/mmcblk0p2 single drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/extlinux/extlinux.conf
+-- errors
+CASE/root/boot/extlinux/extlinux.conf has no append line for the parameters: drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+-- errors
+This machine boots a UKI that it did not build (a distribution's ready kernel, such as Fedora's kernel-uki-virt):
+the boot image and the kernel command line are inside it, so the EDID cannot be added. Nothing was changed.
+Install a kernel that builds its own boot image, or use an HDMI dummy plug.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+-- errors
+This machine boots a UKI that it did not build (a distribution's ready kernel, such as Fedora's kernel-uki-virt):
+the boot image and the kernel command line are inside it, so the EDID cannot be added. Nothing was changed.
+Install a kernel that builds its own boot image, or use an HDMI dummy plug.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
+root=UUID=abc rw quiet my.initrd=keep drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+==> Building the UKI
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
+root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+==> Building the UKI
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
+root=UUID=abc rw quiet my.initrd=keep drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+==> Building the UKI
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+-- errors
+This machine boots a UKI that it did not build (a distribution's ready kernel, such as Fedora's kernel-uki-virt):
+the boot image and the kernel command line are inside it, so the EDID cannot be added. Nothing was changed.
+Install a kernel that builds its own boot image, or use an HDMI dummy plug.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+-- errors
+This machine boots a UKI that it did not build (a distribution's ready kernel, such as Fedora's kernel-uki-virt):
+the boot image and the kernel command line are inside it, so the EDID cannot be added. Nothing was changed.
+Install a kernel that builds its own boot image, or use an HDMI dummy plug.
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
+root=/dev/first drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin bad;HDMI-A-1 (status 1)
+-- errors
+Invalid CONNECTOR: bad;HDMI-A-1 (like HDMI-A-1 or DP-1)
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin bad connector (status 1)
+-- errors
+Invalid CONNECTOR: bad connector (like HDMI-A-1 or DP-1)
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+-- errors
+No boot setup found (armbianEnv.txt, cmdline.txt, kernelstub, GRUB, U-Boot or systemd-boot): I do not know where to put the kernel parameters.
+Add to the kernel command line: drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 1)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+-- errors
+No boot setup found (armbianEnv.txt, cmdline.txt, kernelstub, GRUB, U-Boot or systemd-boot): I do not know where to put the kernel parameters.
+Add to the kernel command line: drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+== install-edid.sh PROJECT/edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+    No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
+==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
+options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh CASE/edid.bin (status 1)
+-- errors
+CASE/edid.bin not found
+== install-edid.sh (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors
+== install-edid.sh edid/virtual-monitor.bin (status 0)
+==> Copying the EDID to CASE/root/usr/lib/firmware/edid/virtual-monitor.bin
+==> Adding the EDID to the boot image (kernel 6.1.0-test)
+==> Checking that the EDID is in the image
+    ok (lsinitramfs)
+==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
+extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+
+Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
+Then: virtual-monitor --list
+-- errors

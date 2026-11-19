@@ -41,11 +41,11 @@ write_files:
       # Runs at every boot: unpacks the project, makes the machine boot a UKI when asked,
       # installs the EDID, and after the reboot checks it
       exec >> /dev/virtio-ports/report 2>&1
-      stub_info=/sys/firmware/efi/efivars/StubInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
+      stub_information=/sys/firmware/efi/efivars/StubInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
 
       # systemd-stub, the start of every UKI, leaves StubInfo at boot
       boot_kind() {
-          [[ -f "$stub_info" ]] || { echo "boot image and kernel"; return; }
+          [[ -f "$stub_information" ]] || { echo "boot image and kernel"; return; }
           echo "UKI"
       }
 
@@ -86,6 +86,7 @@ write_files:
               systemctl poweroff
               exit 1
           fi
+
           touch /root/virtual-monitor-installed
           systemctl reboot
           exit 0
@@ -102,6 +103,7 @@ write_files:
               echo "VM-CHECK $connector modes: $(tr '\n' ' ' < "$connector/modes")"
               [[ "$(sha256sum < "$connector/edid")" == "$expected" ]] && result=ok
           done
+
           echo "VM-RESULT $result"
           systemctl poweroff
       }

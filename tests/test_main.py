@@ -14,13 +14,14 @@ ROOT = Path(__file__).resolve().parent.parent
 class MainTest(unittest.TestCase):
     def setUp(self):
         fake_gi.install()
-        patcher = mock.patch("virtual_monitor.session.attach", return_value=True)
+        patcher = mock.patch("virtual_monitor.session.attach")
         self.attach = patcher.start()
         self.addCleanup(patcher.stop)
 
     def test_attaches_to_the_session_first(self):
         with mock.patch("virtual_monitor.cli.main", return_value=0):
             entry.main(["--list"])
+
         with mock.patch("virtual_monitor.window.run", return_value=0):
             entry.main([])
 
@@ -29,11 +30,13 @@ class MainTest(unittest.TestCase):
     def test_arguments_go_to_cli(self):
         with mock.patch("virtual_monitor.cli.main", return_value=3) as cli_main:
             self.assertEqual(entry.main(["--list"]), 3)
+
         cli_main.assert_called_once_with(["--list"])
 
     def test_no_arguments_opens_window(self):
         with mock.patch("virtual_monitor.window.run", return_value=0) as run:
             self.assertEqual(entry.main([]), 0)
+
         run.assert_called_once_with()
 
     def test_reads_sys_argv_by_default(self):
@@ -41,12 +44,14 @@ class MainTest(unittest.TestCase):
             "virtual_monitor.cli.main", return_value=0
         ) as cli_main:
             entry.main()
+
         cli_main.assert_called_once_with(["--restore"])
 
     def run_script(self, path, command_line_arguments):
         with mock.patch.object(sys, "argv", command_line_arguments), mock.patch("virtual_monitor.cli.main", return_value=5) as cli_main:
             with self.assertRaises(SystemExit) as raised:
                 runpy.run_path(str(path), run_name="__main__")
+
         return raised.exception.code, cli_main
 
     def test_python_dash_m(self):
@@ -63,7 +68,8 @@ class MainTest(unittest.TestCase):
 
     def test_launcher_puts_its_folder_first_on_the_path(self):
         launcher = ROOT / "virtual-monitor.py"
-        with mock.patch.object(sys, "path", list(sys.path)):
+        others = [folder for folder in sys.path if Path(folder or ".").resolve() != ROOT]
+        with mock.patch.object(sys, "path", others):
             runpy.run_path(str(launcher), run_name="launcher")
             self.assertEqual(sys.path[0], str(ROOT))
 

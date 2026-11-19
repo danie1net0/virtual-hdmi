@@ -64,24 +64,53 @@ class WindowTestCase(unittest.TestCase):
         self.installed = self.temporary / "installed.bin"
         patches = [
             mock.patch.object(edid, "INSTALLED", self.installed),
-            mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.temporary / "config")}),
+            mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.temporary / "configuration")}),
             mock.patch.object(displays, "detect", side_effect=lambda: self.backend),
             mock.patch.object(displays, "command_line_connector", side_effect=lambda: self.command_line),
             mock.patch.object(edid_setup, "target_output", side_effect=lambda: self.output),
-            mock.patch("tempfile.mkdtemp", side_effect=self.mkdtemp),
+            mock.patch("tempfile.mkdtemp", side_effect=self.make_temporary_folder),
         ]
         for patcher in patches:
             patcher.start()
             self.addCleanup(patcher.stop)
+
         self.application = fake_gi.Adw.Application("test")
 
-    def mkdtemp(self, prefix):
-        path = self.temporary / f"{prefix}x"
+    def make_temporary_folder(self, prefix):
+        path = self.temporary / f"{prefix}folder"
         path.mkdir()
         return str(path)
 
     def window(self):
         return window_module.Window(self.application)
+
+
+class WindowGroupsTest(WindowTestCase):
+    def test_each_group_holds_its_rows(self):
+        window = self.window()
+
+        status = window.build_status()
+        current = window.build_current()
+
+        self.assertEqual(status.children, [window.display_row, window.edid_row])
+        self.assertEqual(current.children, [window.scale_row])
+
+    def test_refresh_forgets_a_current_mode_that_is_gone(self):
+        window = self.window()
+        self.assertEqual(window.current.id, "2560x1080@59.98")
+
+        self.backend._outputs = {"HDMI-1": [mode("3440x1440@59.24", 3440, 1440, 59.24)]}
+        window.refresh()
+
+        self.assertIsNone(window.current)
+
+    def test_starts_with_no_switch_waiting_and_not_syncing(self):
+        # Without a current mode, sync_current never sets syncing itself
+        self.backend._outputs = {"HDMI-1": [mode("3440x1440@59.24", 3440, 1440, 59.24)]}
+        window = self.window()
+
+        self.assertIsNone(window.pending)
+        self.assertIs(window.syncing, False)
 
 
 class ModuleTest(unittest.TestCase):
@@ -90,6 +119,9 @@ class ModuleTest(unittest.TestCase):
         install = (Path(__file__).parent.parent / "install.sh").read_text()
         self.assertIn(f'APPLICATION_ID="{window_module.APPLICATION_ID}"', install)
         self.assertIn('LAUNCHER="$DATA/applications/$APPLICATION_ID.desktop"', install)
+
+    def test_countdown_text(self):
+        self.assertEqual(window_module.countdown_text(15), "Going back to the previous resolution in 15 s.")
 
     def test_requires_gtk4_and_libadwaita(self):
         fake_gi.install()
@@ -232,6 +264,7 @@ class LayoutTest(WindowTestCase):
         self.assertEqual(len(window.mode_rows), 1)
         for row in old:
             self.assertNotIn(row, window.modes_group.children)
+
         self.assertEqual(window.modes_group.children, [window.remember, window.mode_rows[0]])
 
 
@@ -318,6 +351,13 @@ class CurrentModeTest(WindowTestCase):
 
         self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Failed: refused")
         self.assertIsNone(choice.load())
+
+    def test_apply_says_whether_the_mode_took(self):
+        window = self.window()
+        self.assertIs(window.apply("2560x1080@59.98", False), True)
+
+        self.backend.error = RuntimeError("refused")
+        self.assertIs(window.apply("2560x1080@59.98", False), False)
 
     def test_setting_without_current_mode_does_nothing(self):
         self.backend._outputs = {"HDMI-1": [mode("1920x1080@60.00", 1920, 1080, 60.0)]}
@@ -411,6 +451,7 @@ class ModeTest(WindowTestCase):
         for remaining in range(14, 0, -1):
             self.assertIs(count_down(pending), fake_gi.GLib.SOURCE_CONTINUE)
             self.assertEqual(dialog.body, window_module.countdown_text(remaining))
+
         self.assertEqual(len(self.backend.applied), 1)
 
         self.assertIs(count_down(pending), fake_gi.GLib.SOURCE_REMOVE)
@@ -495,6 +536,7 @@ class InstallTest(WindowTestCase):
     def click_install(self, window, text=None):
         if text is not None:
             window.modes_entry.set_text(text)
+
         window.install_button.emit("clicked")
 
     def test_generates_edid_and_runs_installer_with_pkexec(self):
@@ -558,6 +600,7 @@ class InstallTest(WindowTestCase):
 
         self.assertTrue(window.install_button.sensitive)
         self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Install cancelled or failed")
+        self.assertEqual(fake_gi.AlertDialog.created, [])
 
     def test_subprocess_error_counts_as_failure(self):
         window = self.window()
@@ -630,7 +673,7 @@ class RunAsyncTest(unittest.TestCase):
         self.assertEqual(self.results, [(False, "failed to read")])
 
 
-class AppTest(WindowTestCase):
+class ApplicationTest(WindowTestCase):
     def test_activate_creates_and_presents_window_once(self):
         application = window_module.VirtualMonitorApplication()
 
@@ -651,7 +694,7 @@ class AppTest(WindowTestCase):
 
         self.assertEqual(error_output.getvalue(), window_module.NO_DISPLAY + "\n")
         self.assertEqual(len(fake_gi.Application.created), applications_before)
-        self.assertEqual(fake_gi.GLib.prgnames, [])
+        self.assertEqual(fake_gi.GLib.program_names, [])
 
     def test_run(self):
         self.assertEqual(window_module.run(), 0)
@@ -659,7 +702,7 @@ class AppTest(WindowTestCase):
 
         self.assertIsInstance(application, window_module.VirtualMonitorApplication)
         self.assertEqual(application.run_arguments, [])
-        self.assertEqual(fake_gi.GLib.prgnames, ["virtual-monitor"])
+        self.assertEqual(fake_gi.GLib.program_names, ["virtual-monitor"])
         self.assertEqual(fake_gi.Gtk.Window.default_icons, ["virtual-monitor"])
         self.assertIsInstance(application.props.active_window, window_module.Window)
 

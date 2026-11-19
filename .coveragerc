@@ -3,6 +3,7 @@ branch = True
 include =
     virtual_monitor/*
     virtual-monitor.py
+    tests/shell/shell_coverage.py
 
 [report]
 show_missing = True

@@ -29,6 +29,7 @@ def portability_problems(path):
     for number, line in enumerate(path.read_text().splitlines(), 1):
         code = line.split("#", 1)[0]
         problems.extend(f"{number}: {reason}" for pattern, reason in FORBIDDEN if pattern.search(code))
+
     return problems
 
 

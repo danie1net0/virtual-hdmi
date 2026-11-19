@@ -136,19 +136,13 @@ class MissingVariablesTest(SessionTestCase):
 
 
 class HelpersTest(unittest.TestCase):
-    def test_has_display(self):
-        self.assertTrue(session.has_display({"WAYLAND_DISPLAY": "wayland-0"}))
-        self.assertTrue(session.has_display({"DISPLAY": ":0"}))
-        self.assertFalse(session.has_display({"DISPLAY": ""}))
-        self.assertFalse(session.has_display({}))
-
     def test_socket_number(self):
         self.assertEqual(session.socket_number(Path("wayland-12"), "wayland-"), 12)
         self.assertIsNone(session.socket_number(Path("wayland-0.lock"), "wayland-"))
         self.assertIsNone(session.socket_number(Path("X0"), "wayland-"))
 
     def test_is_socket_of_a_missing_path(self):
-        self.assertFalse(session.is_socket(Path("/nonexistent/socket")))
+        self.assertIs(session.is_socket(Path("/nonexistent/socket")), False)
 
     def test_default_locations(self):
         self.assertEqual(session.RUNTIME_ROOT, Path("/run/user"))
@@ -161,16 +155,19 @@ class AttachTest(SessionTestCase):
         with mock.patch.dict("os.environ", {}, clear=True), mock.patch.object(
             session, "missing_variables", return_value=found
         ) as missing:
-            self.assertTrue(session.attach())
+            session.attach()
             self.assertEqual(os.environ["WAYLAND_DISPLAY"], "wayland-0")
 
         environment, uid, home = missing.call_args.args
         self.assertEqual((uid, home), (os.getuid(), Path.home()))
         self.assertIs(environment, os.environ)
 
-    def test_without_a_session_reports_no_display(self):
-        with mock.patch.dict("os.environ", {}, clear=True), mock.patch.object(session, "missing_variables", return_value={}):
-            self.assertFalse(session.attach())
+    def test_without_a_session_leaves_the_environment(self):
+        with mock.patch.dict("os.environ", {"HOME": "/home/user"}, clear=True), mock.patch.object(
+            session, "missing_variables", return_value={}
+        ):
+            session.attach()
+            self.assertEqual(dict(os.environ), {"HOME": "/home/user"})
 
 
 if __name__ == "__main__":

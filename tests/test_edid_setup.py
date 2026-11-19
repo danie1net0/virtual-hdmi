@@ -59,6 +59,21 @@ class OutputsTest(DrmTestCase):
         self.assertEqual(edid_setup.free_output(self.drm), "DVI-I-1")
         self.assertEqual(edid_setup.preference("VGA-1"), (3, "VGA-1"))
 
+    def test_built_in_panels_are_never_free(self):
+        for name in ("card0-eDP-1", "card0-LVDS-1", "card0-DSI-1", "card0-DPI-1", "card0-Virtual-1", "card0-Writeback-1"):
+            self.output(name, "disconnected")
+
+        self.assertIsNone(edid_setup.free_output(self.drm))
+
+    def test_dp_comes_before_dvi_and_dvi_before_the_rest(self):
+        self.output("card1-DVI-D-1", "disconnected")
+        self.output("card1-DP-1", "disconnected")
+        self.assertEqual(edid_setup.free_output(self.drm), "DP-1")
+
+        (self.drm / "card1-DP-1" / "status").write_text("connected\n")
+        self.output("card1-Composite-1", "disconnected")
+        self.assertEqual(edid_setup.free_output(self.drm), "DVI-D-1")
+
     def test_no_free_output(self):
         self.output("card1-HDMI-A-1", "connected")
         self.output("card0-eDP-1", "disconnected")
@@ -98,8 +113,8 @@ class InstallTest(unittest.TestCase):
 
     def test_install_command(self):
         script = str(ROOT / "scripts" / "install-edid.sh")
-        self.assertEqual(edid_setup.install_command(Path("/tmp/e.bin"), "DP-1", ["sudo"]), ["sudo", "bash", script, "/tmp/e.bin", "DP-1"])
-        self.assertEqual(edid_setup.install_command(Path("/tmp/e.bin"), "DP-1", []), ["bash", script, "/tmp/e.bin", "DP-1"])
+        self.assertEqual(edid_setup.install_command(Path("/tmp/edid.bin"), "DP-1", ["sudo"]), ["sudo", "bash", script, "/tmp/edid.bin", "DP-1"])
+        self.assertEqual(edid_setup.install_command(Path("/tmp/edid.bin"), "DP-1", []), ["bash", script, "/tmp/edid.bin", "DP-1"])
 
     def test_install_script_ships_with_the_app(self):
         self.assertTrue(edid_setup.INSTALL_SCRIPT.is_file())

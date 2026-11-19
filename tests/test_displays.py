@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import subprocess
 import sys
@@ -15,9 +16,9 @@ HDMI-1 connected primary 3440x1440+0+0 (normal left inverted right x axis y axis
    3440x1440     59.24*+
    2560x1080     59.98
    1920x1080     60.00 +  59.94
-   1280x720      60.00 *
    1920x1080i    30.00
   h: width  3440 start 3488 end 3520 total 3600 skew    0 clock  88.67KHz
+   1280x720      60.00 *
 HDMI-2 disconnected (normal left inverted right x axis y axis)
    1024x768      60.00
 DP-1 connected 1920x1080+3440+0 (normal) 530mm x 300mm
@@ -236,13 +237,16 @@ class ModeChangeTest(unittest.TestCase):
 
 class SetXfceDpiTest(unittest.TestCase):
     def test_sets_dpi_from_scale(self):
-        with mock.patch("shutil.which", return_value="/usr/bin/xfconf-query"), mock.patch.object(displays, "run") as run:
+        with mock.patch("shutil.which", return_value="/usr/bin/xfconf-query") as which, mock.patch.object(displays, "run") as run:
             displays.set_xfce_dpi(1.5)
+
         run.assert_called_once_with(["xfconf-query", "-c", "xsettings", "-p", "/Xft/DPI", "-n", "-t", "int", "-s", "144"])
+        which.assert_called_once_with("xfconf-query")
 
     def test_skips_without_xfconf(self):
         with mock.patch("shutil.which", return_value=None), mock.patch.object(displays, "run") as run:
             displays.set_xfce_dpi(1.5)
+
         run.assert_not_called()
 
 
@@ -324,6 +328,11 @@ class RunTest(unittest.TestCase):
         with self.assertRaisesRegex(displays.DisplayError, "^no-such-tool-here is not installed$"):
             displays.run(["no-such-tool-here", "--query"])
 
+    def test_a_set_variable_or_an_installed_tool_needs_nothing(self):
+        with mock.patch.dict("os.environ", {"DISPLAY": ":0"}), mock.patch.object(displays.shutil, "which", return_value="/usr/bin/xrandr"):
+            self.assertEqual(displays.missing_variable("DISPLAY"), "")
+            self.assertEqual(displays.missing_tool("xrandr"), "")
+
     def test_display_error_is_a_runtime_error(self):
         self.assertTrue(issubclass(displays.DisplayError, RuntimeError))
 
@@ -342,7 +351,6 @@ class CommandBackendsTest(unittest.TestCase):
             with self.subTest(backend_class=backend_class.name, environment=environment, which=which):
                 with mock.patch.dict("os.environ", environment, clear=True), mock.patch("shutil.which", return_value=which):
                     self.assertEqual(backend_class.requirement(), expected)
-                    self.assertIs(backend_class.available(), not expected)
 
     def test_requirements(self):
         self.check_requirement(displays.XrandrBackend, {"DISPLAY": ":0"}, "xrandr")
@@ -372,7 +380,7 @@ class CommandBackendsTest(unittest.TestCase):
 
     def test_kscreen_does_not_need_the_kde_desktop_name(self):
         with mock.patch.dict("os.environ", {"XDG_CURRENT_DESKTOP": "XFCE"}), mock.patch("shutil.which", return_value="/x"):
-            self.assertTrue(displays.KScreenBackend.available())
+            self.assertEqual(displays.KScreenBackend.requirement(), "")
 
     def test_xrandr_skips_xwayland_outputs(self):
         text = XRANDR.replace("DP-1 connected", "XWAYLAND0 connected")
@@ -381,7 +389,7 @@ class CommandBackendsTest(unittest.TestCase):
 
     def test_xrandr_with_only_xwayland_outputs_fails(self):
         text = "XWAYLAND0 connected 1920x1080+0+0\n   1920x1080     59.96*+\n"
-        with mock.patch.object(displays, "run", return_value=text), self.assertRaisesRegex(displays.DisplayError, "only XWayland"):
+        with mock.patch.object(displays, "run", return_value=text), self.assertRaisesRegex(displays.DisplayError, "^only XWayland outputs, which xrandr cannot change$"):
             displays.XrandrBackend().outputs()
 
     def test_xrandr_without_outputs_is_empty(self):
@@ -432,11 +440,13 @@ class CommandBackendsTest(unittest.TestCase):
     def test_wlr_passes_fractional_scale(self):
         with mock.patch.object(displays, "run") as run:
             displays.WlrBackend().apply(change("HDMI-A-1", "2360x1640@60.000", 1.25), False)
+
         self.assertEqual(run.call_args.args[0][-2:], ["--scale", "1.25"])
 
     def test_kscreen_passes_fractional_scale(self):
         with mock.patch.object(displays, "run") as run:
             displays.KScreenBackend().apply(change("HDMI-A-1", "2", 1.5), False)
+
         self.assertEqual(run.call_args.args[0][-1], "output.HDMI-A-1.scale.1.5")
 
     def test_modes_of_unknown_connector_is_empty(self):
@@ -464,9 +474,8 @@ class MutterBackendTest(unittest.TestCase):
         self.proxy = FakeProxy(state=(7, self.monitors, [logical(0, True, "HDMI-1")], {}))
         fake_gi.DBusProxy.next = self.proxy
 
-    def test_available_when_mutter_owns_the_name(self):
+    def test_no_requirement_when_mutter_owns_the_name(self):
         self.assertEqual(displays.MutterBackend.requirement(), "")
-        self.assertTrue(displays.MutterBackend.available())
         bus, flags, information, *names, cancellable = fake_gi.DBusProxy.calls[-1]
 
         self.assertEqual((bus, flags), ("session", "do-not-auto-start"))
@@ -489,6 +498,13 @@ class MutterBackendTest(unittest.TestCase):
         backend = displays.MutterBackend()
         self.assertEqual([mode.id for mode in backend.modes("HDMI-1")], ["a", "b"])
         self.assertEqual(self.proxy.calls[-1][0], "GetCurrentState")
+
+    def test_calls_wait_without_a_timeout(self):
+        backend = displays.MutterBackend()
+        backend.outputs()
+        backend.apply(change("HDMI-1", "b"), False)
+
+        self.assertEqual([call[3] for call in self.proxy.calls], [-1, -1, -1])
 
     def test_apply_persistent_and_temporary(self):
         backend = displays.MutterBackend()
@@ -564,7 +580,7 @@ class DetectTest(unittest.TestCase):
 
     def test_probe_catches_a_failing_constructor(self):
         class FailingConstructor(ProbeBackend):
-            name = "FailingInit"
+            name = "FailingConstructor"
 
             def __init__(self):
                 raise RuntimeError("DBus refused")
@@ -591,6 +607,7 @@ class ConnectorTest(unittest.TestCase):
         path = Path(temporary.name) / "cmdline"
         if text is not None:
             path.write_text(text)
+
         patcher = mock.patch.object(displays, "KERNEL_COMMAND_LINE", path)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -623,6 +640,31 @@ class ConnectorTest(unittest.TestCase):
     def test_no_connectors(self):
         self.command_line("drm.edid_firmware=HDMI-A-1:edid/ultrawide.bin")
         self.assertIsNone(displays.pick_connector(FakeBackend({})))
+
+
+class BoundaryTest(unittest.TestCase):
+    def test_tablet_height_and_aspect_limits(self):
+        self.assertEqual(displays.auto_scale(2360, 1500), 1.5)
+        self.assertEqual(displays.auto_scale(2360, 1499), 1.0)
+        self.assertEqual(displays.auto_scale(2400, 1500), 1.5)
+        self.assertEqual(displays.auto_scale(2401, 1500), 1.0)
+
+    def test_modes_and_changes_are_frozen(self):
+        for value, field in ((displays.Mode("a", 1, 1, 60.0, False, False), "width"), (displays.ModeChange("HDMI-1", "a"), "scale")):
+            with self.subTest(value=value), self.assertRaises(dataclasses.FrozenInstanceError):
+                setattr(value, field, 2)
+
+    def test_backend_names_and_native_persistence(self):
+        self.assertEqual(
+            [(backend_class.name, backend_class.native_persist) for backend_class in displays.BACKENDS],
+            [
+                ("GNOME (Mutter)", True),
+                ("KDE Plasma (kscreen-doctor)", False),
+                ("COSMIC (cosmic-randr)", False),
+                ("Wayland (wlr-randr)", False),
+                ("X11 (xrandr)", False),
+            ],
+        )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+prog: python3 -m virtual_monitor.edid
+description: 
+Generates a virtual monitor EDID (256 bytes: base block + CTA-861 extension)
+with the requested resolutions, each one on a chosen pixel clock.
+
+The clock matters on some hardware: the Rockchip HDMI (RK3566/RK3568) rejects with NOCLOCK every
+mode whose clock its PLL cannot generate exactly. A mode without a clock gets one of SAFE_CLOCKS_MHZ,
+standard clocks that this PLL and every PC GPU (Intel, AMD, NVIDIA) generate, so the default EDID
+works on any machine.
+
+Usage:
+  python3 -m virtual_monitor.edid output.bin 3440x1440@312:60 2560x1080@216:60 ...
+    each mode is WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ] (TARGET_HZ defaults to 60); without
+    CLOCK_MHZ it takes the safe clock that gets closest to TARGET_HZ
+  python3 -m virtual_monitor.edid output.bin 2360x1640 1920x1200:50
+  python3 -m virtual_monitor.edid output.bin 3440x1440@312 --vic 16 --vic 4
+    adds standard CEA modes by VIC number
+
+-h, --help: help='show this help message and exit' metavar=None choices=None default='==SUPPRESS=='
+-h, --help: version=None
+output: help=None metavar=None choices=None default=None
+output: version=None
+modes: help='WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ]' metavar=None choices=None default=None
+modes: version=None
+--vic: help='standard CEA mode (VIC)' metavar=None choices=None default=[]
+--vic: version=None
+--name: help=None metavar=None choices=None default='Virtual UW'
+--name: version=None

@@ -38,7 +38,7 @@ class ConfigurationFolderTest(unittest.TestCase):
             self.assertEqual(choice.configuration_folder(), Path("/xdg"))
 
     def test_ignores_relative_or_missing_xdg(self):
-        for environment in ({"XDG_CONFIG_HOME": "rel"}, {}):
+        for environment in ({"XDG_CONFIG_HOME": "relative"}, {}):
             with self.subTest(environment=environment), mock.patch.dict("os.environ", environment, clear=True):
                 self.assertEqual(choice.configuration_folder(), self.home / ".config")
 
@@ -53,7 +53,7 @@ class SaveLoadTest(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.configuration_folder = Path(temporary.name) / "config"
+        self.configuration_folder = Path(temporary.name) / "configuration"
         patcher = mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(self.configuration_folder)})
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -73,6 +73,14 @@ class SaveLoadTest(unittest.TestCase):
         self.assertIn(f'Exec=python3 "{choice.LAUNCHER}" --restore\n', entry)
         self.assertTrue(entry.startswith("[Desktop Entry]\nType=Application\n"))
         self.assertIn("NoDisplay=true\n", entry)
+
+    def test_save_creates_a_missing_configuration_folder(self):
+        nested = self.configuration_folder / "inside" / "deeper"
+        with mock.patch.dict("os.environ", {"XDG_CONFIG_HOME": str(nested)}):
+            choice.save("HDMI-1", "2560x1080@59.98")
+
+        self.assertTrue((nested / "virtual-monitor/mode.json").is_file())
+        self.assertTrue((nested / "autostart/virtual-monitor-restore.desktop").is_file())
 
     def test_save_overwrites(self):
         choice.save("HDMI-1", "a")
@@ -143,6 +151,20 @@ class SettingsTest(SaveLoadTest):
         self.assertEqual(change, displays.ModeChange("HDMI-1", "ipad", 2.0))
         self.assertIsInstance(change.scale, float)
 
+    def test_settings_file_is_indented_and_sorted(self):
+        choice.save_setting(2560, 1600, "scale", 1.25)
+        choice.save_setting(1920, 1080, "scale", 2.0)
+
+        self.assertEqual(
+            choice.settings_file().read_text(),
+            '{\n  "1920x1080": {\n    "scale": 2.0\n  },\n  "2560x1600": {\n    "scale": 1.25\n  }\n}',
+        )
+
+    def test_a_saved_scale_of_one_or_less_wins_over_the_tablet_default(self):
+        for scale in (1.0, 0.5):
+            with self.subTest(scale=scale):
+                self.assertEqual(choice.saved_scale({"scale": scale}, 2360, 1640), scale)
+
     def test_change_ignores_invalid_saved_values(self):
         for scale in ("big", 0, -1, True):
             with self.subTest(scale=scale):
@@ -206,7 +228,7 @@ class ApplyRestoreTest(SaveLoadTest):
         choice.save("HDMI-1", "m")
         backend = Backend()
 
-        self.assertTrue(choice.restore(backend))
+        choice.restore(backend)
         self.assertEqual(backend.applied, [("HDMI-1", "m", False)])
 
     def test_restore_uses_the_saved_settings(self):
@@ -219,7 +241,7 @@ class ApplyRestoreTest(SaveLoadTest):
 
     def test_restore_without_choice(self):
         backend = Backend()
-        self.assertFalse(choice.restore(backend))
+        choice.restore(backend)
         self.assertEqual(backend.applied, [])
 
 

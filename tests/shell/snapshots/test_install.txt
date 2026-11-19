@@ -1,0 +1,270 @@
+== install.sh --help (status 0)
+Virtual monitor installer
+
+Usage: bash install.sh [options]
+
+  --dev             Link to this folder (development).
+  --dest-dir FOLDER Install into another data folder: no ~/.local/bin command, caches, autostart
+                    or cleanup of the old install.
+  --skip-check      Do not check the app dependencies.
+  --uninstall       Remove the app, icon, launcher, command and the resolution autostart.
+  --help, -h        Show this help.
+
+With no options, installs a copy in ~/.local/share/virtual-monitor and the command ~/.local/bin/virtual-monitor.
+Run without sudo.
+-- errors
+== install.sh -h (status 0)
+Virtual monitor installer
+
+Usage: bash install.sh [options]
+
+  --dev             Link to this folder (development).
+  --dest-dir FOLDER Install into another data folder: no ~/.local/bin command, caches, autostart
+                    or cleanup of the old install.
+  --skip-check      Do not check the app dependencies.
+  --uninstall       Remove the app, icon, launcher, command and the resolution autostart.
+  --help, -h        Show this help.
+
+With no options, installs a copy in ~/.local/share/virtual-monitor and the command ~/.local/bin/virtual-monitor.
+Run without sudo.
+-- errors
+== install.sh --nothing (status 1)
+-- errors
+Unknown option: --nothing. Use --help.
+== install.sh --dest-dir (status 1)
+-- errors
+--dest-dir needs a path.
+== install.sh --dest-dir --dev (status 1)
+-- errors
+--dest-dir needs a path.
+== install.sh (status 1)
+-- errors
+Run without sudo to install for your user.
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/data/virtual-monitor
+Icon installed: CASE/data/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/data/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+Warning: gtk-update-icon-cache failed; the icon may show only after logging in again.
+Warning: update-desktop-database failed; the launcher may show only after logging in again.
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Migrated: CASE/home/.config/monitor-virtual/modo.json -> CASE/home/.config/virtual-monitor/mode.json
+Autostart migrated: CASE/home/.config/autostart/virtual-monitor-restore.desktop
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Autostart migrated: CASE/home/.config/autostart/virtual-monitor-restore.desktop
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Migrated: CASE/home/.config/monitor-virtual/modo.json -> CASE/home/.config/virtual-monitor/mode.json
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 1)
+-- errors
+GTK 4 or libadwaita for Python is missing. On Debian/Ubuntu/Armbian:
+  sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1
+== install.sh (status 1)
+-- errors
+Missing python3.
+== install.sh --skip-check (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh (status 0)
+Warning: without pkexec the EDID Install button does not work (package policykit-1 or polkit).
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check --dest-dir CASE/destination (status 0)
+App installed: CASE/destination/virtual-monitor
+Icon installed: CASE/destination/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/destination/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check --dest-dir relative (status 0)
+App installed: CASE/relative/virtual-monitor
+Icon installed: CASE/relative/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/relative/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check --dev --dest-dir CASE/dev (status 0)
+App installed: CASE/dev/virtual-monitor
+Icon installed: CASE/dev/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/dev/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check --dev --dest-dir CASE/linked (status 0)
+App installed: CASE/linked/virtual-monitor
+Icon installed: CASE/linked/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/linked/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check --dest-dir CASE/project/out (status 1)
+-- errors
+Destination cannot be inside the project folder.
+== install.sh --skip-check --dest-dir CASE/outside (status 1)
+-- errors
+Destination cannot contain the project folder.
+== install.sh --skip-check (status 1)
+-- errors
+Missing file: assets/virtual-monitor.png
+== install.sh --skip-check (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check (status 1)
+-- errors
+Missing file: data/virtual-monitor.desktop
+== install.sh (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --uninstall (status 0)
+Removed: CASE/home/.local/share/virtual-monitor, CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Removed: CASE/home/.local/bin/virtual-monitor
+The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+-- errors
+== install.sh --uninstall (status 0)
+Removed: CASE/home/.local/share/virtual-monitor, CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Removed: CASE/home/.local/bin/virtual-monitor
+The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+-- errors
+== install.sh --skip-check --dest-dir CASE/destination (status 0)
+App installed: CASE/destination/virtual-monitor
+Icon installed: CASE/destination/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/destination/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --uninstall --dest-dir CASE/destination (status 0)
+Removed: CASE/destination/virtual-monitor, CASE/destination/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/destination/applications/br.app.VirtualMonitor.desktop
+The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+-- errors
+== install.sh --skip-check (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+Warning: gtk-update-icon-cache failed; the icon may show only after logging in again.
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --skip-check (status 0)
+Command installed: CASE/home/.local/bin/virtual-monitor
+CASE/home/.local/bin is not in PATH yet: log in again, or run it as CASE/home/.local/bin/virtual-monitor
+App installed: CASE/home/.local/share/virtual-monitor
+Icon installed: CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png
+Launcher installed: CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
+Open it from the menu (Virtual monitor), or run virtual-monitor --help in a terminal.
+-- errors
+== install.sh --uninstall --dest-dir CASE/elsewhere (status 0)
+Removed: CASE/elsewhere/virtual-monitor, CASE/elsewhere/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/elsewhere/applications/br.app.VirtualMonitor.desktop
+The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+-- errors
+== install.sh --skip-check (status 1)
+-- errors

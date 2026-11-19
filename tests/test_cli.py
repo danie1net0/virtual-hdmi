@@ -44,6 +44,7 @@ class CliTest(unittest.TestCase):
         for patcher in patches:
             patcher.start()
             self.addCleanup(patcher.stop)
+
         self.backend = Backend(
             {"HDMI-1": [mode("3440x1440@59.24", preferred=True), mode("2560x1080@59.98", current=True), mode("1920x1080@60.00")]}
         )
@@ -55,6 +56,7 @@ class CliTest(unittest.TestCase):
         standard_output, error_output = io.StringIO(), io.StringIO()
         with mock.patch.object(displays, "detect", return_value=backend):
             code = cli.main(command_line_arguments, standard_output, error_output)
+
         return code, standard_output.getvalue(), error_output.getvalue()
 
     def test_list(self):
@@ -87,9 +89,9 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(error_output.splitlines()[-1], cli.EDID_HINT)
 
-    def run_auto_login(self, command_line_arguments, environment, euid=1000):
+    def run_auto_login(self, command_line_arguments, environment, effective_user_id=1000):
         with mock.patch.object(cli.subprocess, "call", return_value=4) as call, mock.patch(
-            "os.geteuid", return_value=euid
+            "os.geteuid", return_value=effective_user_id
         ), mock.patch.dict("os.environ", environment), mock.patch("getpass.getuser", return_value="daniel"), mock.patch.object(
             displays, "detect"
         ) as detect:
@@ -104,8 +106,14 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 4)
         self.assertEqual(command_line_arguments, ["sudo", "bash", str(cli.AUTO_LOGIN_SCRIPT), "daniel", "on"])
 
+    def test_auto_login_on_by_name(self):
+        code, command_line_arguments = self.run_auto_login(["--auto-login", "on"], {"SUDO_USER": ""})
+
+        self.assertEqual(code, 4)
+        self.assertEqual(command_line_arguments[-1], "on")
+
     def test_auto_login_off_under_sudo_keeps_the_real_user(self):
-        _code, command_line_arguments = self.run_auto_login(["--auto-login", "off"], {"SUDO_USER": "maria"}, euid=0)
+        _code, command_line_arguments = self.run_auto_login(["--auto-login", "off"], {"SUDO_USER": "maria"}, effective_user_id=0)
         self.assertEqual(command_line_arguments, ["bash", str(cli.AUTO_LOGIN_SCRIPT), "maria", "off"])
 
     def test_auto_login_script_ships_with_the_app(self):
@@ -165,6 +173,7 @@ class CliTest(unittest.TestCase):
     def test_list_without_edid_on_boot(self):
         with mock.patch.object(displays, "command_line_connector", return_value=None):
             _, standard_output, _ = self.run_cli(["--list"])
+
         self.assertIn("(EDID at boot: no)", standard_output)
 
     def test_no_session_says_why_each_backend_failed(self):
@@ -185,7 +194,7 @@ class CliTest(unittest.TestCase):
     def test_no_connector(self):
         code, _, error_output = self.run_cli(["--list"], backend=Backend({}))
         self.assertEqual(code, 1)
-        self.assertIn("No monitor connected", error_output)
+        self.assertEqual(error_output, "No monitor connected.\n")
 
     def test_apply_remembers(self):
         code, standard_output, _ = self.run_cli(["--apply", "1920x1080@60.00"])
@@ -262,6 +271,35 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(error_output, "Failed: the output has no modes\n")
 
+    def test_apply_without_scale_keeps_the_saved_scale(self):
+        choice.save_setting(1920, 1080, "scale", 2.0)
+
+        code, _, _ = self.run_cli(["--apply", "1920x1080@60.00"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(choice.size_settings(1920, 1080), {"scale": 2.0})
+
+    def test_without_streams_writes_to_standard_output_and_error(self):
+        standard_output, error_output = io.StringIO(), io.StringIO()
+        with mock.patch.object(displays, "detect", return_value=self.backend), contextlib.redirect_stdout(
+            standard_output
+        ), contextlib.redirect_stderr(error_output):
+            listed = cli.main(["--list"])
+            self.backend.error = RuntimeError("refused")
+            failed = cli.main(["--apply", "1920x1080@60.00"])
+
+        self.assertEqual((listed, failed), (0, 1))
+        self.assertIn("session: Fake (test)", standard_output.getvalue())
+        self.assertEqual(error_output.getvalue(), "Failed: refused\n")
+
+    def test_scale_works_when_the_first_mode_is_current(self):
+        backend = Backend({"HDMI-1": [mode("1920x1080@60.00", current=True), mode("2560x1080@59.98")]})
+
+        code, _, _ = self.run_cli(["--scale", "1.25"], backend=backend)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(backend.last_change, displays.ModeChange("HDMI-1", "1920x1080@60.00", 1.25))
+
     def test_apply_with_scale_saves_it_for_the_size(self):
         code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--scale", "1.25"])
 
@@ -304,6 +342,7 @@ class CliTest(unittest.TestCase):
 
     def test_scale_argument(self):
         self.assertEqual(cli.scale_argument("1.5"), 1.5)
+        self.assertEqual(cli.scale_argument("0.5"), 0.5)
         self.assertEqual(cli.scale_argument("4"), 4.0)
         self.assertEqual(cli.scale_argument("auto"), cli.AUTO_SCALE)
         for text, message in (("big", "not a number"), ("0", "from 0 to 4"), ("4.5", "from 0 to 4"), ("-1", "from 0 to 4")):
@@ -313,6 +352,7 @@ class CliTest(unittest.TestCase):
     def test_rotation_is_no_longer_an_option(self):
         with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
             cli.parse_arguments(["--rotation", "left"])
+
         self.assertEqual(raised.exception.code, 2)
 
     def test_version(self):
@@ -326,6 +366,7 @@ class CliTest(unittest.TestCase):
     def test_options_are_exclusive(self):
         with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
             cli.parse_arguments(["--list", "--restore"])
+
         self.assertEqual(raised.exception.code, 2)
 
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):

@@ -27,7 +27,8 @@ HELP="Virtual monitor installer
 Usage: bash install.sh [options]
 
   --dev             Link to this folder (development).
-  --dest-dir FOLDER Install into another data folder, without updating caches or the autostart.
+  --dest-dir FOLDER Install into another data folder: no ~/.local/bin command, caches, autostart
+                    or cleanup of the old install.
   --skip-check      Do not check the app dependencies.
   --uninstall       Remove the app, icon, launcher, command and the resolution autostart.
   --help, -h        Show this help.
@@ -53,21 +54,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         *) echo "Unknown option: $1. Use --help." >&2; exit 1 ;;
     esac
+
     shift
 done
 
 [[ "$(id -u)" -ne 0 ]] || { echo "Run without sudo to install for your user." >&2; exit 1; }
 
 # Absolute XDG path, or the default
-xdg() {
-    local value="$1" default="$2"
+xdg() (
+    value="$1" default="$2"
     if [[ "$value" != /* ]]; then
         echo "$default"
         return
     fi
 
     echo "$value"
-}
+)
 
 # The data folder: --dest-dir (created, made absolute) or the user's XDG one
 data_folder() {
@@ -98,7 +100,8 @@ LEGACY_AUTOSTART="$CONFIGURATION_FOLDER/autostart/$LEGACY_AUTOSTART_NAME.desktop
 LEGACY_MODE="$CONFIGURATION_FOLDER/$LEGACY_NAME/$LEGACY_MODE_FILE"
 MODE="$CONFIGURATION_FOLDER/$NAME/mode.json"
 
-# With --dest-dir the install is standalone: it leaves the user's caches and autostart alone
+# With --dest-dir the install is standalone: no ~/.local/bin command, and it leaves the user's
+# caches, autostart and old install alone
 is_user_install() {
     [[ -z "$DESTINATION" ]]
 }
@@ -106,12 +109,12 @@ is_user_install() {
 update_caches() {
     is_user_install || return 0
 
-    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-        gtk-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || true
+    if command -v gtk-update-icon-cache >/dev/null; then
+        gtk-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || echo "Warning: gtk-update-icon-cache failed; the icon may show only after logging in again."
     fi
 
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database "$DATA/applications" 2>/dev/null || true
+    if command -v update-desktop-database >/dev/null; then
+        update-desktop-database "$DATA/applications" 2>/dev/null || echo "Warning: update-desktop-database failed; the launcher may show only after logging in again."
     fi
 }
 
@@ -163,8 +166,8 @@ uninstall() {
 }
 
 check_dependencies() {
-    [[ $SKIP_CHECK -eq 0 ]] || return 0
-    command -v python3 >/dev/null 2>&1 || { echo "Missing python3." >&2; exit 1; }
+    [[ $SKIP_CHECK -eq 1 ]] && return 0
+    command -v python3 >/dev/null || { echo "Missing python3." >&2; exit 1; }
 
     if ! python3 -c 'import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Adw", "1")' 2>/dev/null; then
         echo "GTK 4 or libadwaita for Python is missing. On Debian/Ubuntu/Armbian:" >&2
@@ -172,12 +175,12 @@ check_dependencies() {
         exit 1
     fi
 
-    command -v pkexec >/dev/null 2>&1 || echo "Warning: without pkexec the EDID Install button does not work (package policykit-1 or polkit)."
+    command -v pkexec >/dev/null || echo "Warning: without pkexec the EDID Install button does not work (package policykit-1 or polkit)."
 }
 
 # Copies one app file into the staging folder; --dev links it to this checkout instead
-stage_file() {
-    local file="$1"
+stage_file() (
+    file="$1"
     mkdir -p "$(dirname "$STAGING/application/$file")"
     if [[ $DEVELOPMENT -eq 1 ]]; then
         ln -s "$PROJECT_FOLDER/$file" "$STAGING/application/$file"
@@ -185,19 +188,19 @@ stage_file() {
     fi
 
     install -m 644 "$PROJECT_FOLDER/$file" "$STAGING/application/$file"
-}
+)
 
 # Migrates the old Portuguese-named install: remembered resolution and autostart
 migrate_legacy() {
     is_user_install || return 0
-    if [[ -f "$LEGACY_MODE" && ! -f "$MODE" ]]; then
+    if [[ -f "$LEGACY_MODE" && ! -e "$MODE" ]]; then
         mkdir -p "$(dirname "$MODE")"
         cp "$LEGACY_MODE" "$MODE"
         echo "Migrated: $LEGACY_MODE -> $MODE"
     fi
 
-    [[ -f "$LEGACY_AUTOSTART" ]] || return 0
-    mkdir -p "$(dirname "$AUTOSTART")"
+    # The old autostart sits in the same folder as the new one
+    [[ -e "$LEGACY_AUTOSTART" ]] || return 0
     cat > "$AUTOSTART" <<EOF
 [Desktop Entry]
 Type=Application
@@ -218,8 +221,8 @@ for module in "$PROJECT_FOLDER"/virtual_monitor/*.py; do
     FILES+=("virtual_monitor/$(basename "$module")")
 done
 
-for file in "${FILES[@]}" "assets/$NAME.png" "data/$NAME.desktop"; do
-    [[ -f "$PROJECT_FOLDER/$file" ]] || { echo "Missing file: $file" >&2; exit 1; }
+for project_file in "${FILES[@]}" "assets/$NAME.png" "data/$NAME.desktop"; do
+    [[ -f "$PROJECT_FOLDER/$project_file" ]] || { echo "Missing file: $project_file" >&2; exit 1; }
 done
 
 # The destination cannot be inside this folder nor contain it
@@ -232,8 +235,8 @@ mkdir -p "$DATA"
 STAGING="$(mktemp -d "$DATA/.${NAME}-install-XXXXXX")"
 trap 'rm -rf "$STAGING"' EXIT
 
-for file in "${FILES[@]}"; do
-    stage_file "$file"
+for project_file in "${FILES[@]}"; do
+    stage_file "$project_file"
 done
 
 [[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/application/$NAME.py" "$STAGING/application/scripts/install-edid.sh" "$STAGING/application/scripts/auto-login.sh"

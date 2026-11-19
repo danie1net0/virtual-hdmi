@@ -1,0 +1,212 @@
+== auto-login.sh daniel (status 1)
+-- errors
+Run with sudo.
+== auto-login.sh (status 1)
+-- errors
+Give the user: sudo bash scripts/auto-login.sh <user> [on|off]
+== auto-login.sh Daniel; rm -rf / (status 1)
+-- errors
+Give the user: sudo bash scripts/auto-login.sh <user> [on|off]
+== auto-login.sh 1daniel (status 1)
+-- errors
+Give the user: sudo bash scripts/auto-login.sh <user> [on|off]
+== auto-login.sh daniel maybe (status 1)
+-- errors
+Use on or off, not maybe.
+== auto-login.sh ghost (status 1)
+-- errors
+User ghost does not exist.
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (gdm3)
+    CASE/root/etc/gdm3/custom.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (gdm3)
+    CASE/root/etc/gdm3/custom.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel off (status 0)
+==> Automatic login of daniel: off (gdm3)
+    CASE/root/etc/gdm3/custom.conf
+
+Done. It takes effect at the next boot: sudo reboot
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (gdm)
+    CASE/root/etc/gdm/custom.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (sddm)
+    CASE/root/etc/sddm.conf.d/virtual-monitor-autologin.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel off (status 0)
+==> Automatic login of daniel: off (sddm)
+
+Done. It takes effect at the next boot: sudo reboot
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (lightdm)
+    CASE/root/etc/lightdm/lightdm.conf.d/60-virtual-monitor-autologin.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (lightdm)
+    CASE/root/etc/lightdm/lightdm.conf.d/60-virtual-monitor-autologin.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel off (status 0)
+==> Automatic login of daniel: off (lightdm)
+
+Done. It takes effect at the next boot: sudo reboot
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (greetd)
+    CASE/root/etc/greetd/cosmic-greeter.toml
+    CASE/root/etc/pam.d/cosmic-greeter
+    CASE/root/etc/security/virtual-monitor-session.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (greetd)
+    CASE/root/etc/greetd/cosmic-greeter.toml
+    CASE/root/etc/pam.d/cosmic-greeter
+    CASE/root/etc/security/virtual-monitor-session.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel off (status 0)
+==> Automatic login of daniel: off (greetd)
+    CASE/root/etc/greetd/cosmic-greeter.toml
+    CASE/root/etc/pam.d/cosmic-greeter
+
+Done. It takes effect at the next boot: sudo reboot
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (cosmic-greeter)
+    CASE/root/etc/greetd/config.toml
+    no CASE/root/etc/pam.d/greetd: the session type stays as greetd sets it
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (greetd)
+    CASE/root/etc/greetd/config.toml
+    CASE/root/etc/pam.d/greetd
+    CASE/root/etc/security/virtual-monitor-session.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo rm -f /var/run/greetd-custom.run && sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (greetd)
+    CASE/root/etc/greetd/config.toml
+    CASE/root/etc/pam.d/greetd
+    CASE/root/etc/security/virtual-monitor-session.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 1)
+==> Automatic login of daniel: on (greetd)
+    CASE/root/etc/greetd/config.toml
+-- errors
+No desktop session found for greetd to start.
+== auto-login.sh daniel (status 1)
+==> Automatic login of daniel: on (greetd)
+-- errors
+greetd has no configuration in CASE/root/etc/greetd.
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (gdm3)
+    CASE/root/etc/gdm3/custom.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (gdm3)
+    CASE/root/etc/gdm3/custom.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (lightdm)
+    CASE/root/etc/lightdm/lightdm.conf.d/60-virtual-monitor-autologin.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (greetd)
+    CASE/root/etc/greetd/config.toml
+    CASE/root/etc/pam.d/greetd
+    CASE/root/etc/security/virtual-monitor-session.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (sddm)
+    CASE/root/etc/sddm.conf.d/virtual-monitor-autologin.conf
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 0)
+==> Automatic login of daniel: on (greetd)
+    CASE/root/etc/greetd/config.toml
+    no CASE/root/etc/pam.d/greetd: the session type stays as greetd sets it
+
+Done. It takes effect at the next boot: sudo reboot
+Anyone at the machine now gets the desktop without a password; remote access keeps its own.
+Logging out ends the session until the next boot; to open it again: sudo rm -f /run/greetd.run && sudo systemctl restart display-manager
+-- errors
+== auto-login.sh daniel (status 1)
+==> Automatic login of daniel: on (xdm)
+-- errors
+Unknown display manager (xdm): turn automatic login on in its settings.
+== auto-login.sh daniel (status 1)
+==> Automatic login of daniel: on (no display manager)
+-- errors
+Unknown display manager (none): turn automatic login on in its settings.
+== auto-login.sh daniel (status 1)
+==> Automatic login of daniel: on (lightdm)
+-- errors
+== auto-login.sh Bad User (status 1)
+-- errors
+Give the user: sudo bash scripts/auto-login.sh <user> [on|off]

@@ -21,17 +21,16 @@ ROOT="${ROOT:-}"
 
 # Prints "id class name type seat active" of each session, separated by tabs
 # (the seat is empty in some sessions, and loginctl does not follow the -p order)
-list_sessions() {
-    local id
+list_sessions() (
     for id in $(loginctl list-sessions --no-legend | awk '{print $1}'); do
         loginctl show-session "$id" -p Class -p Name -p Type -p Seat -p Active | awk -F= -v id="$id" '
             { property[$1] = substr($0, length($1) + 2) }
             END { printf "%s\t%s\t%s\t%s\t%s\t%s\n", id, property["Class"], property["Name"], property["Type"], property["Seat"], property["Active"] }'
     done
-}
+)
 
-check() {
-    local user_name="$1" sessions active_greeter user_session
+check() (
+    user_name="$1"
     sessions="$(list_sessions)"
     active_greeter="$(awk -F'\t' '$2 == "greeter" && $6 == "yes" {print $1; exit}' <<<"$sessions")"
     user_session="$(awk -F'\t' -v user="$user_name" '$2 == "user" && $3 == user && ($4 == "wayland" || $4 == "x11") && $5 == "seat0" && $6 == "no" {print $1; exit}' <<<"$sessions")"
@@ -39,12 +38,12 @@ check() {
 
     echo "Login screen ($active_greeter) active with session $user_session of $user_name in the background; reactivating the session."
     [[ "${DRY_RUN:-0}" == 1 ]] || loginctl activate "$user_session"
-}
+)
 
-user_name="$(sed -n 's/^AutomaticLogin *= *//p' "$ROOT/etc/gdm3/custom.conf" 2>/dev/null | tail -1 || true)"
-[[ -n "$user_name" ]] || { echo "Auto-login not configured in GDM; nothing to do."; exit 0; }
+AUTOLOGIN_USER="$(sed -n 's/^AutomaticLogin *= *//p' "$ROOT/etc/gdm3/custom.conf" 2>/dev/null | tail -1 || true)"
+[[ -n "$AUTOLOGIN_USER" ]] || { echo "Auto-login not configured in GDM; nothing to do."; exit 0; }
 
 for ((attempt = 0; attempt < WINDOW_SECONDS / INTERVAL; attempt++)); do
-    check "$user_name"
+    check "$AUTOLOGIN_USER"
     sleep "$INTERVAL"
 done

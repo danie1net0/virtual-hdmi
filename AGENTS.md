@@ -10,8 +10,8 @@ modules) are notes, not defaults.
 ## Layout
 
 - `virtual-monitor.py`: entry point. No arguments opens the window; `--list`, `--apply ID [--temp]`,
-  `--next`, `--restore`, `--scale N|auto`, `--install-edid [--output NAME] [--modes ...]` and
-  `--auto-login [on|off]` run in the terminal.
+  `--next`, `--restore`, `--scale N|auto`, `--install-edid [--output NAME] [--modes ...]`,
+  `--auto-login [on|off]` and `--version` run in the terminal.
 - `virtual_monitor/`: `edid.py`, `displays.py` (Mutter, KScreen, cosmic-randr, wlr-randr, xrandr backends; `detect`
   takes the first that lists an output, `diagnose` says why the others failed; `apply` takes a
   `ModeChange` with the mode and desktop scale),
@@ -30,7 +30,8 @@ modules) are notes, not defaults.
 - `assets/`: app icon, README banners and screenshot, GitHub social preview (SVG source and the
   1280×640 PNG uploaded in Settings) and the GitLab project avatar.
 - `install.sh`: per-user install of app, icon, launcher and the `~/.local/bin/virtual-monitor`
-  command (`--dev`, `--dest-dir`, `--uninstall`).
+  command (`--dev`, `--dest-dir`, `--skip-check`, `--uninstall`), with the launcher from
+  `data/virtual-monitor.desktop`.
 - `CHANGELOG.md`: one `## vX.Y.Z (date)` section per release, newest first; the top one equals
   `__version__` in `virtual_monitor/__init__.py`. Pushing the tag makes CI create the GitLab release
   from that section (`tests/test_release.py` checks both).
@@ -43,6 +44,10 @@ modules) are notes, not defaults.
 - Shell scripts must run on macOS bash 3.2 and Linux bash 5: no `sed -i`, `install -D`,
   associative arrays or other bash 4 features (`tests/test_shell_portability.py` checks it).
 - New or changed code ships with tests and 100% coverage.
+- In the shipped scripts (`scripts/`, `install.sh`, `get.sh`), a function that keeps variables of
+  its own runs in a subshell, `name() ( ... )`, instead of using `local`; one that sets a global
+  keeps braces, and so does `fail`. A subshell function may call `fail` or `exit`, which stops the
+  script through `set -e`, so it is never called inside a condition (`if`, `||`, `&&`).
 - Flat control flow: no `else`, `elif`, conditional expressions or `if` inside `if`; use guard
   clauses and small functions. `tests/test_flow_rules.py` checks it.
 - `README.md` (English, default) and `README.pt-BR.md` (Portuguese) say the same thing; change both together.
@@ -50,7 +55,11 @@ modules) are notes, not defaults.
 
 ## Tests
 
-`bash tests/run.sh` runs everything. `bash tests/coverage.sh` measures coverage; the shell part
+`bash tests/run.sh` runs everything. Each shell test file also compares what every run printed with
+`tests/shell/snapshots/<test file>.txt`; after changing a message, run the file with
+`UPDATE_SNAPSHOTS=1` and check the diff. `tests/test_interface_texts.py` does the same for what the
+user reads in Python (options, help, hints, window labels) against `tests/snapshots/*.txt`.
+`bash tests/coverage.sh` measures coverage; the shell part
 needs bash 4.1+ and a non-root user (on macOS use the container in the script header).
 `.gitlab-ci.yml` runs the tests on Python 3.9 and 3.13 and on bash 3.2 (the `bash:3.2` image), and
 coverage on 3.13, for every push and MR. Every job runs on the Docker runner (tag `docker`, as a

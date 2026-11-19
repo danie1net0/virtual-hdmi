@@ -12,44 +12,40 @@
 # (default: master).
 #
 # Run without sudo. The EDID changes the boot, so it stays apart: the Install button in the app
-# or sudo bash scripts/install-edid.sh.
+# or virtual-monitor --install-edid.
 
 set -euo pipefail
 
 REPOSITORY="https://gitlab.com/danie1net0/virtual-hdmi"
-WORK=""
 
 fail() {
     echo "$1" >&2
     exit 1
 }
 
-check_arguments() {
-    local version="$1" argument
-    shift
-    [[ "$version" =~ ^[A-Za-z0-9._-]+$ ]] || fail "Invalid VERSION: $version"
-
+check_options() (
     for argument in "$@"; do
         [[ "$argument" != --dev ]] || fail "--dev links to a checkout; clone the repository and run bash install.sh --dev."
     done
-}
+)
 
 # Everything runs from here, on the last line: a download cut in the middle executes nothing
-main() {
-    local version="${VERSION:-master}" archive
-    command -v curl >/dev/null 2>&1 || fail "Missing curl."
-    command -v tar >/dev/null 2>&1 || fail "Missing tar."
-    check_arguments "$version" "$@"
+main() (
+    version="${VERSION:-master}"
+    command -v curl >/dev/null || fail "Missing curl."
+    command -v tar >/dev/null || fail "Missing tar."
+    [[ "$version" =~ ^[A-Za-z0-9._-]+$ ]] || fail "Invalid VERSION: $version"
+    check_options "$@"
 
-    WORK="$(mktemp -d)"
-    trap 'rm -rf "$WORK"' EXIT
+    work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
 
     archive="$REPOSITORY/-/archive/$version/virtual-hdmi-$version.tar.gz"
     echo "==> Downloading $archive"
-    curl -fsSL "$archive" | tar -xz -C "$WORK" --strip-components=1
+    curl -fsSL "$archive" | tar -xz -C "$work" --strip-components=1
 
     echo "==> Installing"
-    bash "$WORK/install.sh" "$@" < /dev/null
-}
+    bash "$work/install.sh" "$@" < /dev/null
+)
 
 main "$@"

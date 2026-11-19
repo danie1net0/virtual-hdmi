@@ -1,0 +1,26 @@
+prog: virtual-monitor
+description: With no options, opens the window.
+-h, --help: help='show this help message and exit' metavar=None choices=None default='==SUPPRESS=='
+-h, --help: version=None
+--version: help="show program's version number and exit" metavar=None choices=None default='==SUPPRESS=='
+--version: version='%(prog)s VERSION'
+--list: help='shows the session, the connector and the modes (default)' metavar=None choices=None default=False
+--list: version=None
+--apply: help='applies mode ID and remembers it at the next login' metavar='ID' choices=None default=None
+--apply: version=None
+--next: help='applies the mode after the current one, like --apply' metavar=None choices=None default=False
+--next: version=None
+--restore: help='reapplies the last remembered mode' metavar=None choices=None default=False
+--restore: version=None
+--install-edid: help='installs the virtual monitor, so a free output works with no monitor plugged in (asks for sudo)' metavar=None choices=None default=False
+--install-edid: version=None
+--auto-login: help='opens your desktop session at boot (on, the default) or stops it (off), so the machine works with no one at it (asks for sudo)' metavar=None choices=('on', 'off') default=None
+--auto-login: version=None
+--output: help='with --install-edid: the output, like HDMI-A-1 or DP-1' metavar='NAME' choices=None default=None
+--output: version=None
+--modes: help='with --install-edid: WIDTHxHEIGHT[@MHZ][:HZ] modes, separated by spaces (default: %(default)s)' metavar="'MODE ...'" choices=None default='3440x1440@312 2560x1080@216 3008x1260@241.5 2360x1640@297'
+--modes: version=None
+--temp: help='with --apply, --next or --scale: does not remember the resolution' metavar=None choices=None default=False
+--temp: version=None
+--scale: help='desktop scale (1.25, 1.5...) or auto, saved for the size of the mode; alone, rescales the current mode' metavar='N' choices=None default=None
+--scale: version=None

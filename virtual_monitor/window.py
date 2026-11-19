@@ -122,7 +122,6 @@ class Window(Adw.ApplicationWindow):
             self.connector = displays.pick_connector(self.backend)
 
         self.mode_rows = []
-        self.current = None
         self.pending = None
         self.syncing = False
 
@@ -131,6 +130,7 @@ class Window(Adw.ApplicationWindow):
         main.add(self.build_status())
         main.add(self.build_current())
         main.add(self.build_modes())
+
         edid_page = Adw.PreferencesPage()
         edid_page.add(self.build_edid())
 
@@ -185,7 +185,7 @@ class Window(Adw.ApplicationWindow):
 
         self.output = edid_setup.target_output()
         install = Adw.ActionRow(title="Generate and install EDID", subtitle=install_subtitle(self.output))
-        self.install_button = Gtk.Button(label="Install", valign=Gtk.Align.CENTER)
+        self.install_button = Gtk.Button(valign=Gtk.Align.CENTER)
         self.install_button.add_css_class("suggested-action")
         self.install_button.connect("clicked", self.on_install)
         install.add_suffix(self.install_button)
@@ -270,7 +270,7 @@ class Window(Adw.ApplicationWindow):
         """Applies mode_id; on failure shows a toast and returns False."""
         try:
             choice.apply_mode(self.backend, self.connector, mode_id, persistent)
-        except Exception as error:  # xrandr, kscreen-doctor or DBus refused the mode
+        except Exception as error:  # a display tool or DBus refused the mode
             self.toast(f"Failed: {error}")
             return False
 
@@ -333,7 +333,7 @@ class Window(Adw.ApplicationWindow):
 
         try:
             choice.commit(self.backend, self.connector, mode_id)
-        except Exception as error:  # GNOME refused to write the mode as persistent
+        except Exception as error:  # the desktop or mode.json refused to keep the mode
             self.toast(f"Failed: {error}")
 
     def go_back(self, pending):

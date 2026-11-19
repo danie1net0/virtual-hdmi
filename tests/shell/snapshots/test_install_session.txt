@@ -1,0 +1,24 @@
+== install-session.sh (status 1)
+-- errors
+Run with sudo.
+== install-session.sh (status 0)
+==> Installing /usr/local/sbin/keep-session.sh
+==> Creating the keep-session.service service
+
+Done. The service runs during the first 5 minutes of each boot.
+Log: journalctl -u keep-session
+-- errors
+== install-session.sh (status 0)
+==> Installing /usr/local/sbin/keep-session.sh
+==> Creating the keep-session.service service
+
+Done. The service runs during the first 5 minutes of each boot.
+Log: journalctl -u keep-session
+-- errors
+== install-session.sh (status 1)
+==> Installing /usr/local/sbin/keep-session.sh
+==> Creating the keep-session.service service
+-- errors
+== install-session.sh (status 1)
+==> Installing /usr/local/sbin/keep-session.sh
+-- errors

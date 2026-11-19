@@ -72,7 +72,7 @@ class DisplayError(RuntimeError):
 
 def command_message(error):
     """First line the failed command printed, or its exit status when it printed nothing."""
-    lines = (error.stderr or error.stdout or "").strip().splitlines()
+    lines = (error.stderr or error.stdout).strip().splitlines()
     if not lines:
         return f"exit status {error.returncode}"
 
@@ -122,13 +122,17 @@ def parse_xrandr_rates(tokens):
     """[rate, flags] pairs; xrandr may print the flags apart from the rate ("60.00 +")."""
     rates = []
     for token in tokens:
-        rate = re.match(r"^(\d+(?:\.\d+)?)([*+]*)$", token)
-        if rate:
-            rates.append([rate.group(1), rate.group(2)])
+        found = re.match(r"^(\d+(?:\.\d+)?)?([*+]*)$", token)
+        if not found:
             continue
 
-        if rates and re.match(r"^[*+]+$", token):
-            rates[-1][1] += token
+        rate, flags = found.groups()
+        if rate:
+            rates.append([rate, ""])
+
+        if rates:
+            rates[-1][1] += flags
+
     return rates
 
 
@@ -136,19 +140,26 @@ def parse_xrandr(text):
     outputs = {}
     modes = None
     for line in text.splitlines():
-        header = re.match(r"^(\S+) (connected|disconnected)", line)
-        if header:
-            modes = start_xrandr_output(outputs, header)
-            continue
+        modes = read_xrandr_line(outputs, modes, line)
 
-        row = re.match(r"^\s+(\d+)x(\d+)(i?)\s+(.*)$", line)
-        if not row or modes is None or row.group(3):
-            continue
-
-        width, height = int(row.group(1)), int(row.group(2))
-        for rate, flags in parse_xrandr_rates(row.group(4).split()):
-            modes.append(Mode(f"{width}x{height}@{rate}", width, height, float(rate), "*" in flags, "+" in flags))
     return outputs
+
+
+def read_xrandr_line(outputs, modes, line):
+    """Adds what one line of xrandr says; returns the mode list later lines go to."""
+    header = re.match(r"^(\S+) (connected|disconnected)", line)
+    if header:
+        return start_xrandr_output(outputs, header)
+
+    row = re.match(r"^\s+(\d+)x(\d+)(i?)\s+(.*)$", line)
+    if not row or modes is None or row.group(3):
+        return modes
+
+    width, height = int(row.group(1)), int(row.group(2))
+    for rate, flags in parse_xrandr_rates(row.group(4).split()):
+        modes.append(Mode(f"{width}x{height}@{rate}", width, height, float(rate), "*" in flags, "+" in flags))
+
+    return modes
 
 
 def parse_wlr(text):
@@ -167,7 +178,9 @@ def parse_wlr(text):
                     bool(mode.get("preferred")),
                 )
             )
+
         outputs[output["name"]] = modes
+
     return outputs
 
 
@@ -193,7 +206,9 @@ def parse_kscreen(text):
                     mode_id == preferred,
                 )
             )
+
         outputs[output["name"]] = modes
+
     return outputs
 
 
@@ -202,21 +217,28 @@ def parse_cosmic(text):
     outputs = {}
     modes = None
     for line in text.splitlines():
-        header = re.match(r'^output "([^"]+)" enabled=#(true|false)', line)
-        if header:
-            modes = start_cosmic_output(outputs, header)
-            continue
+        modes = read_cosmic_line(outputs, modes, line)
 
-        row = re.match(r"^\s+mode (\d+) (\d+) (\d+)(.*)$", line)
-        if not row or modes is None:
-            continue
-
-        width, height, refresh = int(row.group(1)), int(row.group(2)), int(row.group(3)) / 1000
-        flags = row.group(4)
-        modes.append(
-            Mode(f"{width}x{height}@{refresh:.3f}", width, height, refresh, "current=#true" in flags, "preferred=#true" in flags)
-        )
     return outputs
+
+
+def read_cosmic_line(outputs, modes, line):
+    """Adds what one line of cosmic-randr says; returns the mode list later lines go to."""
+    header = re.match(r'^output "([^"]+)" enabled=#(true|false)', line)
+    if header:
+        return start_cosmic_output(outputs, header)
+
+    row = re.match(r"^\s+mode (\d+) (\d+) (\d+)(.*)$", line)
+    if not row or modes is None:
+        return modes
+
+    width, height, refresh = int(row.group(1)), int(row.group(2)), int(row.group(3)) / 1000
+    flags = row.group(4)
+    modes.append(
+        Mode(f"{width}x{height}@{refresh:.3f}", width, height, refresh, "current=#true" in flags, "preferred=#true" in flags)
+    )
+
+    return modes
 
 
 def start_cosmic_output(outputs, header):
@@ -238,7 +260,9 @@ def parse_mutter(monitors):
             modes.append(
                 Mode(mode_id, width, height, refresh, bool(properties.get("is-current")), bool(properties.get("is-preferred")))
             )
+
         outputs[monitor[0][0]] = modes
+
     return outputs
 
 
@@ -285,6 +309,7 @@ def mutter_layout(monitors, logical, change):
 
     if not any(holds(item[5], change.connector) for item in layout):
         layout.append((0, 0, scale, 0, not layout, [(change.connector, change.mode_id, {})]))
+
     return layout
 
 
@@ -300,12 +325,7 @@ def set_xfce_dpi(scale):
 class Backend:
     """Base of the backends: each one has name, requirement(), outputs() and apply(change, persistent)."""
 
-    name = ""
     native_persist = False
-
-    @classmethod
-    def available(cls):
-        return not cls.requirement()
 
     def connectors(self):
         return list(self.outputs())
@@ -321,8 +341,8 @@ class Backend:
 class XrandrBackend(Backend):
     name = "X11 (xrandr)"
 
-    @classmethod
-    def requirement(cls):
+    @staticmethod
+    def requirement():
         """Why the backend cannot run here; "" when it can."""
         return missing_variable("DISPLAY") or missing_tool("xrandr")
 
@@ -344,8 +364,8 @@ class XrandrBackend(Backend):
 class WlrBackend(Backend):
     name = "Wayland (wlr-randr)"
 
-    @classmethod
-    def requirement(cls):
+    @staticmethod
+    def requirement():
         return missing_variable("WAYLAND_DISPLAY") or missing_tool("wlr-randr")
 
     def outputs(self):
@@ -368,8 +388,8 @@ class WlrBackend(Backend):
 class KScreenBackend(Backend):
     name = "KDE Plasma (kscreen-doctor)"
 
-    @classmethod
-    def requirement(cls):
+    @staticmethod
+    def requirement():
         return missing_tool("kscreen-doctor")
 
     def outputs(self):
@@ -389,8 +409,8 @@ class KScreenBackend(Backend):
 class CosmicBackend(Backend):
     name = "COSMIC (cosmic-randr)"
 
-    @classmethod
-    def requirement(cls):
+    @staticmethod
+    def requirement():
         return missing_variable("WAYLAND_DISPLAY") or missing_tool("cosmic-randr")
 
     def outputs(self):
@@ -431,8 +451,8 @@ class MutterBackend(Backend):
     def __init__(self):
         self.proxy = mutter_proxy(auto_start=True)
 
-    @classmethod
-    def requirement(cls):
+    @staticmethod
+    def requirement():
         try:
             owner = mutter_proxy(auto_start=False).get_name_owner()
         except Exception as error:  # no gi, no session bus
@@ -491,11 +511,8 @@ def probe(backend_class):
 
 def detect():
     """The first backend that works in the current session, or None."""
-    for backend_class in BACKENDS:
-        backend, _reason = probe(backend_class)
-        if backend is not None:
-            return backend
-    return None
+    backends = (probe(backend_class)[0] for backend_class in BACKENDS)
+    return next((backend for backend in backends if backend is not None), None)
 
 
 def diagnose():
@@ -522,7 +539,7 @@ def pick_connector(backend):
     connectors = backend.connectors()
     wanted = normalize(command_line_connector())
     for connector in connectors:
-        if wanted and normalize(connector) == wanted:
+        if normalize(connector) == wanted:
             return connector
 
     if not connectors:

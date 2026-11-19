@@ -12,6 +12,7 @@ shell opened over SSH or on a text console. Only fills what is missing, never ch
 It only finds sessions of the same user: the sockets of other users are not readable anyway.
 """
 
+import contextlib
 import os
 import re
 import stat
@@ -52,10 +53,9 @@ def socket_number(path, prefix):
 
 
 def owner(path):
-    try:
+    """User id that owns path, or None when it cannot be read."""
+    with contextlib.suppress(OSError):
         return path.stat().st_uid
-    except OSError:
-        return None
 
 
 def lowest_socket(folder, prefix, uid=None):
@@ -106,7 +106,7 @@ def add_x11_variables(found, environment, runtime, home, x11_sockets, uid):
 
 
 def missing_variables(environment, uid, home, runtime_root=RUNTIME_ROOT, x11_sockets=X11_SOCKETS):
-    """The session variables environ lacks and this user's session provides."""
+    """The session variables the environment lacks and this user's session provides."""
     found = {}
     runtime = runtime_folder(environment, uid, runtime_root)
     if runtime is None:
@@ -120,11 +120,6 @@ def missing_variables(environment, uid, home, runtime_root=RUNTIME_ROOT, x11_soc
     return found
 
 
-def has_display(environment):
-    return bool(environment.get("WAYLAND_DISPLAY") or environment.get("DISPLAY"))
-
-
 def attach():
-    """Completes os.environ with the user's graphical session; True when there is a display to use."""
+    """Completes os.environ with the user's graphical session."""
     os.environ.update(missing_variables(os.environ, os.getuid(), Path.home()))
-    return has_display(os.environ)

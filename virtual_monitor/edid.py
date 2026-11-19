@@ -82,7 +82,7 @@ def build_timing(width: int, height: int, clock_mhz: float, target_hz: float = 6
     if clock_khz > MAXIMUM_CLOCK_KHZ:
         raise EdidError(f"Clock above {MAXIMUM_CLOCK_KHZ / 1000:g} MHz: {clock_mhz:g}")
 
-    clock_hz = clock_mhz * 1_000_000
+    clock_hz = clock_khz * 1000
     horizontal_total = width + MINIMUM_HORIZONTAL_BLANKING
     vertical_total = max(height + MINIMUM_VERTICAL_BLANKING, round(clock_hz / (horizontal_total * target_hz)))
     if vertical_total - height > MAXIMUM_PIXELS:
@@ -94,7 +94,7 @@ def build_timing(width: int, height: int, clock_mhz: float, target_hz: float = 6
     return Timing(width, height, clock_khz, horizontal_total, vertical_total)
 
 
-def best_safe_timing(width: int, height: int, target_hz: float = 60.0) -> Timing:
+def best_safe_timing(width: int, height: int, target_hz: float) -> Timing:
     """The timing on a safe clock whose refresh rate gets closest to target_hz.
 
     Rates within 0.1 Hz count as a tie, won by the lowest clock: less blanking and HDMI bandwidth.
@@ -158,7 +158,6 @@ def detailed_timing(timing: Timing) -> bytes:
     dtd[7] = (timing.height >> 8) << 4 | vertical_blanking >> 8
     dtd[8], dtd[9] = HORIZONTAL_FRONT_PORCH, HORIZONTAL_SYNC_WIDTH
     dtd[10] = (VERTICAL_FRONT_PORCH & 0xF) << 4 | (VERTICAL_SYNC_WIDTH & 0xF)
-    dtd[11] = 0
     dtd[12], dtd[13] = WIDTH_MM & 0xFF, HEIGHT_MM & 0xFF
     dtd[14] = (WIDTH_MM >> 8) << 4 | HEIGHT_MM >> 8
     dtd[17] = 0x1E  # digital, separate sync, +hsync +vsync
@@ -212,8 +211,8 @@ def cta_block(vics: list[int], dtds: list[bytes]) -> bytearray:
     if vics:
         data += bytes([0x40 | len(vics)]) + bytes(vics)
 
-    # HDMI Vendor Specific Data Block: address 1.0.0.0, max TMDS 340 MHz
-    data += bytes([0x67, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x00, 340 // 5])
+    # HDMI Vendor Specific Data Block: address 1.0.0.0, maximum TMDS clock 340 MHz (68 steps of 5 MHz)
+    data += bytes([0x67, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x00, 68])
 
     block = bytearray(128)
     block[0], block[1] = 0x02, 0x03
@@ -257,7 +256,7 @@ def is_installed(texts: list[str]) -> bool:
         return False
 
 
-def main(command_line_arguments=None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python3 -m virtual_monitor.edid", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -265,7 +264,11 @@ def main(command_line_arguments=None) -> int:
     parser.add_argument("modes", nargs="+", help="WIDTHxHEIGHT[@CLOCK_MHZ][:TARGET_HZ]")
     parser.add_argument("--vic", type=int, action="append", default=[], help="standard CEA mode (VIC)")
     parser.add_argument("--name", default=DEFAULT_NAME)
-    arguments = parser.parse_args(command_line_arguments)
+    return parser
+
+
+def main(command_line_arguments=None) -> int:
+    arguments = build_parser().parse_args(command_line_arguments)
 
     try:
         timings, data = generate(arguments.modes, arguments.vic, arguments.name)
