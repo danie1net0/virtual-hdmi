@@ -3,6 +3,22 @@
 Each `## vX.Y.Z` section becomes the GitLab release of that tag: CI creates the release from it when
 the tag is pushed. Pin a version with `VERSION=vX.Y.Z` (see `get.sh`).
 
+## v0.7.0 (2026-11-20)
+
+- `virtual-monitor --size WIDTHxHEIGHT` and the window's **Other size** row switch to any size,
+  such as the screen of the computer you connect from (`2880x1800`). A size the output lists is
+  applied and remembered like `--apply`; any other size gets a new EDID right away, with no
+  reboot: the size first, then the default modes. The output goes off for two seconds and comes
+  back with it.
+- `scripts/set-edid.sh` writes that EDID to the kernel's override in debugfs and keeps it in
+  `/var/lib/virtual-monitor`; the `virtual-monitor-edid` service sets it again at every boot,
+  before the login screen. `set-edid.sh --reset` goes back to the installed EDID, and
+  `--install-edid` drops the kept one. With kernel lockdown or NVIDIA's own modules there is no
+  override: add the size to `--modes` and reboot.
+- Tested on a Ryzen machine with COSMIC: the new size came up with no reboot and stayed after one.
+- For contributors: `tests/check-mutations.sh` is a mutation gate. It mutates the files changed
+  since `origin/master` and fails if any mutant survives; `tests/run.sh` and CI run it.
+
 ## v0.6.0 (2026-11-19)
 
 - `--install-edid` works on more distributions and boot loaders. It sets the kernel parameters
