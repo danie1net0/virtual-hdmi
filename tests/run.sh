@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Runs all the tests: Python (unittest, no dependencies) and shell scripts.
+# Runs all the tests: Python (unittest, no dependencies) and shell scripts, then the mutation gate
+# on what changed since origin/master (tests/check-mutations.sh; SKIP_MUTATION=1 leaves it out, as
+# the CI test jobs do, since the mutation job runs it).
 #
 #   bash tests/run.sh
 #
@@ -19,6 +21,11 @@ for test in tests/shell/test_*.sh; do
     bash "$test" | grep -v -e '^ok ' -e '^# '
     [[ ${PIPESTATUS[0]} -eq 0 ]] || failures=$((failures + 1))
 done
+
+if [[ "${SKIP_MUTATION:-}" != 1 ]]; then
+    echo "== Mutation"
+    bash tests/check-mutations.sh || failures=$((failures + 1))
+fi
 
 if [[ $failures -ne 0 ]]; then
     echo "$failures test set(s) failed."

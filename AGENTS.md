@@ -38,6 +38,7 @@ modules) are notes, not defaults.
 - `CHANGELOG.md`: one `## vX.Y.Z (date)` section per release, newest first; the top one equals
   `__version__` in `virtual_monitor/__init__.py`. Pushing the tag makes CI create the GitLab release
   from that section (`tests/test_release.py` checks both).
+- `tests/mutation/`: the mutation gate behind `tests/check-mutations.sh` (see Tests).
 - `get.sh`: `curl | bash` installer. Downloads the GitLab archive of `VERSION` (default `master`)
   and runs `install.sh` with the options after `--`.
 
@@ -58,16 +59,26 @@ modules) are notes, not defaults.
 
 ## Tests
 
-`bash tests/run.sh` runs everything. Each shell test file also compares what every run printed with
-`tests/shell/snapshots/<test file>.txt`; after changing a message, run the file with
-`UPDATE_SNAPSHOTS=1` and check the diff. `tests/test_interface_texts.py` does the same for what the
-user reads in Python (options, help, hints, window labels) against `tests/snapshots/*.txt`.
-`bash tests/coverage.sh` measures coverage; the shell part
-needs bash 4.1+ and a non-root user (on macOS use the container in the script header).
-`.gitlab-ci.yml` runs the tests on Python 3.9 and 3.13 and on bash 3.2 (the `bash:3.2` image), and
-coverage on 3.13, for every push and MR. Every job runs on the Docker runner (tag `docker`, as a
-non-root user), so none spends GitLab CI minutes; no job runs on macOS, so
-`tests/test_shell_portability.py` checks for GNU-only options and bash 4 features.
+`bash tests/run.sh` runs everything, the mutation gate last. Each shell test file also compares
+what every run printed with `tests/shell/snapshots/<test file>.txt`; after changing a message, run
+the file with `UPDATE_SNAPSHOTS=1` and check the diff. `tests/test_interface_texts.py` does the
+same for what the user reads in Python (options, help, hints, window labels) against
+`tests/snapshots/*.txt`. `bash tests/coverage.sh` measures coverage; the shell part needs bash 4.1+
+and a non-root user (on macOS use the container in the script header).
+
+`bash tests/check-mutations.sh` is the mutation gate (`tests/mutation/`, standard library only): it
+mutates the files changed since `origin/master` (or `MUTATION_BASE`) and fails if any mutant
+survives. A changed Python test pulls in every Python source (the suite takes two seconds), and a
+shell test or its snapshot the scripts it tests (`SHELL_TESTS` in `tests/mutation/scope.py`, which
+must list every new script and shell test). `MUTATION_SCOPE=all` mutates everything: minutes for
+Python, hours for the scripts. An equivalent mutant is not excluded: rewrite the code until it is
+gone. `SKIP_MUTATION=1 bash tests/run.sh` leaves the gate out.
+
+`.gitlab-ci.yml` runs the tests on Python 3.9 and 3.13 and on bash 3.2 (the `bash:3.2` image),
+coverage on 3.13 and the mutation gate in two slices (`MUTATION_SHARD`), for every push and MR.
+Every job runs on the Docker runner (tag `docker`, as a non-root user), so none spends GitLab CI
+minutes; no job runs on macOS, so `tests/test_shell_portability.py` checks for GNU-only options and
+bash 4 features.
 A `vX.Y.Z` tag also runs the `release` job (Docker runner), which creates the GitLab release.
 
 `bash tests/boot/run.sh IMAGE [aarch64|x86_64]` is the real boot test, by hand on macOS with QEMU:

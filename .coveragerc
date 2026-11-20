@@ -4,6 +4,7 @@ include =
     virtual_monitor/*
     virtual-monitor.py
     tests/shell/shell_coverage.py
+    tests/mutation/*
 
 [report]
 show_missing = True

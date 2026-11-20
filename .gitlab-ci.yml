@@ -1,6 +1,7 @@
-# Tests on the oldest and newest supported Python and on bash 3.2 (the macOS bash), plus coverage
-# (100% required). Every job runs on the webmaker-runner Docker runner (tag docker), so none spends
-# GitLab CI minutes. A version tag (vX.Y.Z) also creates its GitLab release from CHANGELOG.md.
+# Tests on the oldest and newest supported Python and on bash 3.2 (the macOS bash), coverage (100%
+# required) and the mutation gate (no mutant may survive). Every job runs on the webmaker-runner
+# Docker runner (tag docker), so none spends GitLab CI minutes. A version tag (vX.Y.Z) also creates
+# its GitLab release from CHANGELOG.md.
 
 workflow:
   rules:
@@ -12,6 +13,7 @@ workflow:
 
 stages:
   - test
+  - mutation
   - release
 
 # The shell scripts expect a regular user, as on a real machine, so the Linux jobs drop root.
@@ -29,7 +31,7 @@ test:linux:
     matrix:
       - PYTHON: ["3.9", "3.13"]
   script:
-    - su tester -c 'python3 --version && bash --version | head -n 1 && bash tests/run.sh'
+    - su tester -c 'python3 --version && bash --version | head -n 1 && SKIP_MUTATION=1 bash tests/run.sh'
 
 # The bash of macOS is 3.2. The bash:3.2 image (Alpine) ships it in /usr/local/bin; the test stubs
 # start with #!/bin/bash, which the image lacks. BSD-only behavior is checked by
@@ -44,7 +46,7 @@ test:bash-3.2:
     - adduser -D tester
     - chown -R tester "$CI_PROJECT_DIR"
   script:
-    - su tester -c 'bash --version | head -n 1 && bash tests/run.sh'
+    - su tester -c 'bash --version | head -n 1 && SKIP_MUTATION=1 bash tests/run.sh'
 
 # Shell coverage needs bash 4.1+, so it runs on Linux.
 coverage:
@@ -54,6 +56,31 @@ coverage:
   script:
     - su tester -c 'pip install --quiet --user coverage && bash tests/coverage.sh'
   coverage: '/^TOTAL\s.*\s(\d+(?:\.\d+)?)%$/'
+
+# The mutation gate mutates the files changed since the base: the target branch of a merge request,
+# or the previous tip of the pushed branch. A new branch has no previous tip, so every file is
+# mutated, which takes hours; the two slices split every run. The image lacks git, which the gate
+# needs to find the changes.
+mutation:
+  extends: .linux
+  stage: mutation
+  timeout: 3h
+  parallel: 2
+  variables:
+    PYTHON: "3.13"
+    GIT_DEPTH: "0"
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
+  before_script:
+    - apt-get update -qq && apt-get install -qq -y --no-install-recommends git > /dev/null
+    - !reference [.linux, before_script]
+  script:
+    # GitLab counts the slices from one and the gate from zero
+    - export MUTATION_BASE="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-$CI_COMMIT_BEFORE_SHA}"
+    - export MUTATION_SHARD="$((CI_NODE_INDEX - 1))/$CI_NODE_TOTAL"
+    - su tester -c "MUTATION_BASE=$MUTATION_BASE MUTATION_SHARD=$MUTATION_SHARD bash tests/check-mutations.sh"
 
 # The release notes are the CHANGELOG.md section of the tag; tests/test_release.py runs the same awk.
 release:
