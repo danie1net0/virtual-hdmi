@@ -17,11 +17,11 @@ LAUNCHER = Path(__file__).resolve().parent.parent / "virtual-monitor.py"
 
 
 def configuration_folder():
-    xdg = os.environ.get("XDG_CONFIG_HOME")
-    if xdg is None or not xdg.startswith("/"):
+    config_home = os.environ.get("XDG_CONFIG_HOME")
+    if config_home is None or not config_home.startswith("/"):
         return Path.home() / ".config"
 
-    return Path(xdg)
+    return Path(config_home)
 
 
 def choice_file():

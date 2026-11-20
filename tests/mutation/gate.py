@@ -29,19 +29,19 @@ def shard(text):
 
 
 def parser():
-    arguments = argparse.ArgumentParser(prog="tests/check-mutations.sh", description=__doc__.strip().splitlines()[0])
-    arguments.add_argument("files", nargs="*", help="files to mutate instead of the changed ones")
-    arguments.add_argument("--base", default=os.environ.get("MUTATION_BASE", "origin/master"), help="base revision")
-    arguments.add_argument(
+    argument_parser = argparse.ArgumentParser(prog="tests/check-mutations.sh", description=__doc__.strip().splitlines()[0])
+    argument_parser.add_argument("files", nargs="*", help="files to mutate instead of the changed ones")
+    argument_parser.add_argument("--base", default=os.environ.get("MUTATION_BASE", "origin/master"), help="base revision")
+    argument_parser.add_argument(
         "--all", action="store_true", default=os.environ.get("MUTATION_SCOPE") == "all", help="mutate every file"
     )
-    arguments.add_argument(
+    argument_parser.add_argument(
         "--shard", type=shard, default=os.environ.get("MUTATION_SHARD", "0/1"), help="slice of the mutants, like 0/4"
     )
-    arguments.add_argument(
+    argument_parser.add_argument(
         "--jobs", type=int, default=int(os.environ.get("MUTATION_JOBS", os.cpu_count())), help="mutants at once"
     )
-    return arguments
+    return argument_parser
 
 
 def say(line):

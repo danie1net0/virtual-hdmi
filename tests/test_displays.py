@@ -518,7 +518,7 @@ class MutterBackendTest(unittest.TestCase):
         for persistent, method in ((True, 2), (False, 1)):
             with self.subTest(persistent=persistent):
                 backend.apply(change("HDMI-1", "b"), persistent)
-                name, variant, *_ = self.proxy.calls[-1]
+                name, variant, *_others = self.proxy.calls[-1]
                 self.assertEqual(name, "ApplyMonitorsConfig")
                 self.assertEqual(variant.signature, "(uua(iiduba(ssa{sv}))a{sv})")
                 self.assertEqual(variant.value, (7, method, [(0, 0, 1.0, 0, True, [("HDMI-1", "b", {})])], {}))

@@ -24,10 +24,12 @@ def options(arguments, environment=None):
         return gate.parser().parse_args(arguments)
 
 
-def main(arguments, results=None, root=ROOT):
+def main(arguments, results=None, root=ROOT, failure=None):
+    """The gate run without the MUTATION_ variables of the shell, as CI sets them for its own run."""
     output = io.StringIO()
-    with contextlib.redirect_stdout(output), mock.patch.object(runner, "run", return_value=results) as run:
-        status = gate.main(arguments, root)
+    with contextlib.redirect_stdout(output), mock.patch.dict(os.environ, clear=True):
+        with mock.patch.object(runner, "run", return_value=results, side_effect=failure) as run:
+            status = gate.main(arguments, root)
 
     return status, output.getvalue(), run
 
@@ -178,19 +180,26 @@ class MainTest(unittest.TestCase):
         )
 
     def test_fails_when_the_unmutated_tests_fail(self):
-        output = io.StringIO()
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root / "a.py").write_text("x = 1\n")
-            failure = runner.BaselineFailure("a.py")
-            with contextlib.redirect_stdout(output), mock.patch.object(runner, "run", side_effect=failure):
-                status = gate.main(["a.py"], root)
+            status, output, _run = main(["a.py"], root=root, failure=runner.BaselineFailure("a.py"))
 
         self.assertEqual(status, 1)
         self.assertEqual(
-            output.getvalue(),
+            output,
             "Mutation of a.py: 2 mutants.\nThe tests of a.py fail without any mutant, so no mutant was tested.\n",
         )
+
+    def test_the_shell_variables_do_not_reach_the_tests(self):
+        environment = {"MUTATION_SHARD": "1/2", "MUTATION_JOBS": "7", "MUTATION_SCOPE": "all", "MUTATION_BASE": "abc"}
+        with mock.patch.dict(os.environ, environment), tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "a.py").write_text("x = 1\n")
+            _status, output, run = main(["a.py"], [], root)
+
+        self.assertEqual(output.splitlines()[0], "Mutation of a.py: 2 mutants.")
+        self.assertEqual(run.call_args.args[2], os.cpu_count())
 
     def test_the_root_is_the_project(self):
         self.assertEqual(gate.ROOT, ROOT)

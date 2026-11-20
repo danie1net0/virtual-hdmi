@@ -32,11 +32,11 @@ class BuildTimingTest(unittest.TestCase):
             (2560, 1080, 216): (2720, 1324, 59.98),
             (3008, 1260, 241.5): (3168, 1283, 59.42),
         }
-        for (width, height, clock), (horizontal_total, vertical_total, hz) in cases.items():
+        for (width, height, clock), (horizontal_total, vertical_total, refresh) in cases.items():
             with self.subTest(mode=f"{width}x{height}@{clock}"):
                 timing = edid.build_timing(width, height, clock)
                 self.assertEqual((timing.horizontal_total, timing.vertical_total), (horizontal_total, vertical_total))
-                self.assertAlmostEqual(timing.refresh, hz, places=2)
+                self.assertAlmostEqual(timing.refresh, refresh, places=2)
                 self.assertEqual(timing.clock_khz, round(clock * 1000))
 
     def test_low_clock_keeps_minimum_blanking(self):
@@ -63,9 +63,9 @@ class BuildTimingTest(unittest.TestCase):
         self.assertEqual(timing.width, 4095)
 
     def test_rejects_non_positive_or_non_finite_clock_and_rate(self):
-        for clock, hz in ((0, 60), (-1, 60), (math.nan, 60), (math.inf, 60), (148.5, 0), (148.5, math.nan), (148.5, -60)):
-            with self.subTest(clock=clock, hz=hz), self.assertRaisesRegex(edid.EdidError, "positive"):
-                edid.build_timing(1920, 1080, clock, hz)
+        for clock, refresh in ((0, 60), (-1, 60), (math.nan, 60), (math.inf, 60), (148.5, 0), (148.5, math.nan), (148.5, -60)):
+            with self.subTest(clock=clock, refresh=refresh), self.assertRaisesRegex(edid.EdidError, "positive"):
+                edid.build_timing(1920, 1080, clock, refresh)
 
     def test_rejects_clock_above_the_16_bit_field(self):
         with self.assertRaisesRegex(edid.EdidError, "655.35"):
@@ -78,9 +78,9 @@ class BuildTimingTest(unittest.TestCase):
             edid.build_timing(640, 480, 600, 1)
 
     def test_horizontal_blanking_stays_near_minimum(self):
-        for clock, hz in ((74.25, 24), (312, 60), (10, 120), (148.5, 30)):
-            with self.subTest(clock=clock, hz=hz):
-                timing = edid.build_timing(1920, 1080, clock, hz)
+        for clock, refresh in ((74.25, 24), (312, 60), (10, 120), (148.5, 30)):
+            with self.subTest(clock=clock, refresh=refresh):
+                timing = edid.build_timing(1920, 1080, clock, refresh)
                 self.assertLessEqual(timing.horizontal_total - 1920, edid.MINIMUM_HORIZONTAL_BLANKING + 1)
 
 
