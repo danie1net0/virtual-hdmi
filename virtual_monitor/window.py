@@ -122,6 +122,15 @@ def install_subtitle(output):
     return f"On {output}. Asks for the administrator password."
 
 
+def failure_text(output):
+    """Why set-edid.sh failed: the last line it printed. A cancelled password prompt prints nothing."""
+    lines = output.strip().splitlines()
+    if not lines:
+        return "Cancelled: the EDID did not change"
+
+    return f"Failed: {lines[-1]}"
+
+
 def install_label(installed):
     if installed:
         return "Installed"
@@ -396,33 +405,39 @@ class Window(Adw.ApplicationWindow):
     def on_size(self, row):
         text = row.get_text().strip()
         try:
-            mode = edid_setup.listed_mode(self.backend.modes(self.connector), text)
+            timing = edid.parse_mode(text)
         except edid.EdidError as error:
             self.toast(f"Invalid size: {error}")
             return
 
+        try:
+            modes = self.backend.modes(self.connector)
+        except displays.DisplayError as error:
+            self.toast(f"Failed: {error}")
+            return
+
+        mode = edid_setup.listed_mode(modes, text, timing)
         if mode is not None:
             self.switch_to(mode, self.current)
             return
 
-        self.set_size(text)
+        self.set_size(text, timing)
 
-    def set_size(self, text):
+    def set_size(self, text, timing):
         """Gives the virtual monitor an EDID with the size in text, then waits for the desktop to list it."""
-        output = displays.command_line_connector()
-        if output is None:
+        command = edid_setup.size_command(text, timing, ["pkexec"])
+        if command is None:
             self.toast(edid_setup.NOT_INSTALLED)
             return
 
-        path = edid_setup.write_edid(edid_setup.custom_modes(text))
-        pending = PendingSize(edid.parse_mode(text), self.current)
+        pending = PendingSize(timing, self.current)
         self.size_entry.set_sensitive(False)
-        run_async(edid_setup.set_command(path, output, ["pkexec"]), functools.partial(self.after_size, pending))
+        run_async(command, functools.partial(self.after_size, pending))
 
-    def after_size(self, pending, succeeded, _text):
+    def after_size(self, pending, succeeded, output):
         self.size_entry.set_sensitive(True)
         if not succeeded:
-            self.toast("Cancelled or failed: the EDID did not change")
+            self.toast(failure_text(output))
             return
 
         GLib.timeout_add(edid_setup.WAIT_MILLISECONDS, functools.partial(self.wait_for_size, pending))

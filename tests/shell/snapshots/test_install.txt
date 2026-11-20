@@ -221,11 +221,13 @@ Open it from the menu (Virtual monitor), or run virtual-monitor --help in a term
 Removed: CASE/home/.local/share/virtual-monitor, CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
 Removed: CASE/home/.local/bin/virtual-monitor
 The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+A size set with --size stays at every boot until: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset
 -- errors
 == install.sh --uninstall (status 0)
 Removed: CASE/home/.local/share/virtual-monitor, CASE/home/.local/share/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/home/.local/share/applications/br.app.VirtualMonitor.desktop
 Removed: CASE/home/.local/bin/virtual-monitor
 The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+A size set with --size stays at every boot until: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset
 -- errors
 == install.sh --skip-check --dest-dir CASE/destination (status 0)
 App installed: CASE/destination/virtual-monitor
@@ -236,6 +238,7 @@ Open it from the menu (Virtual monitor), or run virtual-monitor --help in a term
 == install.sh --uninstall --dest-dir CASE/destination (status 0)
 Removed: CASE/destination/virtual-monitor, CASE/destination/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/destination/applications/br.app.VirtualMonitor.desktop
 The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+A size set with --size stays at every boot until: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset
 -- errors
 == install.sh --skip-check (status 0)
 Command installed: CASE/home/.local/bin/virtual-monitor
@@ -265,6 +268,7 @@ Open it from the menu (Virtual monitor), or run virtual-monitor --help in a term
 == install.sh --uninstall --dest-dir CASE/elsewhere (status 0)
 Removed: CASE/elsewhere/virtual-monitor, CASE/elsewhere/icons/hicolor/512x512/apps/virtual-monitor.png, CASE/elsewhere/applications/br.app.VirtualMonitor.desktop
 The remembered resolution stays in CASE/home/.config/virtual-monitor; delete it if you no longer want it.
+A size set with --size stays at every boot until: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset
 -- errors
 == install.sh --skip-check (status 1)
 -- errors

@@ -1,5 +1,6 @@
-"""Terminal mode of the Virtual monitor: lists, applies and restores resolutions, and installs the
-virtual monitor (the EDID), without GTK."""
+"""Terminal mode of the Virtual monitor, without GTK: lists, applies and restores resolutions,
+switches to any size (--size, with a new EDID when the output does not list it), installs the
+virtual monitor (the EDID) and turns automatic login on or off."""
 
 import argparse
 import getpass
@@ -150,20 +151,26 @@ def save_settings(arguments, backend, connector, mode_id):
     choice.save_setting(mode.width, mode.height, "scale", arguments.scale or None)
 
 
-def set_size(text, backend, connector, standard_output, error_output):
+def switch(arguments, backend, connector, mode_id, standard_output):
+    """Applies mode_id with --scale, and remembers it unless --temp."""
+    save_settings(arguments, backend, connector, mode_id)
+    choice.apply_mode(backend, connector, mode_id, not arguments.temp)
+    print(f"applied {mode_id} on {connector}", file=standard_output)
+    return 0
+
+
+def set_size(text, timing, backend, connector, standard_output, error_output):
     """Gives the virtual monitor an EDID with the size in text and returns its mode once the desktop
-    lists it; None after saying why not."""
-    output = displays.command_line_connector()
-    if output is None:
+    lists it; None after saying why not (set-edid.sh says it when it fails)."""
+    command = edid_setup.size_command(text, timing, elevate())
+    if command is None:
         print(edid_setup.NOT_INSTALLED, file=error_output)
         return None
 
-    path = edid_setup.write_edid(edid_setup.custom_modes(text))
-    print(f"Giving {output} an EDID with {text}", file=standard_output)
-    if subprocess.call(edid_setup.set_command(path, output, elevate())) != 0:
+    print(f"Giving the virtual monitor an EDID with {text}", file=standard_output)
+    if subprocess.call(command) != 0:
         return None
 
-    timing = edid.parse_mode(text)
     mode = edid_setup.wait_for_size(backend, connector, timing)
     if mode is None:
         print(f"The desktop does not list {timing.width}x{timing.height} yet; see virtual-monitor --list", file=error_output)
@@ -174,19 +181,20 @@ def set_size(text, backend, connector, standard_output, error_output):
 def apply_size(arguments, backend, connector, standard_output, error_output):
     """--size: the listed mode of that size, or else a new EDID with it."""
     try:
-        mode = edid_setup.listed_mode(backend.modes(connector), arguments.size)
+        timing = edid.parse_mode(arguments.size)
     except edid.EdidError as error:
         print(f"Invalid size: {error}", file=error_output)
         return 1
 
-    mode = mode or set_size(arguments.size, backend, connector, standard_output, error_output)
+    mode = edid_setup.listed_mode(backend.modes(connector), arguments.size, timing)
+    if mode is not None:
+        return switch(arguments, backend, connector, mode.id, standard_output)
+
+    mode = set_size(arguments.size, timing, backend, connector, standard_output, error_output)
     if mode is None:
         return 1
 
-    save_settings(arguments, backend, connector, mode.id)
-    choice.apply_mode(backend, connector, mode.id, not arguments.temp)
-    print(f"applied {mode.id} on {connector}", file=standard_output)
-    return 0
+    return switch(arguments, backend, connector, mode.id, standard_output)
 
 
 def run_action(arguments, backend, standard_output, error_output):
@@ -207,10 +215,7 @@ def run_action(arguments, backend, standard_output, error_output):
         print_modes(backend, connector, standard_output)
         return 0
 
-    save_settings(arguments, backend, connector, mode_id)
-    choice.apply_mode(backend, connector, mode_id, not arguments.temp)
-    print(f"applied {mode_id} on {connector}", file=standard_output)
-    return 0
+    return switch(arguments, backend, connector, mode_id, standard_output)
 
 
 SESSION_HINT = (

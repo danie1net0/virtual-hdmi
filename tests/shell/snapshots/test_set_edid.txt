@@ -42,17 +42,17 @@ Invalid OUTPUT: HDMI-A-B-1 (like HDMI-A-1 or DP-1)
 Invalid OUTPUT: HDMI-A (like HDMI-A-1 or DP-1)
 == set-edid.sh PROJECT/edid/virtual-monitor.bin DP-1 (status 1)
 -- errors
-No EDID override for DP-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'
+No output DP-1: the outputs are the names after cardN- in /sys/class/drm
 == set-edid.sh PROJECT/edid/virtual-monitor.bin DP-1 (status 1)
 -- errors
-No EDID override for DP-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'
+No output DP-1: the outputs are the names after cardN- in /sys/class/drm
 == set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 1)
 -- errors
 No EDID override for HDMI-A-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'
 == set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 1)
 ==> Setting the EDID of HDMI-A-1
 -- errors
-PROJECT/scripts/set-edid.sh: line 148: CASE/root/sys/kernel/debug/dri/1/HDMI-A-1/edid_override: Is a directory
+PROJECT/scripts/set-edid.sh: line 166: CASE/root/sys/kernel/debug/dri/1/HDMI-A-1/edid_override: Is a directory
 == set-edid.sh PROJECT/edid/virtual-monitor.bin HDMI-A-1 (status 0)
 ==> Setting the EDID of HDMI-A-1
 Done: HDMI-A-1 has the new modes now and at every boot. To go back to the installed EDID: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset
@@ -88,6 +88,9 @@ No EDID kept: the installed one is in use.
 -- errors
 == set-edid.sh --reset (status 0)
 HDMI-A-1 is back to the installed EDID.
+-- errors
+== set-edid.sh --reset (status 0)
+The kept EDID is gone; the installed one comes back at the next boot.
 -- errors
 == set-edid.sh --reset (status 0)
 The kept EDID is gone; the installed one comes back at the next boot.

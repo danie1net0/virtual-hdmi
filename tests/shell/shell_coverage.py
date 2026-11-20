@@ -71,7 +71,6 @@ def executable_lines(path):
     heredoc = None
     quote = None
     continued = False
-    command = None
     for number, line in enumerate(lines, 1):
         stripped = line.strip()
         if heredoc:

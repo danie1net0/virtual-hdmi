@@ -56,7 +56,7 @@ def shell_problems(path):
         if SHELL_AND_OR.search(code):
             problems.append(f"{number}: && then || as an if/else")
 
-        for _ in SHELL_IF.finditer(code):
+        for _match in SHELL_IF.finditer(code):
             depth += 1
             if depth > 1:
                 problems.append(f"{number}: if inside an if")

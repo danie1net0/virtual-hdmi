@@ -146,25 +146,24 @@ class ModesBackend(displays.Backend):
 
 
 class CustomSizeTest(unittest.TestCase):
+    def custom_modes(self, text):
+        return edid_setup.custom_modes(text, edid.parse_mode(text))
+
     def test_custom_modes_put_the_size_first_then_the_defaults(self):
-        self.assertEqual(edid_setup.custom_modes("2880x1800"), ["2880x1800", *edid.DEFAULT_MODES])
+        self.assertEqual(self.custom_modes("2880x1800"), ["2880x1800", *edid.DEFAULT_MODES])
 
     def test_custom_modes_drop_the_default_of_the_same_size(self):
         self.assertEqual(
-            edid_setup.custom_modes("3440x1440@350"),
+            self.custom_modes("3440x1440@350"),
             ["3440x1440@350", "2560x1080@216", "3008x1260@241.5", "2360x1640@297"],
         )
 
     def test_custom_modes_keep_a_default_of_the_same_width_only(self):
-        self.assertIn("3440x1440@312", edid_setup.custom_modes("3440x1441"))
-        self.assertIn("3440x1440@312", edid_setup.custom_modes("3441x1440"))
+        self.assertIn("3440x1440@312", self.custom_modes("3440x1441"))
+        self.assertIn("3440x1440@312", self.custom_modes("3441x1440"))
 
     def test_custom_modes_fit_in_the_edid(self):
-        self.assertEqual(len(edid.generate(edid_setup.custom_modes("2880x1800"))[1]), 256)
-
-    def test_custom_modes_refuse_an_invalid_size(self):
-        with self.assertRaisesRegex(edid.EdidError, r"^Invalid mode: 2880 \(use WIDTHxHEIGHT\[@MHZ\]\[:HZ\]\)$"):
-            edid_setup.custom_modes("2880")
+        self.assertEqual(len(edid.generate(self.custom_modes("2880x1800"))[1]), 256)
 
     def test_size_mode_takes_the_rate_closest_to_the_timing(self):
         timing = edid.parse_mode("2880x1800")  # 56.3 Hz
@@ -177,19 +176,18 @@ class CustomSizeTest(unittest.TestCase):
         self.assertIsNone(edid_setup.size_mode([listed(2880, 1864, 56.3), listed(2560, 1800, 56.3)], timing))
         self.assertIsNone(edid_setup.size_mode([], timing))
 
+    def listed_mode(self, modes, text):
+        return edid_setup.listed_mode(modes, text, edid.parse_mode(text))
+
     def test_listed_mode_of_a_plain_size(self):
         modes = [listed(1920, 1080, 60.0), listed(2880, 1800, 56.3)]
-        self.assertEqual(edid_setup.listed_mode(modes, "2880x1800"), modes[1])
-        self.assertIsNone(edid_setup.listed_mode(modes, "2560x1600"))
+        self.assertEqual(self.listed_mode(modes, "2880x1800"), modes[1])
+        self.assertIsNone(self.listed_mode(modes, "2560x1600"))
 
     def test_listed_mode_with_a_clock_or_rate_needs_a_new_edid(self):
         modes = [listed(2880, 1800, 56.3)]
-        self.assertIsNone(edid_setup.listed_mode(modes, "2880x1800@350"))
-        self.assertIsNone(edid_setup.listed_mode(modes, "2880x1800:50"))
-
-    def test_listed_mode_refuses_an_invalid_size(self):
-        with self.assertRaises(edid.EdidError):
-            edid_setup.listed_mode([], "2880x")
+        self.assertIsNone(self.listed_mode(modes, "2880x1800@350"))
+        self.assertIsNone(self.listed_mode(modes, "2880x1800:50"))
 
     def test_listed_modes_while_the_output_is_away(self):
         self.assertEqual(edid_setup.listed_modes(ModesBackend(displays.DisplayError("gone")), "HDMI-1"), [])
@@ -215,15 +213,48 @@ class CustomSizeTest(unittest.TestCase):
 
         self.assertIsNone(found)
         self.assertEqual(backend.calls, 20)
-        self.assertEqual(sleep.call_count, 20)
+        self.assertEqual(sleep.call_count, 19)
 
-    def test_wait_takes_ten_seconds_at_most(self):
-        self.assertEqual(edid_setup.WAIT_ATTEMPTS * edid_setup.WAIT_MILLISECONDS, 10000)
+    def test_wait_for_size_does_not_sleep_when_listed_at_once(self):
+        wanted = listed(2880, 1800, 56.3)
+        with mock.patch.object(edid_setup.time, "sleep") as sleep:
+            found = edid_setup.wait_for_size(ModesBackend([wanted]), "HDMI-1", edid.parse_mode("2880x1800"))
+
+        self.assertEqual(found, wanted)
+        sleep.assert_not_called()
+
+    def test_wait_finds_the_size_at_the_last_check(self):
+        wanted = listed(2880, 1800, 56.3)
+        backend = ModesBackend(*([[]] * 19), [wanted])
+        with mock.patch.object(edid_setup.time, "sleep") as sleep:
+            found = edid_setup.wait_for_size(backend, "HDMI-1", edid.parse_mode("2880x1800"))
+
+        self.assertEqual(found, wanted)
+        self.assertEqual(sleep.call_count, 19)
 
     def test_set_command(self):
         script = str(ROOT / "scripts" / "set-edid.sh")
         self.assertEqual(edid_setup.set_command(Path("/tmp/edid.bin"), "HDMI-A-1", ["pkexec"]), ["pkexec", "bash", script, "/tmp/edid.bin", "HDMI-A-1"])
         self.assertEqual(edid_setup.set_command(Path("/tmp/edid.bin"), "HDMI-A-1", []), ["bash", script, "/tmp/edid.bin", "HDMI-A-1"])
+
+    def test_size_command_writes_the_edid_for_the_virtual_monitor(self):
+        timing = edid.parse_mode("2880x1800")
+        with mock.patch.object(displays, "command_line_connector", return_value="HDMI-A-1"):
+            command = edid_setup.size_command("2880x1800", timing, ["sudo"])
+
+        written = Path(command[-2])
+        self.addCleanup(written.parent.rmdir)
+        self.addCleanup(written.unlink)
+        self.assertEqual(command, ["sudo", "bash", str(edid_setup.SET_SCRIPT), str(written), "HDMI-A-1"])
+        self.assertEqual(written.read_bytes(), edid.generate(["2880x1800", *edid.DEFAULT_MODES])[1])
+
+    def test_size_command_needs_the_virtual_monitor(self):
+        with mock.patch.object(displays, "command_line_connector", return_value=None), mock.patch.object(
+            edid_setup, "write_edid"
+        ) as write_edid:
+            self.assertIsNone(edid_setup.size_command("2880x1800", edid.parse_mode("2880x1800"), ["sudo"]))
+
+        write_edid.assert_not_called()
 
     def test_set_script_ships_with_the_app(self):
         self.assertTrue(edid_setup.SET_SCRIPT.is_file())

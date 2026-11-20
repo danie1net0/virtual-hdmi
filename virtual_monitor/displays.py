@@ -286,6 +286,14 @@ def holds(members, connector):
     return any(member[0] == connector for member in members)
 
 
+def logical_scale(members, change, scale, own_scale):
+    """The logical monitor of the changed connector gets the new scale; the others keep their own."""
+    if holds(members, change.connector):
+        return scale
+
+    return own_scale
+
+
 def mutter_layout(monitors, logical, change):
     """Builds the logical monitors for ApplyMonitorsConfig, changing only the mode and scale of the connector."""
     mode_of = {}
@@ -301,11 +309,7 @@ def mutter_layout(monitors, logical, change):
         if not members:
             continue
 
-        if holds(members, change.connector):
-            layout.append((left, top, scale, own_transform, primary, members))
-            continue
-
-        layout.append((left, top, own_scale, own_transform, primary, members))
+        layout.append((left, top, logical_scale(members, change, scale, own_scale), own_transform, primary, members))
 
     if not any(holds(item[5], change.connector) for item in layout):
         layout.append((0, 0, scale, 0, not layout, [(change.connector, change.mode_id, {})]))

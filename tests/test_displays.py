@@ -149,6 +149,13 @@ class ParseXrandrTest(unittest.TestCase):
         self.assertEqual([(mode.id, mode.current, mode.preferred) for mode in modes], [("800x600@60.32", False, False), ("800x600@56.25", True, False)])
 
 
+class ParseXrandrRatesTest(unittest.TestCase):
+    def test_joins_the_flags_printed_apart_to_their_rate(self):
+        self.assertEqual(
+            displays.parse_xrandr_rates(["+", "60.00*", "+", "50.00", "bad"]), [["60.00", "*+"], ["50.00", ""]]
+        )
+
+
 class ParseOtherBackendsTest(unittest.TestCase):
     def test_wlr(self):
         outputs = displays.parse_wlr(WLR)
@@ -526,8 +533,8 @@ class ProbeBackend(displays.Backend):
     error = None
 
     @classmethod
-    def requirement(cls):
-        return cls.reason
+    def requirement(backend_class):
+        return backend_class.reason
 
     def outputs(self):
         if self.error:

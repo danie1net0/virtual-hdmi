@@ -14,6 +14,7 @@ CASE/short.bin is not 256 bytes; it does not look like an EDID.
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+The kept EDID is gone; the installed one comes back at the next boot.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -25,6 +26,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -36,6 +38,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -47,6 +50,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -58,6 +62,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -69,6 +74,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -80,6 +86,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -91,6 +98,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -102,6 +110,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -113,6 +122,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -124,6 +134,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet my.drm.edid_firmware=keep drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -135,6 +146,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -147,6 +159,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
 # Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
 GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -159,6 +172,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
 # Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
 GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -171,6 +185,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
 # Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
 GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -183,6 +198,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
 # Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
 GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -195,6 +211,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/etc/default/grub.d/99-virtual-monitor.cfg
 # Virtual monitor EDID, written by install-edid.sh. To undo: delete this file and run update-grub.
 GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -206,6 +223,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -216,6 +234,7 @@ Then: virtual-monitor --list
 ==> Checking that the EDID is in the image
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters with kernelstub
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -226,6 +245,7 @@ Then: virtual-monitor --list
 ==> Checking that the EDID is in the image
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters with kernelstub
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -236,6 +256,7 @@ Then: virtual-monitor --list
 ==> Checking that the EDID is in the image
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters with kernelstub
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -247,6 +268,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -257,6 +279,7 @@ Then: virtual-monitor --list
 ==> Checking that the EDID is in the image
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters with kernelstub
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -275,6 +298,7 @@ Add to the kernel command line: drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.
 ==> Checking that the EDID is in the image
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters with kernelstub
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -285,6 +309,7 @@ Then: virtual-monitor --list
 ==> Checking that the EDID is in the image
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters with kernelstub
+No EDID kept: the installed one is in use.
 
 Done: DP-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -295,6 +320,7 @@ Then: virtual-monitor --list
 ==> Checking that the EDID is in the image
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters with kernelstub
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-2 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -306,6 +332,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -319,6 +346,7 @@ Invalid CONNECTOR: HDMI-A-1 rm -rf / (like HDMI-A-1 or DP-1)
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -336,6 +364,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -347,6 +376,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -358,6 +388,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -375,6 +406,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -386,6 +418,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -398,6 +431,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in GRUB
 #GRUB_CMDLINE_LINUX_DEFAULT="quiet video=HDMI-A-1:D"
 GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -409,6 +443,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -420,6 +455,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -431,6 +467,7 @@ Then: virtual-monitor --list
     ok (lsinitrd)
 ==> Adjusting the kernel parameters in GRUB
 GRUB_CMDLINE_LINUX_DEFAULT="quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -451,6 +488,7 @@ Neither update-grub, grubby, grub2-mkconfig nor grub-mkconfig found to apply CAS
     ok (lsinitcpio)
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/arch.conf
 options root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -472,6 +510,7 @@ options root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin vid
 options drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
 ==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
 root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -487,6 +526,7 @@ options root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin vid
 options drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
 ==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
 root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -498,6 +538,7 @@ Then: virtual-monitor --list
     ok (lsinitcpio)
 ==> Adjusting the kernel parameters in CASE/root/boot/efi/loader/entries/opensuse.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -509,6 +550,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
 console=serial0,115200 root=PARTUUID=abc rootwait drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -520,6 +562,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
 console=serial0,115200 root=PARTUUID=abc rootwait drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -531,6 +574,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/cmdline.txt
 root=/dev/mmcblk0p2 rootwait drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -541,6 +585,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
 root=/dev/mmcblk0p2 drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -551,6 +596,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/etc/default/u-boot
 U_BOOT_PARAMETERS="ro quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -561,6 +607,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/etc/default/u-boot
 U_BOOT_PARAMETERS="ro quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e"
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -571,6 +618,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/extlinux/extlinux.conf
 append root=/dev/sda1 drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -582,6 +630,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/boot/extlinux/extlinux.conf
   APPEND root=/dev/mmcblk0p2 drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
   append root=/dev/mmcblk0p2 single drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -609,6 +658,7 @@ Install a kernel that builds its own boot image, or use an HDMI dummy plug.
 ==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
 root=UUID=abc rw quiet my.initrd=keep drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
 ==> Building the UKI
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -619,6 +669,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
 root=UUID=abc rw drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
 ==> Building the UKI
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -629,6 +680,7 @@ Then: virtual-monitor --list
 ==> Adjusting the kernel parameters in CASE/root/etc/kernel/cmdline
 root=UUID=abc rw quiet my.initrd=keep drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
 ==> Building the UKI
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -650,6 +702,7 @@ Install a kernel that builds its own boot image, or use an HDMI dummy plug.
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/firmware/cmdline.txt
 root=/dev/first drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -678,6 +731,7 @@ Add to the kernel command line: drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -688,6 +742,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -698,6 +753,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -708,6 +764,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -718,6 +775,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -728,6 +786,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -738,6 +797,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -748,6 +808,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -758,6 +819,7 @@ Then: virtual-monitor --list
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -775,6 +837,7 @@ Add to the kernel command line: drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.
     No update-initramfs, dracut or mkinitcpio: no boot image to build; the kernel reads the EDID from /usr/lib/firmware.
 ==> Adjusting the kernel parameters in CASE/root/boot/loader/entries/linux.conf
 options quiet drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -789,6 +852,7 @@ CASE/edid.bin not found
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list
@@ -800,6 +864,7 @@ Then: virtual-monitor --list
     ok (lsinitramfs)
 ==> Adjusting the kernel parameters in CASE/root/boot/armbianEnv.txt
 extraargs=cma=256M drm.edid_firmware=HDMI-A-1:edid/virtual-monitor.bin video=HDMI-A-1:e
+No EDID kept: the installed one is in use.
 
 Done: HDMI-A-1 gets the virtual monitor at the next boot. Reboot with: sudo reboot
 Then: virtual-monitor --list

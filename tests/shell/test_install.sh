@@ -331,6 +331,7 @@ check "old autostart removed" test ! -e "$(legacy_autostart)"
 check "remembered choice stays" test -f "$(mode_file)"
 called "update-desktop-database $DATA/applications"
 contains "$OUTPUT" "The remembered resolution stays in $CONFIGURATION_FOLDER/$NAME" "says where the choice stayed"
+contains "$OUTPUT" "A size set with --size stays at every boot until: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset" "says how to undo a size set with --size"
 
 run_script "$SCRIPT" --uninstall
 status_is 0 "uninstalling again does not fail"

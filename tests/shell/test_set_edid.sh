@@ -89,19 +89,20 @@ echo "# the output and its override"
 machine
 run_script "$SCRIPT" "$EDID" DP-1
 status_is 1 "an output the machine does not have fails"
-contains "$ERRORS" "No EDID override for DP-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'" "explains what to do instead"
+contains "$ERRORS" "No output DP-1: the outputs are the names after cardN- in /sys/class/drm" "says the output is not there"
 not_called systemctl
 
 machine
 mkdir -p "$ROOT/sys/class/drm/card2-DP-1"
 run_script "$SCRIPT" "$EDID" DP-1
 status_is 1 "a folder with no status is no output"
+contains "$ERRORS" "No output DP-1:" "says a folder with no status is no output"
 
 machine
 rm "$OVERRIDE"
 run_script "$SCRIPT" "$EDID" HDMI-A-1
 status_is 1 "an output with no override fails"
-contains "$ERRORS" "No EDID override for HDMI-A-1:" "says the override is missing"
+contains "$ERRORS" "No EDID override for HDMI-A-1: its driver has no EDID override (debugfs hidden by kernel lockdown, or NVIDIA's own modules). Install the modes instead and reboot: virtual-monitor --install-edid --modes '...'" "explains what to do instead"
 check "does not touch the other GPU's override" test ! -s "$DECOY"
 check "leaves the output connected" test "$(cat "$STATUS_FILE")" = connected
 
@@ -125,6 +126,7 @@ called "sleep 2"
 check "waits only once" test "$(grep -c '^sleep' "$CALLS")" = 1
 check "connects the output again" test "$(cat "$STATUS_FILE")" = on
 check "keeps the EDID" cmp "$EDID" "$ROOT/var/lib/virtual-monitor/edid.bin"
+check "the kept EDID is readable by everyone and writable by root only" test "$(ls -l "$ROOT/var/lib/virtual-monitor/edid.bin" | cut -c1-10)" = "-rw-r--r--"
 check "keeps the output" test "$(cat "$ROOT/var/lib/virtual-monitor/output")" = HDMI-A-1
 check "the root copy of the script is this script" cmp "$SCRIPT" "$ROOT/usr/local/lib/virtual-monitor/set-edid.sh"
 check "the root copy is executable" test -x "$ROOT/usr/local/lib/virtual-monitor/set-edid.sh"
@@ -164,6 +166,8 @@ check "writes the EDID without systemd" cmp "$EDID" "$OVERRIDE"
 contains "$OUTPUT" "Done: HDMI-A-1 has the new modes until the next boot; without systemd, nothing sets them again at boot." "says it lasts until the next boot"
 not_contains "$OUTPUT" "every boot" "does not promise every boot without systemd"
 check "keeps the EDID for a later --boot" cmp "$EDID" "$ROOT/var/lib/virtual-monitor/edid.bin"
+check "writes no service without systemd" test ! -e "$ROOT/etc/systemd/system/$SERVICE_NAME"
+check "copies no script without systemd" test ! -e "$ROOT/usr/local/lib/virtual-monitor/set-edid.sh"
 
 echo "# at boot"
 machine
@@ -203,13 +207,13 @@ kept DP-1
 run_script "$SCRIPT" --boot
 status_is 1 "fails when the output never shows up"
 contains "$ERRORS" "No EDID override for DP-1 after 30 s:" "says how long it waited"
-check "checks once a second for 30 s" test "$(grep -c '^sleep 1$' "$CALLS")" = 29
+check "checks once a second for 30 s" test "$(grep -c '^sleep 1$' "$CALLS")" = 30
 
 # The driver loads while the script waits: the output shows up at the third check
 machine
 kept HDMI-A-1
 mv "$ROOT/sys/class/drm/card1-HDMI-A-1" "$CASE/later"
-stub sleep "echo \"sleep \$*\" > /dev/null; count=\$(grep -c '^sleep 1' '$CALLS'); [[ \$count -lt 2 ]] || mv '$CASE/later' '$ROOT/sys/class/drm/card1-HDMI-A-1' 2> /dev/null; true"
+stub sleep "count=\$(grep -c '^sleep 1' '$CALLS'); [[ \$count -lt 2 ]] || mv '$CASE/later' '$ROOT/sys/class/drm/card1-HDMI-A-1' 2> /dev/null; true"
 run_script "$SCRIPT" --boot
 status_is 0 "waits for the driver at boot"
 check "stops waiting once the output is there" test "$(grep -c '^sleep 1$' "$CALLS")" = 2
@@ -247,6 +251,16 @@ check "removes the kept EDID when the output is gone" test ! -e "$ROOT/var/lib/v
 check "removes the service when the output is gone" test ! -e "$ROOT/etc/systemd/system/$SERVICE_NAME"
 contains "$OUTPUT" "The kept EDID is gone; the installed one comes back at the next boot." "says when the installed EDID comes back"
 not_called sleep
+
+machine
+kept HDMI-A-1
+installed_service
+rm "$OVERRIDE"
+run_script "$SCRIPT" --reset
+status_is 0 "goes back when the override is gone"
+check "writes no override that is gone" test ! -e "$OVERRIDE"
+contains "$OUTPUT" "The kept EDID is gone; the installed one comes back at the next boot." "says the installed EDID comes back at boot"
+check "removes the kept EDID when the override is gone" test ! -e "$ROOT/var/lib/virtual-monitor/edid.bin"
 
 machine
 kept HDMI-A-1

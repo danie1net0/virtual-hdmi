@@ -126,11 +126,11 @@ def parse_mode(text: str) -> Timing:
 
     Without a clock, the mode takes the safe clock that gets closest to the rate.
     """
-    mode, _, hz = text.partition(":")
+    mode, _separator, rate_text = text.partition(":")
     size, at_sign, clock = mode.partition("@")
     try:
         width, height = (int(number) for number in size.lower().split("x"))
-        target_hz = float(hz or 60)
+        target_hz = float(rate_text or 60)
     except ValueError:
         raise _invalid_mode(text) from None
 

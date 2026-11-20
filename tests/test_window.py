@@ -601,18 +601,36 @@ class SizeTest(WindowTestCase):
 
         self.assertEqual(process.command[:3], ["pkexec", "bash", str(edid_setup.SET_SCRIPT)])
         self.assertEqual(process.command[-1], "HDMI-A-1")
-        self.assertEqual(written.read_bytes(), edid.generate(edid_setup.custom_modes("2880x1800"))[1])
+        self.assertEqual(written.read_bytes(), edid.generate(["2880x1800", *edid.DEFAULT_MODES])[1])
         self.assertFalse(window.size_entry.sensitive)
         self.assertEqual(fake_gi.GLib.timeouts, [])
 
-    def test_failed_set_edid_shows_toast(self):
+    def test_cancelled_password_prompt_shows_toast(self):
         window = self.window()
         self.type_size(window, "2880x1800")
-        fake_gi.Subprocess.created[-1].finish(126)
+        fake_gi.Subprocess.created[-1].finish(126, " \n")
 
         self.assertTrue(window.size_entry.sensitive)
-        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Cancelled or failed: the EDID did not change")
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Cancelled: the EDID did not change")
         self.assertEqual(fake_gi.GLib.timeouts, [])
+
+    def test_failed_set_edid_shows_why(self):
+        window = self.window()
+        self.type_size(window, "2880x1800")
+        fake_gi.Subprocess.created[-1].finish(1, "==> checking\nNo EDID override for HDMI-A-1: install the modes\n\n")
+
+        self.assertTrue(window.size_entry.sensitive)
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Failed: No EDID override for HDMI-A-1: install the modes")
+        self.assertEqual(fake_gi.GLib.timeouts, [])
+
+    def test_size_while_the_display_tool_fails_shows_toast(self):
+        window = self.window()
+        with mock.patch.object(self.backend, "outputs", side_effect=displays.DisplayError("cosmic-randr list: gone")):
+            self.type_size(window, "3440x1440")
+
+        self.assertEqual(window.toasts.toasts[-1].constructor_properties["title"], "Failed: cosmic-randr list: gone")
+        self.assertEqual(fake_gi.Subprocess.created, [])
+        self.assertEqual(self.backend.applied, [])
 
     def test_new_size_switches_once_listed_and_asks_to_keep(self):
         window, wait = self.new_size()

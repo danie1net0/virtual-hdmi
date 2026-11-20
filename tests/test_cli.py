@@ -172,7 +172,7 @@ class CliTest(unittest.TestCase):
 
     def test_list_without_edid_on_boot(self):
         with mock.patch.object(displays, "command_line_connector", return_value=None):
-            _, standard_output, _ = self.run_cli(["--list"])
+            _code, standard_output, _error_output = self.run_cli(["--list"])
 
         self.assertIn("(EDID at boot: no)", standard_output)
 
@@ -192,12 +192,12 @@ class CliTest(unittest.TestCase):
         )
 
     def test_no_connector(self):
-        code, _, error_output = self.run_cli(["--list"], backend=Backend({}))
+        code, _standard_output, error_output = self.run_cli(["--list"], backend=Backend({}))
         self.assertEqual(code, 1)
         self.assertEqual(error_output, "No monitor connected.\n")
 
     def test_apply_remembers(self):
-        code, standard_output, _ = self.run_cli(["--apply", "1920x1080@60.00"])
+        code, standard_output, _error_output = self.run_cli(["--apply", "1920x1080@60.00"])
 
         self.assertEqual(code, 0)
         self.assertEqual(standard_output, "applied 1920x1080@60.00 on HDMI-1\n")
@@ -205,7 +205,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(choice.load(), ("HDMI-1", "1920x1080@60.00"))
 
     def test_apply_temp_does_not_remember(self):
-        code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--temp"])
+        code, _standard_output, _error_output = self.run_cli(["--apply", "1920x1080@60.00", "--temp"])
 
         self.assertEqual(code, 0)
         self.assertEqual(self.backend.applied, [("HDMI-1", "1920x1080@60.00", False)])
@@ -221,7 +221,7 @@ class CliTest(unittest.TestCase):
 
     def test_restore_with_choice(self):
         choice.save("HDMI-1", "3440x1440@59.24")
-        code, standard_output, _ = self.run_cli(["--restore"])
+        code, standard_output, _error_output = self.run_cli(["--restore"])
 
         self.assertEqual((code, standard_output), (0, ""))
         self.assertEqual(self.backend.applied, [("HDMI-1", "3440x1440@59.24", False)])
@@ -233,20 +233,20 @@ class CliTest(unittest.TestCase):
     def test_restore_does_not_need_a_connector(self):
         choice.save("HDMI-1", "m")
         backend = Backend({})
-        code, _, _ = self.run_cli(["--restore"], backend=backend)
+        code, _standard_output, _error_output = self.run_cli(["--restore"], backend=backend)
 
         self.assertEqual(code, 0)
         self.assertEqual(backend.applied, [("HDMI-1", "m", False)])
 
     def test_restore_failure(self):
         choice.save("HDMI-1", "m")
-        code, _, error_output = self.run_cli(["--restore"], backend=Backend({}, error=RuntimeError("no output")))
+        code, _standard_output, error_output = self.run_cli(["--restore"], backend=Backend({}, error=RuntimeError("no output")))
 
         self.assertEqual(code, 1)
         self.assertIn("Failed: no output", error_output)
 
     def test_next_applies_the_mode_after_the_current_one(self):
-        code, standard_output, _ = self.run_cli(["--next"])
+        code, standard_output, _error_output = self.run_cli(["--next"])
 
         self.assertEqual(code, 0)
         self.assertEqual(standard_output, "applied 1920x1080@60.00 on HDMI-1\n")
@@ -266,7 +266,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(backend.applied[0][1], "3440x1440@59.24")
 
     def test_next_without_modes_fails(self):
-        code, _, error_output = self.run_cli(["--next"], backend=Backend({"HDMI-1": []}))
+        code, _standard_output, error_output = self.run_cli(["--next"], backend=Backend({"HDMI-1": []}))
 
         self.assertEqual(code, 1)
         self.assertEqual(error_output, "Failed: the output has no modes\n")
@@ -274,7 +274,7 @@ class CliTest(unittest.TestCase):
     def test_apply_without_scale_keeps_the_saved_scale(self):
         choice.save_setting(1920, 1080, "scale", 2.0)
 
-        code, _, _ = self.run_cli(["--apply", "1920x1080@60.00"])
+        code, _standard_output, _error_output = self.run_cli(["--apply", "1920x1080@60.00"])
 
         self.assertEqual(code, 0)
         self.assertEqual(choice.size_settings(1920, 1080), {"scale": 2.0})
@@ -295,7 +295,7 @@ class CliTest(unittest.TestCase):
     def test_scale_works_when_the_first_mode_is_current(self):
         backend = Backend({"HDMI-1": [mode("1920x1080@60.00", current=True), mode("2560x1080@59.98")]})
 
-        code, _, _ = self.run_cli(["--scale", "1.25"], backend=backend)
+        code, _standard_output, _error_output = self.run_cli(["--scale", "1.25"], backend=backend)
 
         self.assertEqual(code, 0)
         self.assertEqual(backend.last_change, displays.ModeChange("HDMI-1", "1920x1080@60.00", 1.25))
@@ -357,11 +357,11 @@ class CliTest(unittest.TestCase):
         code, standard_output, error_output, call, sleep = self.run_size(["--size", "2880x1800"])
 
         self.assertEqual((code, error_output), (0, ""))
-        self.assertEqual(standard_output, "Giving HDMI-A-1 an EDID with 2880x1800\napplied 2880x1800@56.30 on HDMI-1\n")
+        self.assertEqual(standard_output, "Giving the virtual monitor an EDID with 2880x1800\napplied 2880x1800@56.30 on HDMI-1\n")
         command = call.call_args.args[0]
         self.assertEqual(command[:3], ["sudo", "bash", str(cli.edid_setup.SET_SCRIPT)])
         self.assertEqual(command[-1], "HDMI-A-1")
-        self.assertEqual(Path(command[-2]).read_bytes(), cli.edid.generate(cli.edid_setup.custom_modes("2880x1800"))[1])
+        self.assertEqual(Path(command[-2]).read_bytes(), cli.edid.generate(["2880x1800", *cli.edid.DEFAULT_MODES])[1])
         self.assertEqual(self.backend.applied, [("HDMI-1", "2880x1800@56.30", True)])
         self.assertEqual(choice.load(), ("HDMI-1", "2880x1800@56.30"))
         sleep.assert_not_called()
@@ -387,7 +387,7 @@ class CliTest(unittest.TestCase):
 
         self.assertEqual(code, 1)
         self.assertEqual(error_output, "The desktop does not list 2880x1800 yet; see virtual-monitor --list\n")
-        self.assertEqual(sleep.call_count, cli.edid_setup.WAIT_ATTEMPTS)
+        self.assertEqual(sleep.call_count, cli.edid_setup.WAIT_ATTEMPTS - 1)
         self.assertEqual(self.backend.applied, [])
 
     def test_size_and_apply_go_alone(self):
@@ -395,14 +395,14 @@ class CliTest(unittest.TestCase):
             cli.parse_arguments(["--size", "2880x1800", "--apply", "1920x1080@60.00"])
 
     def test_apply_with_scale_saves_it_for_the_size(self):
-        code, _, _ = self.run_cli(["--apply", "1920x1080@60.00", "--scale", "1.25"])
+        code, _standard_output, _error_output = self.run_cli(["--apply", "1920x1080@60.00", "--scale", "1.25"])
 
         self.assertEqual(code, 0)
         self.assertEqual(choice.size_settings(1920, 1080), {"scale": 1.25})
         self.assertEqual(self.backend.last_change, displays.ModeChange("HDMI-1", "1920x1080@60.00", 1.25))
 
     def test_scale_alone_rescales_the_current_mode(self):
-        code, standard_output, _ = self.run_cli(["--scale", "2"])
+        code, standard_output, _error_output = self.run_cli(["--scale", "2"])
 
         self.assertEqual((code, standard_output), (0, "applied 2560x1080@59.98 on HDMI-1\n"))
         self.assertEqual(self.backend.last_change.scale, 2.0)
@@ -422,7 +422,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(self.backend.last_change.scale, 1.0)
 
     def test_scale_without_current_mode_fails(self):
-        code, _, error_output = self.run_cli(["--scale", "2"], backend=Backend({"HDMI-1": [mode("1920x1080@60.00")]}))
+        code, _standard_output, error_output = self.run_cli(["--scale", "2"], backend=Backend({"HDMI-1": [mode("1920x1080@60.00")]}))
 
         self.assertEqual(code, 1)
         self.assertEqual(error_output, "Failed: the output has no current mode\n")
@@ -467,7 +467,7 @@ class CliTest(unittest.TestCase):
             cli.parse_arguments(["--next", "--apply", "m"])
 
     def test_temp_alone_lists(self):
-        code, standard_output, _ = self.run_cli(["--temp"])
+        code, standard_output, _error_output = self.run_cli(["--temp"])
 
         self.assertEqual(code, 0)
         self.assertIn("session:", standard_output)

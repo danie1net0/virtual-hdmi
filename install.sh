@@ -162,6 +162,7 @@ uninstall() {
     echo "Removed: $APPLICATION_FOLDER, $ICON, $LAUNCHER"
     is_user_install && echo "Removed: $COMMAND"
     echo "The remembered resolution stays in $CONFIGURATION_FOLDER/$NAME; delete it if you no longer want it."
+    echo "A size set with --size stays at every boot until: sudo bash /usr/local/lib/virtual-monitor/set-edid.sh --reset"
     exit 0
 }
 
@@ -239,8 +240,7 @@ for project_file in "${FILES[@]}"; do
     stage_file "$project_file"
 done
 
-[[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/application/$NAME.py" "$STAGING/application/scripts/install-edid.sh" \
-    "$STAGING/application/scripts/set-edid.sh" "$STAGING/application/scripts/auto-login.sh"
+[[ $DEVELOPMENT -eq 1 ]] || chmod 755 "$STAGING/application/$NAME.py" "$STAGING/application/scripts/"*.sh
 
 install -m 644 "$PROJECT_FOLDER/assets/$NAME.png" "$STAGING/icon.png"
 

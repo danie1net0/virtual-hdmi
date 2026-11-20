@@ -1,10 +1,11 @@
 """
-Sets up the virtual monitor on any machine: picks the video output that gets the EDID and runs
-scripts/install-edid.sh with an EDID generated from the modes (edid.py).
+Sets up the virtual monitor on any machine: picks the video output that gets the EDID, generates
+the EDID of the modes (edid.py) and builds the scripts/install-edid.sh command that cli.py and
+window.py run.
 
-Any other size, such as the screen of the computer that connects, comes without a reboot:
-scripts/set-edid.sh gives the virtual monitor an EDID with that size and the default modes, and the
-desktop lists the size once the output comes back.
+Any other size, such as the screen of the computer that connects, comes without a reboot: the
+scripts/set-edid.sh command gives the virtual monitor an EDID with that size and the default modes,
+and the desktop lists the size once the output comes back.
 
 The output is the one the current boot already uses for the EDID, or else a free external output
 (nothing plugged in), HDMI first, then DisplayPort and DVI. Built-in panels (eDP, LVDS, DSI) and
@@ -104,11 +105,10 @@ def same_size(first, second):
     return (first.width, first.height) == (second.width, second.height)
 
 
-def custom_modes(text):
-    """The modes of an EDID with the size in text first, so the desktop prefers it, then the default
-    modes; a default mode of the same size leaves, so the size keeps the clock or rate in text.
-    Raises EdidError."""
-    timing = edid.parse_mode(text)
+def custom_modes(text, timing):
+    """The modes of an EDID with the size in text (whose timing is timing) first, so the desktop
+    prefers it, then the default modes; a default mode of the same size leaves, so the size keeps the
+    clock or rate in text."""
     others = [mode for mode in edid.DEFAULT_MODES if not same_size(edid.parse_mode(mode), timing)]
     return [text, *others]
 
@@ -122,10 +122,9 @@ def size_mode(modes, timing):
     return min(sized, key=lambda mode: abs(mode.refresh - timing.refresh))
 
 
-def listed_mode(modes, text):
-    """The listed mode that gives the size in text, or None when the EDID has to change: no mode has
-    that size, or the text asks for a clock or a rate (@, :). Raises EdidError."""
-    timing = edid.parse_mode(text)
+def listed_mode(modes, text, timing):
+    """The listed mode that gives the size in text (whose timing is timing), or None when the EDID has
+    to change: no mode has that size, or the text asks for a clock or a rate (@, :)."""
     if "@" in text or ":" in text:
         return None
 
@@ -141,15 +140,28 @@ def listed_modes(backend, connector):
 
 
 def wait_for_size(backend, connector, timing):
-    """The mode of the size of timing once the desktop lists it, or None after WAIT_ATTEMPTS."""
-    for _attempt in range(WAIT_ATTEMPTS):
-        mode = size_mode(listed_modes(backend, connector), timing)
+    """The mode of the size of timing once the desktop lists it, or None after WAIT_ATTEMPTS checks."""
+    mode = size_mode(listed_modes(backend, connector), timing)
+    for _attempt in range(WAIT_ATTEMPTS - 1):
         if mode is not None:
             return mode
 
         time.sleep(WAIT_MILLISECONDS / 1000)
+        mode = size_mode(listed_modes(backend, connector), timing)
+
+    return mode
 
 
 def set_command(edid_path, connector, elevate):
     """The command that gives connector the EDID in edid_path right away, through elevate."""
     return [*elevate, "bash", str(SET_SCRIPT), str(edid_path), connector]
+
+
+def size_command(text, timing, elevate):
+    """The command that gives the virtual monitor an EDID with the size in text (whose timing is
+    timing), through elevate; None when the virtual monitor is not installed at this boot."""
+    output = displays.command_line_connector()
+    if output is None:
+        return None
+
+    return set_command(write_edid(custom_modes(text, timing)), output, elevate)

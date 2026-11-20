@@ -523,7 +523,7 @@ fi
 install_in_boot
 
 # An EDID set without reboot (set-edid.sh) would replace this one again at every boot
-rm -f "$ROOT/var/lib/virtual-monitor/edid.bin" "$ROOT/var/lib/virtual-monitor/output"
+bash "$SCRIPT_FOLDER/set-edid.sh" --reset
 
 echo
 echo "Done: $CONNECTOR gets the virtual monitor at the next boot. Reboot with: sudo reboot"

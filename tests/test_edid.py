@@ -158,7 +158,7 @@ class BytesTest(unittest.TestCase):
         self.assertEqual(dtd[17], 0x1E)
 
     def test_generate_writes_the_name(self):
-        _, data = edid.generate(["1920x1080@148.5"], [], "Test")
+        _timings, data = edid.generate(["1920x1080@148.5"], [], "Test")
         self.assertIn(edid.name_descriptor("Test"), data)
         self.assertNotIn(edid.name_descriptor(edid.DEFAULT_NAME), data)
 
@@ -320,7 +320,7 @@ class MainTest(unittest.TestCase):
     def test_writes_file_and_lists_modes(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "output.bin"
-            code, standard_output, _ = self.run_main([str(path), "3440x1440@312", "2560x1080@216", "--vic", "16", "--vic", "4"])
+            code, standard_output, _error_output = self.run_main([str(path), "3440x1440@312", "2560x1080@216", "--vic", "16", "--vic", "4"])
             self.assertEqual(code, 0)
             self.assertEqual(path.read_bytes(), edid.generate(["3440x1440@312", "2560x1080@216"], [16, 4])[1])
 
@@ -332,7 +332,7 @@ class MainTest(unittest.TestCase):
     def test_without_vics_prints_no_vic_line(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "output.bin"
-            code, standard_output, _ = self.run_main([str(path), "1920x1080@148.5", "--name", "Test"])
+            code, standard_output, _error_output = self.run_main([str(path), "1920x1080@148.5", "--name", "Test"])
             written = path.read_bytes()
 
         self.assertEqual(code, 0)
